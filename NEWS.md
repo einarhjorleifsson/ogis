@@ -1,3 +1,11 @@
+# rebelrebel 2026.11.12.2
+
+* A trackpad's two-finger swipe pans the map, up, down and sideways, as it scrolls a page; a pinch and a mouse's wheel
+  zoom, as before. MapLibre zooms on every wheel event, so a swipe zoomed and the map could not be moved without
+  dragging it. A burst of events takes the kind of its first: a swipe has a sideways part or starts small in pixels; a
+  wheel comes in lines, in a Mac mouse's step (4.000244140625 px, MapLibre's own test) or large. Over a popup or a
+  control the wheel is theirs.
+
 # rebelrebel 2026.11.12.1
 
 * A popup that takes verdicts (`rr_serve(verdicts = )`) on a layer function's layer showed its title and questions

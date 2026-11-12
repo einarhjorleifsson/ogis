@@ -1185,6 +1185,22 @@ const map = new maplibregl.Map({
 if (!BASEMAPS[0].style) setBase(BASEMAPS[0].id);
 // a page laid out after the map was made (a tab opened in the background) left the canvas at 400 x 300
 new ResizeObserver(() => map.resize()).observe($("map"));
+// A trackpad's two-finger swipe pans the map, as it scrolls a page; a pinch (a wheel event with ctrlKey, as browsers
+// send it) and a mouse's wheel zoom, as before. A burst of events (none 300 ms apart) takes the kind of its first: a
+// swipe has a sideways part, or starts small in pixels; a wheel comes in lines (Firefox), in MapLibre's step of a Mac
+// mouse (4.000244140625 px), or large (Windows, 100 px a notch). So a swipe's momentum is not taken for a wheel. Over a
+// popup or a control the wheel is theirs. deltaMode is read first: Firefox gives pixels to a page that reads deltaY first
+let wheelKind = null, wheelLast = 0;
+map.getContainer().addEventListener("wheel", e => {
+  if (!map.getCanvasContainer().contains(e.target) || e.ctrlKey) return;
+  const mode = e.deltaMode, dx = e.deltaX, dy = e.deltaY;
+  if (e.timeStamp - wheelLast > 300) wheelKind = dx !== 0 || (mode === 0 && dy % 4.000244140625 !== 0 && Math.abs(dy) < 50) ? "pan" : "zoom";
+  wheelLast = e.timeStamp;
+  if (wheelKind !== "pan") return;
+  e.preventDefault(); e.stopPropagation();
+  const k = mode === 1 ? 40 : mode === 2 ? map.getCanvas().clientHeight : 1;           // lines and pages in pixels
+  map.panBy([dx * k, dy * k], { animate: false });
+}, { capture: true, passive: false });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 map.addControl(new maplibregl.ScaleControl(), "bottom-right");
 // the style's load event, caught once: map.loaded() is false again while any tile loads, so it cannot tell
