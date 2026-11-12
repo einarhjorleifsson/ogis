@@ -1,3 +1,10 @@
+# rebelrebel 2026.11.12.1
+
+* A popup that takes verdicts (`rr_serve(verdicts = )`) on a layer function's layer showed its title and questions
+  but none of its fields: since a layer function's fields are its row, fetched on the click, the verdict popup looked
+  for them in the feature, where they are not. It now fetches the row as the popup without questions does, and shows
+  it under the questions.
+
 # rebelrebel 2026.11.12
 
 * A choice's option may name a base map, `base`, shown while that value is the one chosen (by the list, by ‹ and ›, or

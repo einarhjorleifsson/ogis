@@ -1756,22 +1756,25 @@ function rowHtml(cols) {
   const td = c => `<td>${rowValue(c)}${c.code ? ` \u00b7 ${esc(c.code)}` : ""}</td>`;
   return `<table class="rr-row">${cols.map(c => `<tr>${th(c)}${td(c)}</tr>`).join("")}</table>`;
 }
+// A feature's row as a table, fetched into `body`: from the server, or in a bundle from the layer's rows file, read on
+// the layer's first click and kept, not read again at every click
+function rowInto(l, p, body) {
+  body.innerHTML = esc(tr("rowLoading"));
+  (BUNDLE ? (bundleRows[l.id] ??= bundleLoad(`data/${l.id}_rows`)).then(d => {
+    const v = d.rows[p.rr_row - 1];                                  // row n at n - 1
+    return v ? { columns: d.cols.map((c, i) => ({ ...c, value: v[i] ?? null, code: c.codes?.[String(v[i])] })) } : null;
+  }) : fetch(`/row/${l.id}/${p.rr_row}`).then(r => r.ok ? r.json() : null))
+    .then(r => { body.innerHTML = r ? rowHtml(r.columns) : esc(tr("rowNone")); })
+    .catch(() => { body.innerHTML = esc(tr("rowNone")); });
+}
 // A click on a feature: its title and fields. Registered top layer first, so the topmost feature under the click speaks
 function featurePopup(l, e) {
   popup?.remove();
-  const box = document.createElement("div"), p = e.features[0].properties;
-  if (l.popup.row && p.rr_row !== undefined && !(VERDICTS && l.popup.verdict)) {
-    // the row as a table, fetched on the click: from the server, or in a bundle from the layer's rows file
+  const box = document.createElement("div"), p = e.features[0].properties, row = l.popup.row && p.rr_row !== undefined;
+  if (row && !(VERDICTS && l.popup.verdict)) {
     box.className = "rr-row-popup";
-    box.innerHTML = `${featureHtml(l, p, false)}<div class="rr-row-body">${esc(tr("rowLoading"))}</div>`;
-    const body = box.querySelector(".rr-row-body");
-    // a bundle's rows file read on the layer's first click and kept, not read again at every click
-    (BUNDLE ? (bundleRows[l.id] ??= bundleLoad(`data/${l.id}_rows`)).then(d => {
-      const v = d.rows[p.rr_row - 1];                                // row n at n - 1
-      return v ? { columns: d.cols.map((c, i) => ({ ...c, value: v[i] ?? null, code: c.codes?.[String(v[i])] })) } : null;
-    }) : fetch(`/row/${l.id}/${p.rr_row}`).then(r => r.ok ? r.json() : null))
-      .then(r => { body.innerHTML = r ? rowHtml(r.columns) : esc(tr("rowNone")); })
-      .catch(() => { body.innerHTML = esc(tr("rowNone")); });
+    box.innerHTML = `${featureHtml(l, p, false)}<div class="rr-row-body"></div>`;
+    rowInto(l, p, box.querySelector(".rr-row-body"));
     popup = new maplibregl.Popup({ closeButton: true, maxWidth: l.popup.maxWidth ?? "360px" }).setLngLat(e.lngLat)
       .setDOMContent(box).addTo(map);
     return;
@@ -1780,10 +1783,12 @@ function featurePopup(l, e) {
     const title = featureHtml(l, p, false), rest = document.createElement("div");
     box.className = "rb-verdict-popup";
     box.innerHTML = title;
-    rest.innerHTML = featureHtml(l, p).slice(title.length).replace(/^<br>/, "");
+    // a layer function's fields are its row, fetched as without the questions; the others are in the feature
+    if (row) { rest.className = "rr-row-body"; rowInto(l, p, rest); }
+    else rest.innerHTML = featureHtml(l, p).slice(title.length).replace(/^<br>/, "");
     box.append(verdictBlock(l, e.features[0], e.lngLat), rest);
   } else box.innerHTML = featureHtml(l, p);
-  popup = new maplibregl.Popup({ closeButton: false, maxWidth: l.popup.maxWidth ?? "300px" }).setLngLat(e.lngLat)
+  popup = new maplibregl.Popup({ closeButton: false, maxWidth: l.popup.maxWidth ?? (row ? "360px" : "300px") }).setLngLat(e.lngLat)
     .setDOMContent(box)
     .addTo(map);
 }
