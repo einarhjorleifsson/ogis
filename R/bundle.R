@@ -84,6 +84,14 @@ rr_bundle <- function(
   grids = list(),
   overwrite = FALSE
 ) {
+  .rr_bundle(map, dir, maxzoom = maxzoom, fit = fit, grids = grids, overwrite = overwrite)
+}
+
+# rr_bundle()'s work. `vendor`: NULL copies the page's libraries into the bundle's own `vendor` folder; a path
+# (relative to the page, ending in "/") leaves them out and points the page there, for maps that share one copy
+# (knit_print(): an article's maps)
+.rr_bundle <- function(map, dir, maxzoom = NULL, fit = eval(formals(rr_bundle)$fit), grids = list(),
+                       overwrite = FALSE, vendor = NULL) {
   if (!inherits(map, "rr_map")) {
     stop("`map` is an rr_map().", call. = FALSE)
   }
@@ -283,14 +291,16 @@ rr_bundle <- function(
     fit = fit,
     grids = if (length(grid_specs)) grid_specs else stats::setNames(list(), character())
   )
-  # the page's libraries, so the folder draws with no network but the base map's
-  dir.create(file.path(dir, "vendor"), showWarnings = FALSE)
-  vendor <- list.files(system.file("engine", "vendor", package = "rebelrebel"), full.names = TRUE)
-  if (!length(vendor) || !all(file.copy(vendor, file.path(dir, "vendor"), overwrite = TRUE))) {
-    stop("Could not copy the page's libraries into the bundle.", call. = FALSE)
+  # the page's libraries, so the folder draws with no network but the base map's (or a copy shared, `vendor`)
+  if (is.null(vendor)) {
+    dir.create(file.path(dir, "vendor"), showWarnings = FALSE)
+    lib <- list.files(system.file("engine", "vendor", package = "rebelrebel"), full.names = TRUE)
+    if (!length(lib) || !all(file.copy(lib, file.path(dir, "vendor"), overwrite = TRUE))) {
+      stop("Could not copy the page's libraries into the bundle.", call. = FALSE)
+    }
   }
   writeLines(
-    enc2utf8(.rr_map_page(.rr_map_json(config), .rr_map_json(bundle))),
+    enc2utf8(.rr_map_page(.rr_map_json(config), .rr_map_json(bundle), vendor = vendor %||% "vendor/")),
     file.path(dir, "index.html"),
     useBytes = TRUE
   )

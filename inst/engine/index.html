@@ -1180,7 +1180,9 @@ function fitToView() {
 const map = new maplibregl.Map({
   container: "map",
   style: BASEMAPS[0].style ?? BASEMAPS[0].labels ?? baseStyle(BASEMAPS[0]),
-  center: CONFIG.view.center, zoom: CONFIG.view.zoom, hash: true
+  center: CONFIG.view.center, zoom: CONFIG.view.zoom, hash: true,
+  // the data's extent fitted to the frame the page has (a window, an article's iframe); a view in the address wins
+  ...(CONFIG.view.bounds ? { bounds: CONFIG.view.bounds, fitBoundsOptions: { padding: 24, maxZoom: 14 } } : {})
 });
 if (!BASEMAPS[0].style) setBase(BASEMAPS[0].id);
 // a page laid out after the map was made (a tab opened in the background) left the canvas at 400 x 300

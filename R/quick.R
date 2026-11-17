@@ -20,10 +20,11 @@
   if (!is.null(state$pending)) {
     p <- state$pending
     state <- list(
-      ctx = .rr_quick_data(.rr_data(p$data), NULL, NULL, NULL, rlang::quo(NULL), NULL), # a path read as a table
+      # a path read as a table; none for rr_map() with no data, whose layers bring their own
+      ctx = if (!is.null(p$data)) .rr_quick_data(.rr_data(p$data), NULL, NULL, NULL, rlang::quo(NULL), NULL),
       layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections
     )
-    if (!groups) {
+    if (!groups && !is.null(state$ctx)) {
       state$ctx$groups <- character()
     }
     if (rlang::quo_is_null(choose_q)) {
@@ -41,6 +42,9 @@
     data
   } else if (is.null(state)) {
     x
+  }
+  if (is.null(rows) && is.null(base)) {
+    stop("This layer has no data: give it its own (`data`), or start the map from data, rr_map(data).", call. = FALSE)
   }
   ctx <- if (is.null(rows)) {
     if (
@@ -412,9 +416,12 @@
   }
   m <- do.call(rr_map, c(sections, list(
     title = state$title,
+    # the rows' extent, which the page fits to the frame it has (a window, an article's iframe); the centre and zoom
+    # for a page whose address holds no view and no extent
     view = list(
       center = c((lon0 + lon1) / 2, (lat0 + lat1) / 2),
-      zoom = if (span > 0) max(1, min(15, floor(log2(360 / span)) - 1)) else 12
+      zoom = if (span > 0) max(1, min(15, floor(log2(360 / span)) - 1)) else 12,
+      bounds = if (span > 0) c(lon0, lat0, lon1, lat1)
     ),
     choose = if (!is.null(state[["choose"]])) {
       cfg <- state[["choose"]]

@@ -198,8 +198,10 @@ rr_stop <- function(port = NULL) {
   ))
 }
 
-# The page with its config, and a bundle's own (rr_bundle()) or none; "</" escaped, so neither can close its tag
-.rr_map_page <- function(config, bundle = "null") {
+# The page with its config, and a bundle's own (rr_bundle()) or none; "</" escaped, so neither can close its tag.
+# `vendor` is where the page finds its libraries, relative to it: its own folder `vendor/`, or a copy shared by the
+# maps of an article (knit_print())
+.rr_map_page <- function(config, bundle = "null", vendor = "vendor/") {
   page <- paste(
     readLines(
       system.file("engine", "index.html", package = "rebelrebel"),
@@ -208,6 +210,9 @@ rr_stop <- function(port = NULL) {
     ),
     collapse = "\n"
   )
+  if (!identical(vendor, "vendor/")) {
+    page <- gsub("\"vendor/", paste0("\"", vendor), page, fixed = TRUE)
+  }
   page <- sub("__CONFIG__", gsub("</", "<\\/", config, fixed = TRUE), page, fixed = TRUE)
   sub("__BUNDLE__", gsub("</", "<\\/", bundle, fixed = TRUE), page, fixed = TRUE)
 }

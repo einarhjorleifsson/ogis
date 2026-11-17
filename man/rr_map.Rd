@@ -22,11 +22,13 @@ rr_map(
 }
 \arguments{
 \item{...}{\code{\link[=rr_section]{rr_section()}}s; or, alone, the data a map starts from (a parquet file, folder or glob, a lazy DuckDB
-table, a data frame or an sf object), which the layer functions (\code{\link[=rr_point]{rr_point()}} and the others) draw.}
+table, a data frame or an sf object), which the layer functions (\code{\link[=rr_point]{rr_point()}} and the others) draw; or nothing,
+a map whose layer functions each bring their own data (\code{rr_map() |> rr_line(tows) |> rr_point(stations)}).}
 
 \item{title}{The page's title: a key of \code{texts}, or the text itself.}
 
-\item{view}{The first view: \code{center} (longitude, latitude) and \code{zoom}.}
+\item{view}{The first view: \code{center} (longitude, latitude) and \code{zoom}; or \code{bounds} (west, south, east, north), an
+extent fitted to the frame the page has (a window, an article's iframe). A view in the page's address wins.}
 
 \item{texts}{The texts of the layers and groups, and of the page in other languages: a named list whose elements
 are a text, or a list of texts by language (\code{list(en = "Ports", is = "Hafnir")}). The page's own texts are

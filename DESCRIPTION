@@ -1,7 +1,7 @@
 Package: rebelrebel
 Type: Package
 Title: Fast Maps on 'MapLibre' for Marine Data
-Version: 2026.11.12.2
+Version: 2026.11.17
 Authors@R: c(
   person("Einar", "Hjörleifsson", role = c("aut", "cre"), email = "einar.hjorleifsson@gmail.com")
   )
@@ -35,9 +35,13 @@ Imports:
     tidyselect,
     utils
 Suggests:
+    chromote,
+    htmltools,
+    knitr,
     marmap,
     png,
     rbibutils,
+    rmarkdown,
     RSQLite,
     rstudioapi,
     sf,

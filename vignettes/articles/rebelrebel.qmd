@@ -1,0 +1,59 @@
+---
+title: "Get started"
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+---
+
+rebelrebel draws maps on [MapLibre](https://maplibre.org) from data that stay in DuckDB: a parquet file, a lazy
+table, a data frame or an sf object. A map is built with the pipe, a layer at a time, and every map below is live:
+pan it, zoom it, click a point.
+
+## A first map
+
+The example data are the positions of four vessels on the Icelandic groundfish survey in March 2019, one row a
+position, with whether a tow was on.
+
+```{r}
+library(rebelrebel)
+pings <- rr_example("trawlsurvey")
+pings |> rr_point(colour = behaviour)
+```
+
+`colour` takes a column written bare. Its values get a colour each and a legend; the map opens on the rows' extent.
+
+## Layers with the pipe
+
+`rr_map()` starts a map from data, and each layer function adds a layer over the ones before. Here a line per vessel
+in the order of time, and the positions over it: two columns to colour by (the first shown; the other is a choice in
+the page), and a click that shows the row.
+
+```{r}
+rr_map(pings) |>
+  rr_path(group = vid, time = time, name = "Tracks") |>
+  rr_point(
+    colour = c(behaviour, speed),
+    popup = c(vid, time, speed, behaviour),
+    name = "Positions"
+  )
+```
+
+`rr_map()` with no data starts a map whose layers bring their own. The survey's tows are lines, one a row:
+
+```{r}
+#| out-height: 400px
+rr_map() |>
+  rr_line(rr_example("trawlsurveytows"), name = "Tows") |>
+  rr_point(pings, colour = behaviour, name = "Positions",
+           visible = FALSE)
+```
+
+`visible = FALSE` leaves a layer off when the page opens; its box in the sidebar turns it on.
+
+## Showing and sharing
+
+- **In R**, printing a map serves it on this computer and opens it in RStudio's Viewer or a browser.
+- **In a document** (Quarto, R Markdown, a pkgdown article like this one), a printed map is drawn live in the page.
+- **As a folder**, `rr_bundle(map, "my-map")` writes the map with its data, to open with a double click on any
+  computer, with no R and no server.

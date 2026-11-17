@@ -9,7 +9,8 @@
   if (!is.null(con) && DBI::dbIsValid(con)) {
     return(con)
   }
-  con <- DBI::dbConnect(duckdb::duckdb())
+  # duckdb's notice of where it keeps its extensions said once: kept out of a document's maps and the console
+  con <- suppressMessages(DBI::dbConnect(duckdb::duckdb()))
   DBI::dbExecute(con, sprintf("SET memory_limit = '%s'", .rr_memory_limit(con)))
   .rr_db$con <- con
   con

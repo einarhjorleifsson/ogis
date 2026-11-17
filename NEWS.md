@@ -1,3 +1,18 @@
+# rebelrebel 2026.11.17
+
+* A map printed in a Quarto or R Markdown document, or a pkgdown article, is drawn live in the rendered page, as
+  leaflet's maps are: it pans, zooms and answers clicks (`knit_print()`). It is written as a bundle and put beside the
+  document as one of its dependencies, shown in an iframe; the libraries (MapLibre and the others) are one copy for all
+  the maps of a document. A document must keep its files beside it, as Quarto and pkgdown do; a self-contained page says
+  so where the map would be. The chunk's `out-width` and `out-height` set its size (by default the page's width and 480
+  pixels). The first article, "Get started", shows three such maps.
+* A map started from data opens on the rows' extent fitted to the frame it has (a window, an article's iframe), where
+  it took a zoom from the extent's width alone (zoom 3 for Iceland's waters, whatever the frame). A view in the page's
+  address still wins; `rr_map(view = list(bounds = ))` gives an extent to fit.
+* `rr_map()` with no data starts a map whose layers each bring their own: `rr_map() |> rr_line(tows) |>
+  rr_point(stations)`. It stopped, asking for sections.
+* duckdb's notice of where it keeps its extensions no longer prints when a map is made (it showed in documents).
+
 # rebelrebel 2026.11.12.2
 
 * A trackpad's two-finger swipe pans the map, up, down and sideways, as it scrolls a page; a pinch and a mouse's wheel

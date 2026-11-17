@@ -634,9 +634,11 @@ rr_section <- function(id, title = id, layers, open = TRUE) {
 #' data the layers' unless a layer brings its own.
 #'
 #' @param ... [rr_section()]s; or, alone, the data a map starts from (a parquet file, folder or glob, a lazy DuckDB
-#'   table, a data frame or an sf object), which the layer functions ([rr_point()] and the others) draw.
+#'   table, a data frame or an sf object), which the layer functions ([rr_point()] and the others) draw; or nothing,
+#'   a map whose layer functions each bring their own data (`rr_map() |> rr_line(tows) |> rr_point(stations)`).
 #' @param title The page's title: a key of `texts`, or the text itself.
-#' @param view The first view: `center` (longitude, latitude) and `zoom`.
+#' @param view The first view: `center` (longitude, latitude) and `zoom`; or `bounds` (west, south, east, north), an
+#'   extent fitted to the frame the page has (a window, an article's iframe). A view in the page's address wins.
 #' @param texts The texts of the layers and groups, and of the page in other languages: a named list whose elements
 #'   are a text, or a list of texts by language (`list(en = "Ports", is = "Hafnir")`). The page's own texts are
 #'   English; give them in another language under the same keys, a base map's label under `b_<id>`.
@@ -704,7 +706,8 @@ rr_map <- function(
   first <- if (...length()) ..1
   is_data <- is.data.frame(first) || inherits(first, "tbl_lazy") ||
     (is.character(first) && length(first) == 1 && grepl("parquet|[*?]", first))
-  if (is_data) {
+  # rr_map() alone starts a map with no data of its own: each layer function brings its own
+  if (is_data || !...length()) {
     if (...length() > 1) {
       stop("rr_map(data) takes one table; its layers come from rr_point() and the other layer functions.", call. = FALSE)
     }
@@ -841,7 +844,11 @@ rr_map <- function(
   names(layers) <- ids
   config <- list(
     title = title,
-    view = list(center = as.list(view$center), zoom = view$zoom),
+    view = Filter(Negate(is.null), list(
+      center = as.list(view$center %||% c(mean(view$bounds[c(1, 3)]), mean(view$bounds[c(2, 4)]))),
+      zoom = view$zoom %||% 2,
+      bounds = if (!is.null(view$bounds)) as.list(view$bounds)
+    )),
     languages = as.list(languages),
     language = language,
     locales = if (length(locales)) lapply(locales, as.list),
