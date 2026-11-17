@@ -1,3 +1,16 @@
+# rebelrebel 2026.11.17.1
+
+* Clicks, hovers and the pointer survive MapLibre 5's lost index. MapLibre 5.x loses a tile's index when the tile is
+  loaded again while an earlier load of it is still being read (fixed only in MapLibre 6.0 and 6.3, which load only as
+  ES modules, which a page opened from its folder cannot): `queryRenderedFeatures()` then throws "Out of bounds" on
+  that layer until its source is loaded again, and every click and hover on it failed. Measured on a bare MapLibre
+  page: a filter reading the zoom from the global state with data sent during a zoom failed 13 times in 100, a filter
+  on whole zooms never. Every query of the page now goes through one guard: a layer that throws is left out of the
+  answer, its data sent again (which cured every failure seen) or a tiled layer's tiles fetched again, and a click
+  tried once more when the map is idle. One click and one pointer check replace the layers' own handlers, which
+  MapLibre queried unguarded. Browser tests force the failure and click.
+* MapLibre GL JS 5.24.1 (from 5.24.0): attributions cleaned by an allow list, the same interface.
+
 # rebelrebel 2026.11.17
 
 * A map printed in a Quarto or R Markdown document, or a pkgdown article, is drawn live in the rendered page, as

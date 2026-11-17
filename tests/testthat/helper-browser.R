@@ -16,11 +16,18 @@ serve_dir <- function(dir, env = parent.frame()) {
 
 # A page opened in a new headless Chrome tab, closed when the test ends; returns the session
 open_page <- function(url, width = 1100, height = 900, env = parent.frame()) {
-  b <- chromote::ChromoteSession$new(width = width, height = height)
+  # Chrome may take more than chromote's 10 s to start on a busy machine or runner; one that does not start at all is
+  # the machine's, not the page's: skipped with the reason
+  withr::local_options(chromote.timeout = 60)
+  b <- tryCatch(chromote::ChromoteSession$new(width = width, height = height),
+                error = function(e) testthat::skip(paste("Chrome did not start:", conditionMessage(e))))
   withr::defer(b$close(), envir = env)
-  loaded <- b$Page$loadEventFired(wait_ = FALSE)
-  b$Page$navigate(url, wait_ = FALSE)
-  b$wait_for(loaded)
+  # navigated without chromote's own wait, which turns a private event loop: a map served by this R (rr_serve())
+  # answers only in the global one, which wait_until() turns
+  promises::catch(b$Page$navigate(url, wait_ = FALSE), function(e) NULL) # its answer may come after the page
+  if (!wait_until(function() identical(page_eval(b, "location.href !== 'about:blank' && document.readyState"), "complete"), 60)) {
+    stop("The page did not load: ", url, call. = FALSE)
+  }
   b
 }
 
@@ -36,7 +43,7 @@ wait_until <- function(f, seconds = 30) {
   t0 <- Sys.time()
   while (as.numeric(Sys.time() - t0, units = "secs") < seconds) {
     if (isTRUE(tryCatch(f(), error = function(e) FALSE))) return(TRUE)
-    Sys.sleep(0.25)
+    later::run_now(0.25) # a map served by this R (rr_serve()) answers meanwhile
   }
   FALSE
 }

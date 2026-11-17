@@ -3,7 +3,7 @@ rebelrebel is licensed GPL (>= 3). Its code was moved from the R package ramb (G
 The page's libraries, in inst/engine/vendor, each unchanged as published on npm and with its licence beside it:
 
 inst/engine/vendor/maplibre-gl.js, maplibre-gl.css
-  MapLibre GL JS 5.24.0, https://github.com/maplibre/maplibre-gl-js
+  MapLibre GL JS 5.24.1, https://github.com/maplibre/maplibre-gl-js
   BSD 3-Clause, Copyright (c) 2023, MapLibre contributors (LICENSE-maplibre-gl.txt, which also lists the code it
   carries from others).
 

@@ -28,8 +28,8 @@ if (requireNamespace("RSQLite", quietly = TRUE)) {
     name = c("format", "encoding", "bounds", "minzoom", "maxzoom"),
     value = c("png", "terrarium", "-30,60,-5,70", "0", "1")
   ))
-  DBI::dbExecute(con, "CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER,
-                       tile_data BLOB)")
+  DBI::dbExecute(con, paste("CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER,",
+                            "tile_row INTEGER, tile_data BLOB)"))
   DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
   DBI::dbDisconnect(con)
   tiles <- rr_tiles_mbtiles(f)

@@ -1163,7 +1163,7 @@ function widen(lo, hi) {
 }
 
 function fitToView() {
-  const v = map.queryRenderedFeatures({ layers: [G.id] })
+  const v = query(null, [G.id])
     .map(f => +f.properties[metric()]).filter(x => x > 0).map(Math.log10).sort((a, b) => a - b);
   if (v.length < 10) return false;
   viewVals = v;
@@ -1187,6 +1187,34 @@ const map = new maplibregl.Map({
 if (!BASEMAPS[0].style) setBase(BASEMAPS[0].id);
 // a page laid out after the map was made (a tab opened in the background) left the canvas at 400 x 300
 new ResizeObserver(() => map.resize()).observe($("map"));
+// MapLibre 5.x loses a tile's index when the tile is loaded again while an earlier load of it is still being read
+// (fixed only in 6.0 and 6.3, maplibre-gl-js 7765 and 8064; this page stays on 5.x, which a page opened from its folder
+// can load): queryRenderedFeatures() then throws ("Out of bounds") on that layer until its source is loaded again.
+// Every query of the page goes through query(): a layer that throws is left out of the answer, its source loaded
+// again (a whole layer's own data sent again, which cured every such failure seen; a tiled layer's tiles fetched
+// again), and `again` called once the map is idle. `geom` is a point, a box, or null for the view
+const healing = new Set();
+function heal(src) {
+  if (healing.has(src)) return;
+  healing.add(src);
+  console.warn(`rebelrebel: the index of ${src} was lost (a fault of MapLibre 5), its data loaded again`);
+  try {
+    const s = map.getSource(src);
+    if (s?.type === "geojson") s.setData(s.serialize().data);
+    else if (typeof s?.setTiles === "function" && s.serialize().tiles) s.setTiles(s.serialize().tiles);
+  } catch (err) { console.warn(err); }
+  map.once("idle", () => healing.delete(src));
+}
+function query(geom, ids, again) {
+  ids = ids.filter(id => map.getLayer(id));
+  if (!ids.length) return [];
+  const q = list => geom == null ? map.queryRenderedFeatures({ layers: list }) : map.queryRenderedFeatures(geom, { layers: list });
+  try { return q(ids); } catch (err) {
+    const ok = ids.filter(id => { try { q([id]); return true; } catch (e) { heal(map.getLayer(id).source); return false; } });
+    if (again) map.once("idle", again);
+    try { return ok.length ? q(ok) : []; } catch (e) { return []; }
+  }
+}
 // A trackpad's two-finger swipe pans the map, as it scrolls a page; a pinch (a wheel event with ctrlKey, as browsers
 // send it) and a mouse's wheel zoom, as before. A burst of events (none 300 ms apart) takes the kind of its first: a
 // swipe has a sideways part, or starts small in pixels; a wheel comes in lines (Firefox), in MapLibre's step of a Mac
@@ -1853,7 +1881,7 @@ function verdictsLoad() { return verdictsCall("GET").then(verdictsFrom).catch(()
 function namesInView() {
   const ids = OTHER.filter(l => l.popup?.title).flatMap(l => (l.style ?? []).map(x => x.id)).filter(id => map.getLayer(id));
   const t = new Set();
-  for (const f of map.queryRenderedFeatures({ layers: ids })) {
+  for (const f of query(null, ids)) {
     const l = OTHER.find(x => x.style?.some(y => y.id === f.layer.id)), v = f.properties[l?.popup?.title];
     if (v !== undefined && v !== null && v !== "") t.add(String(v));
   }
@@ -1928,11 +1956,31 @@ function verdictsSetup() {
 }
 // The notes' clicks first (rr_serve(notes = )): a click that places a note, or on a note's pin, opens no feature
 if (NOTES) map.on("click", noteClick);
-for (const l of [...OTHER].reverse()) for (const id of l.popup?.click ?? []) {
-  map.on("click", id, e => { if (e.originalEvent.featureShown) return; e.originalEvent.featureShown = true; featurePopup(l, e); });
-  map.on("mouseenter", id, () => { if (!noting) map.getCanvas().style.cursor = "pointer"; });
-  map.on("mouseleave", id, () => { if (!noting) map.getCanvas().style.cursor = ""; });
+// One click for every layer that answers one (popup `click`): the topmost feature under it speaks. Its query is guarded
+// (query()), and tried once more when the map is idle if a layer's index was lost and its source loaded again
+const CLICK = new Map(OTHER.flatMap(l => (l.popup?.click ?? []).map(id => [id, l])));
+function clickAt(e, again) {
+  if (e.originalEvent.featureShown) return;                    // a note, or the second try after another took it
+  const f = query(e.point, [...CLICK.keys()], again ? null : () => clickAt(e, true))[0];
+  if (!f) return;
+  e.originalEvent.featureShown = true;
+  featurePopup(CLICK.get(f.layer.id), { lngLat: e.lngLat, point: e.point, originalEvent: e.originalEvent, features: [f] });
 }
+if (CLICK.size) map.on("click", e => clickAt(e));
+// The pointer a hand over what a click answers (the layers', the notes', the grid's, the time panel's): one guarded
+// query a frame, where MapLibre's own mouseenter and mouseleave query unguarded
+let pointerFrame = 0, pointerEvent = null;
+map.on("mousemove", e => {
+  pointerEvent = e;
+  pointerFrame ||= requestAnimationFrame(() => {
+    pointerFrame = 0;
+    if (noting) return;
+    const ids = [...CLICK.keys(), "rb-notes-dot", "rb-time-dot", ...(G ? [G.id] : [])];
+    const over = !pointerEvent.originalEvent.buttons && query(pointerEvent.point, ids).length > 0;
+    map.getCanvas().style.cursor = over ? "pointer" : "";
+  });
+});
+map.on("mouseout", () => { if (!noting) map.getCanvas().style.cursor = ""; });
 // A hover over a feature (popup `hover`): its title, and its fields with `hover_fields`, in a light label beside the
 // pointer, gone when it leaves. One query for every hover style, whose first feature is the topmost, as a click's. A
 // click hides it until the pointer is over another feature, so it does not sit over the click's popup; a drag hides it
@@ -1941,8 +1989,7 @@ let hoverTip = null, hoverKey = null, hoverClicked = null, hoverFrame = 0, hover
 function hideHover() { hoverTip?.remove(); hoverKey = null; }
 // the topmost feature of the hover styles at a point, and a key that tells it from another
 function hoverFeature(point) {
-  const ids = [...HOVER.keys()].filter(id => map.getLayer(id));
-  const f = ids.length ? map.queryRenderedFeatures(point, { layers: ids })[0] : null;
+  const f = query(point, [...HOVER.keys()])[0];
   return f ? { f, key: `${f.layer.id}\u001f${f.id ?? JSON.stringify(f.properties)}` } : null;
 }
 function hoverAt(e) {
@@ -2027,7 +2074,7 @@ function notesUnder(point) {
   const ids = [...new Set(OTHER.flatMap(l => l.popup?.title ? [...(l.popup.click ?? []), ...(l.popup.hover ?? [])] : []))]
     .filter(id => map.getLayer(id));
   const out = [];
-  for (const f of ids.length ? map.queryRenderedFeatures(point, { layers: ids }) : []) {
+  for (const f of query(point, ids)) {
     const l = OTHER.find(x => x.style.some(s => s.id === f.layer.id)), t = f.properties[l.popup.title];
     const s = `${tr(l.label)}: ${t}`;
     if (t != null && t !== "" && !out.includes(s)) out.push(s);
@@ -2040,7 +2087,7 @@ function noteClick(e) {
     notePlacing(false);
     return noteForm(e);
   }
-  const f = map.getLayer("rb-notes-dot") ? map.queryRenderedFeatures(e.point, { layers: ["rb-notes-dot"] })[0] : null;
+  const f = query(e.point, ["rb-notes-dot"])[0];
   if (!f) return;
   e.originalEvent.featureShown = true;
   noteOpen(f.properties.id);
@@ -2119,8 +2166,6 @@ function notesSetup() {
                  layout: { "text-field": ["to-string", ["get", "id"]], "text-font": FONT, "text-size": 11,
                            "text-allow-overlap": true, "text-ignore-placement": true },
                  paint: { "text-color": "#fff" } });
-  map.on("mouseenter", "rb-notes-dot", () => { if (!noting) map.getCanvas().style.cursor = "pointer"; });
-  map.on("mouseleave", "rb-notes-dot", () => { if (!noting) map.getCanvas().style.cursor = ""; });
   $("n-add").addEventListener("click", () => notePlacing(!noting));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && noting) notePlacing(false); });
   $("n-show").addEventListener("change", () => {
@@ -2201,7 +2246,7 @@ map.on("error", async e => {
 });
 function sampleView() {
   if (!G || !map.getLayer(G.id)) return;
-  histVals = map.queryRenderedFeatures({ layers: [G.id] }).map(f => +f.properties[metric()]).filter(x => x > 0).map(Math.log10);
+  histVals = query(null, [G.id]).map(f => +f.properties[metric()]).filter(x => x > 0).map(Math.log10);
   // an equal stretch with a floor and cap from the address has no fit to take its shares from: the first view gives them
   if (!viewVals.length && histVals.length >= 10) { viewVals = [...histVals].sort((a, b) => a - b); paint(); }
   drawHist();
@@ -2216,17 +2261,17 @@ map.on("idle", () => {
 
 if (G) {
   // the grid's popup, registered after the other layers': a feature over the cell has spoken
-  map.on("click", G.id, e => {
+  map.on("click", e => {
     if (e.originalEvent.featureShown) return;
-    const p = e.features[0].properties, fs = G.popup?.fields ?? [];
+    const cell = query(e.point, [G.id])[0];
+    if (!cell) return;
+    const p = cell.properties, fs = G.popup?.fields ?? [];
     const v = f => f.format === "count" ? (+p[f.field]).toLocaleString(loc()) : fmt(+p[f.field]);
     popup?.remove();
     popup = new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat)
       .setHTML(fs.map((f, i) => i === 0 ? `<b>${v(f)}</b> ${tr(f.label)}` : `${v(f)} ${tr(f.label)}`).join("<br>"))
       .addTo(map);
   });
-  map.on("mouseenter", G.id, () => { map.getCanvas().style.cursor = "pointer"; });
-  map.on("mouseleave", G.id, () => { map.getCanvas().style.cursor = ""; });
 }
 
 // The time panel (rr_time()) ---------------------------------------------------------------------------------------
@@ -2310,7 +2355,7 @@ function timeSetup(q) {
   // a click near a ping of the window (within 8 px: a ping is a small target) marks its time on the chart
   map.on("click", e => {
     if (!TU || !map.getLayer("rb-time-dot")) return;
-    const { x, y } = e.point, fs = map.queryRenderedFeatures([[x - 8, y - 8], [x + 8, y + 8]], { layers: ["rb-time-dot"] });
+    const { x, y } = e.point, fs = query([[x - 8, y - 8], [x + 8, y + 8]], ["rb-time-dot"]);
     let i = null, best = Infinity;
     for (const f of fs) {
       const p = map.project(f.geometry.coordinates), d = (p.x - x) ** 2 + (p.y - y) ** 2;
@@ -2323,8 +2368,6 @@ function timeSetup(q) {
     tPinned = i;
     TU.setCursor({ left: TU.valToPos(TS.t[i], "x"), top: yv == null ? 0 : TU.valToPos(yv, "y0") });
   });
-  map.on("mouseenter", "rb-time-dot", () => { map.getCanvas().style.cursor = "pointer"; });
-  map.on("mouseleave", "rb-time-dot", () => { map.getCanvas().style.cursor = ""; });
   const w = (q.get("tw") ?? "").split(",").map(Number);
   tLoad(w.length === 2 && w.every(Number.isFinite) && w[0] < w[1] ? w : null);
 }
