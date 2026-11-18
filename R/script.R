@@ -8,7 +8,13 @@
 #' page, its elements and functions, may change from one version to the next):
 #'
 #' * `rr.map`: MapLibre's map.
-#' * `rr.layer(id)`: a layer's MapLibre style ids and source, by its id ([rr_point()]'s `id` and the others'), or `null`.
+#' * `rr.layer(id)`: a layer's MapLibre style ids, source and `key`, by its id ([rr_point()]'s `id` and the others'), or
+#'   `null`. A layer function's features are known by their row's number (`key` `"rr_row"`, MapLibre's feature id: a
+#'   click's `feature.id`); a layer of your own by its [rr_layer()]'s `key`.
+#' * `rr.state(id, key, value)`: a feature's state in MapLibre (`setFeatureState()`), by its layer and key, which its
+#'   styles read as `list("feature-state", "<name>")` (given to a layer function in MapLibre's own terms, `...`): a
+#'   selection drawn with no data sent again. `rr.state(id, key)` reads it, `rr.state(id, key, null)` clears it; it is
+#'   kept through a change of base map.
 #' * `rr.on("click", id, fn)`: a click on the layer's features is the script's: `fn({feature, lngLat, point, row})`,
 #'   where `row()` is a promise of the clicked row's columns (those its `popup` names, each `name`, `label`, `unit`,
 #'   `value`), or `null` when the reader has clicked again meanwhile; the layer's own popup is not shown.

@@ -1532,7 +1532,7 @@ function addLayer(l, meta) {
     if (!n) return missing(l);
     counts[l.id] = n;
     map.addSource(l.id, { type: "vector", tiles: [layerTiles(l, "pbf", meta.layers[l.id].v ?? meta.engine)],
-                          minzoom: l.minzoom ?? 0, maxzoom: l.maxzoom ?? 14 });
+                          minzoom: l.minzoom ?? 0, maxzoom: l.maxzoom ?? 14, ...keyOf(l) });
     draw();
   } else if (l.kind === "dem") {
     l.tileUrl = layerTiles(l, l.format ?? "png", meta.layers?.[l.id]?.v ?? meta.engine);  // its fit reads them too
@@ -1570,19 +1570,22 @@ function addLayer(l, meta) {
     }).catch(() => missing(l));
   } else if (l.kind === "geojson" && !BUNDLE && Number.isFinite(l.features) && !l.count?.where) {
     // served, with its count known: MapLibre's worker fetches and reads the file, and the page keeps no copy of it
-    map.addSource(l.id, { type: "geojson", data: `${location.origin}/data/${l.id}.geojson` });
+    map.addSource(l.id, { type: "geojson", data: `${location.origin}/data/${l.id}.geojson`, ...keyOf(l) });
     map.on("error", e => { if (e.sourceId === l.id && !map.isSourceLoaded(l.id)) missing(l); });
     counts[l.id] = l.features;
     draw();
   } else if (l.kind === "geojson") {
     (BUNDLE ? bundleLoad(`data/${l.id}`) : fetch(`/data/${l.id}.geojson`).then(r => r.ok ? r.json() : Promise.reject(r.status))).then(data => {
-      map.addSource(l.id, { type: "geojson", data });
+      map.addSource(l.id, { type: "geojson", data, ...keyOf(l) });
       const w = l.count?.where;
       counts[l.id] = w ? data.features.filter(f => f.properties[w[0]] === w[1]).length : data.features.length;
       draw();
     }).catch(() => missing(l));
   }
 }
+// a layer's features known by a property of theirs (rr_layer(key = ); a layer function's rr_row): MapLibre's feature id,
+// by which a style reads a feature's state
+function keyOf(l) { return l.key ? { promoteId: l.key } : {}; }
 function missing(l) {
   layerDone(l);
   $(l.id).disabled = true; $("lyr-" + l.id).classList.add("off");
@@ -2155,13 +2158,29 @@ function layerDone(l) {
 }
 const pendingData = new Map();
 let dataFrame = 0;
+// the states a script set (rr.state()), set again once another base map's style has loaded
+const featureStates = new Map();
+map.on("style.load", () => { for (const { f, value } of featureStates.values()) if (map.getSource(f.source)) map.setFeatureState(f, value); });
 const RR = {
   map,                                                          // MapLibre's map
   served: !BUNDLE,                                              // false in a bundle: no server, no rr.fetch()
   // a layer's MapLibre style ids and source (by its id, rr_point(id = ) and the others), or null
   layer(id) {
     const l = OTHER.find(x => x.id === id);
-    return l ? { id: l.id, styles: l.style.map(st => st.id), source: l.id, kind: l.kind } : null;
+    return l ? { id: l.id, styles: l.style.map(st => st.id), source: l.id, kind: l.kind, key: l.key ?? null } : null;
+  },
+  // a feature's state in MapLibre, by its layer and key (a layer function's row number): what its styles read as
+  // ["feature-state", name]. state(id, key) reads it, state(id, key, { name: value }) adds to it, state(id, key, null)
+  // clears it; kept through a change of base map
+  state(id, key, value) {
+    const l = OTHER.find(x => x.id === id);
+    if (!l?.key || !map.getSource(id)) throw new Error(`rr.state(): "${id}" is not a layer whose features have a key`);
+    const f = { source: id, id: key, ...(map.getSource(id).type === "vector" ? { sourceLayer: l.style[0]?.["source-layer"] ?? "features" } : {}) };
+    const k = `${id}\u001f${key}`;
+    if (value === undefined) return map.getFeatureState(f);
+    if (value === null) { map.removeFeatureState(f); featureStates.delete(k); return; }
+    map.setFeatureState(f, value);
+    featureStates.set(k, { f, value: { ...(featureStates.get(k)?.value ?? {}), ...value } });
   },
   // a click on a layer's features taken by the page: fn({ feature, lngLat, point, row }), row() its row's columns
   // (those `popup` names), null when a newer click has come meanwhile; the layer's own popup is not shown

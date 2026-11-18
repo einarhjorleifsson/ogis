@@ -31,7 +31,8 @@ rr_layer(
   shade = NULL,
   colour = NULL,
   contours = NULL,
-  state = NULL
+  state = NULL,
+  key = NULL
 )
 }
 \arguments{
@@ -162,6 +163,11 @@ as whether a style is drawn, its colour, or a shift of the zoom it starts at. A 
 number, text or \code{TRUE}/\code{FALSE}, and \code{label}), a list to choose from, with \code{default} one of the values (the first
 when not given); or no \code{options} and \code{default} \code{TRUE} or \code{FALSE}, a checkbox. Each applies as it changes, nothing
 fetched again, and goes into the page's address as \verb{<id>_<name>}. Every one must be read by the style.}
+
+\item{key}{For a vector or geojson layer, the property each feature is known by, a number or text unique in the
+layer (MapLibre's \code{promoteId}): the feature's id in the page, by which a style reads its state
+(\code{list("feature-state", "selected")}) and a page's script sets it (\code{\link[=rr_script]{rr_script()}}'s \code{rr.state()}). The layer
+functions' is \code{rr_row}, the row's number.}
 }
 \value{
 An \code{rr_layer}, for \code{\link[=rr_section]{rr_section()}}; or for \code{\link[=rr_add_layer]{rr_add_layer()}}, which puts it into a map the pipe makes.

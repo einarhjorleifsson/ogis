@@ -253,8 +253,10 @@
   DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT row_number() OVER () AS rr_row, * FROM (%s)", rows_nm, src))
   # a search over a text column: each row's text and place, which the page reads on its first search
   find <- .rr_search_index(con, rows_nm, a$search, ctx, mark, a, tx$zcol)
+  # every feature carries its row's number, its id in the page (MapLibre's promoteId): a click's row, a search's hit,
+  # a script's feature state
   props <- unique(c(
-    if (length(cols)) paste0("rr_c", seq_along(cols)), if (length(pop) || !is.null(find)) "rr_row", title, hov, lab,
+    if (length(cols)) paste0("rr_c", seq_along(cols)), "rr_row", title, hov, lab,
     tx$props,
     intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
     if (!is.null(t_s)) c("rr_t", ctx$by)
@@ -348,7 +350,8 @@
     popup = if (!is.null(title)) {
       Filter(Negate(is.null), list(click = sids, title = title, row = if (length(pop)) TRUE,
                                    hover = if (length(hov)) TRUE))
-    }
+    },
+    key = "rr_row"
   )
   layer$config$choose <- own$config
   layer$config$features <- attr(sent$data, "count") # sent whole, its count, so the page need not read the file

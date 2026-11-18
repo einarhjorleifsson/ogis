@@ -25,7 +25,13 @@ page, its elements and functions, may change from one version to the next):
 \details{
 \itemize{
 \item \code{rr.map}: MapLibre's map.
-\item \code{rr.layer(id)}: a layer's MapLibre style ids and source, by its id (\code{\link[=rr_point]{rr_point()}}'s \code{id} and the others'), or \code{null}.
+\item \code{rr.layer(id)}: a layer's MapLibre style ids, source and \code{key}, by its id (\code{\link[=rr_point]{rr_point()}}'s \code{id} and the others'), or
+\code{null}. A layer function's features are known by their row's number (\code{key} \code{"rr_row"}, MapLibre's feature id: a
+click's \code{feature.id}); a layer of your own by its \code{\link[=rr_layer]{rr_layer()}}'s \code{key}.
+\item \code{rr.state(id, key, value)}: a feature's state in MapLibre (\code{setFeatureState()}), by its layer and key, which its
+styles read as \code{list("feature-state", "<name>")} (given to a layer function in MapLibre's own terms, \code{...}): a
+selection drawn with no data sent again. \code{rr.state(id, key)} reads it, \code{rr.state(id, key, null)} clears it; it is
+kept through a change of base map.
 \item \code{rr.on("click", id, fn)}: a click on the layer's features is the script's: \verb{fn(\{feature, lngLat, point, row\})},
 where \code{row()} is a promise of the clicked row's columns (those its \code{popup} names, each \code{name}, \code{label}, \code{unit},
 \code{value}), or \code{null} when the reader has clicked again meanwhile; the layer's own popup is not shown.

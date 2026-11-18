@@ -162,6 +162,10 @@
 #'   number, text or `TRUE`/`FALSE`, and `label`), a list to choose from, with `default` one of the values (the first
 #'   when not given); or no `options` and `default` `TRUE` or `FALSE`, a checkbox. Each applies as it changes, nothing
 #'   fetched again, and goes into the page's address as `<id>_<name>`. Every one must be read by the style.
+#' @param key For a vector or geojson layer, the property each feature is known by, a number or text unique in the
+#'   layer (MapLibre's `promoteId`): the feature's id in the page, by which a style reads its state
+#'   (`list("feature-state", "selected")`) and a page's script sets it ([rr_script()]'s `rr.state()`). The layer
+#'   functions' is `rr_row`, the row's number.
 #' @return An `rr_layer`, for [rr_section()]; or for [rr_add_layer()], which puts it into a map the pipe makes.
 #' @seealso [rr_map()], [rr_add_layer()], [rr_tiles_table()]
 #' @export
@@ -227,7 +231,8 @@ rr_layer <- function(
   shade = NULL,
   colour = NULL,
   contours = NULL,
-  state = NULL
+  state = NULL,
+  key = NULL
 ) {
   kind <- match.arg(kind)
   if (!is.character(id) || length(id) != 1 || !grepl("^[a-z][a-z0-9_]*$", id)) {
@@ -437,6 +442,14 @@ rr_layer <- function(
   if (!is.null(state)) {
     state <- .rr_map_state(state, id, kind, style)
   }
+  if (!is.null(key)) {
+    if (!kind %in% c("vector", "geojson")) {
+      stop("`key` is for a vector or geojson layer: the property each feature is known by.", call. = FALSE)
+    }
+    if (!is.character(key) || length(key) != 1 || is.na(key) || !nzchar(key)) {
+      stop("`key` is the name of one property of the features.", call. = FALSE)
+    }
+  }
   config <- list(
     id = id,
     kind = kind,
@@ -463,6 +476,7 @@ rr_layer <- function(
     colour = colour,
     contours = contours,
     state = state,
+    key = key,
     fit = if (identical(fit, "page")) "page"
   )
   structure(

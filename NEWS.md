@@ -1,3 +1,14 @@
+# rebelrebel 2026.11.18.9
+
+* Features have ids in the page: a layer function's features are known by their row's number (`rr_row`, now carried
+  by every feature, with a popup or not), given to MapLibre as the source's `promoteId`; a layer of your own by
+  `rr_layer(key = )`. So MapLibre's own feature state works on them: a page's script sets it with
+  `rr.state(id, key, value)` (reads it with `rr.state(id, key)`, clears it with `null`) and a style reads it as
+  `list("feature-state", "<name>")`, given to a layer function in MapLibre's terms. A selection is drawn with no data
+  sent again (pages sent a layer's data again to show one). The script's states are set again when a style is made
+  again whole, which drops MapLibre's own; a click's `feature.id` is the row's number, and `rr.layer()` gives the
+  layer's `key`. "A page of your own" rings the marked positions so.
+
 # rebelrebel 2026.11.18.8
 
 * A search over a layer's column: `search = name` on `rr_point()`, `rr_line()`, `rr_segment()`, `rr_polygon()` and

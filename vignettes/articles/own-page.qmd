@@ -14,8 +14,9 @@ whole of what it may use of the page (the help of `rr_script()` lists it):
 | `rr.` | gives |
 |---|---|
 | `map` | MapLibre's map |
-| `layer(id)` | a layer's MapLibre style ids and source |
+| `layer(id)` | a layer's MapLibre style ids, source and key |
 | `on("click", id, fn)` | a click on a layer's features, its row as `row()` |
+| `state(id, key, value)` | a feature's state in MapLibre, which its styles read |
 | `setData(id, geojson)` | new data for a layer sent whole |
 | `filter(id, key, expr)` | a filter of your own, kept with the page's choices |
 | `panel(title)` | a box in the sidebar, yours to fill |
@@ -24,8 +25,13 @@ whole of what it may use of the page (the help of `rr_script()` lists it):
 
 ## A list of marked positions
 
-A click on a position adds its vessel and time to a list in a panel; a button saves the list. On a server, the list
-goes to the route `marks`; in a bundle, which has no server (as on this page), the reader is handed a file.
+A click on a position adds its vessel and time to a list in a panel, and rings it on the map; a button saves the list.
+On a server, the list goes to the route `marks`; in a bundle, which has no server (as on this page), the reader is
+handed a file.
+
+The ring is MapLibre's own feature state. Each feature of a layer function is known by its row's number, the
+`feature.id` of a click; `rr.state()` sets a state on it, and the layer's style reads it as `feature-state`, given in
+MapLibre's own terms. Nothing is sent again, and the state stays through a change of base map.
 
 ```{r}
 library(rebelrebel)
@@ -36,7 +42,8 @@ js <- r"(
   save.textContent = "Save the list";
   body.append(list, save);
   const marks = [];
-  rr.on("click", "positions", async ({ row }) => {
+  rr.on("click", "positions", async ({ feature, row }) => {
+    rr.state("positions", feature.id, { marked: true });
     const r = await row();
     if (!r) return;                       // clicked again meanwhile
     const v = Object.fromEntries(r.map(c => [c.name, c.value]));
@@ -49,9 +56,14 @@ js <- r"(
     : rr.save("marks.csv", "vid,time\n" + marks.map(m => `${m.vid},${m.time}`).join("\n"));
 )"
 
+marked <- function(yes, no) {
+  list("case", list("boolean", list("feature-state", "marked"), FALSE), yes, no)
+}
 m <- rr_example("trawlsurvey") |>
   rr_point(colour = behaviour, popup = c(vid, time), id = "positions",
-           name = "Positions") |>
+           name = "Positions",
+           "circle-stroke-width" = marked(3, 0),
+           "circle-stroke-color" = marked("#000000", "#ffffff")) |>
   rr_script(js)
 m
 ```
