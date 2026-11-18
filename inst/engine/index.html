@@ -1503,6 +1503,9 @@ function addLayer(l, meta) {
     applyState(l);   // before the styles that read it
     for (const st of l.style) {
       const { og_face, ...rest } = st, spec = { ...rest, source: l.id };
+      // the zoom a layer is drawn from (a layer function's `minzoom` as a number): a tiled layer's source has no tiles
+      // below it, a whole layer's (GeoJSON) has all of them, so its styles hold it
+      if (l.kind === "geojson" && l.minzoom != null && spec.minzoom == null) spec.minzoom = l.minzoom;
       if (spec.type === "symbol" && spec.layout?.["text-field"] && !spec.layout["text-font"])
         spec.layout = { ...spec.layout, "text-font": og_face ? faceFont(og_face) : FONT };
       map.addLayer(spec, before);
@@ -2061,11 +2064,17 @@ function findList() {
   }).catch(() => { if (seq === findSeq) { $("find-hits").innerHTML = ""; findNote(tr("findFailed")); } });
 }
 function findGo({ l, d, i }) {
-  const at = new maplibregl.LngLat(d.x[i], d.y[i]), z = d.z?.[i];
+  const at = new maplibregl.LngLat(d.x[i], d.y[i]), z = d.z?.[i], e = d.e?.[i];
   const start = z !== undefined && z !== null ? Math.ceil(z) : Math.max(l.minzoom ?? 0, 10);
+  let zoom = Math.min(18, Math.max(map.getZoom(), start));
+  // and before its end (og_text(endzoom = )): a row's own, judged at whole zooms, so its last is the whole zoom below;
+  // the layer's, its styles' maxzoom, the zoom itself
+  const rowEnd = e !== undefined && e !== null ? Math.ceil(e) : null, layerEnd = l.style[0]?.maxzoom;
+  if (rowEnd !== null && zoom >= rowEnd) zoom = Math.max(start, rowEnd - 1);
+  else if (rowEnd === null && layerEnd !== undefined && zoom >= layerEnd) zoom = Math.max(start, layerEnd - 0.5);
   if (!$(l.id).checked) { $(l.id).checked = true; $(l.id).dispatchEvent(new Event("change")); }
   popup?.remove();
-  map.jumpTo({ center: at, zoom: Math.min(18, Math.max(map.getZoom(), start)) });
+  map.jumpTo({ center: at, zoom });
   // once drawn there: its feature's popup, as a click's; one not drawn (filtered, or a label hidden by another) its text
   map.once("idle", () => {
     const p = map.project(at), ids = l.style.map(s => s.id).filter(id => map.getLayer(id));

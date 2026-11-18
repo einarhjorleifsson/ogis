@@ -106,3 +106,90 @@ test_that("a view and base maps given to og_map() hold for its layer functions' 
   expect_length(unlist(m$config$view$bounds), 4)
   expect_identical(length(m$config$basemaps), length(og_basemaps()))
 })
+
+test_that("endzoom: a row's own end in the filter, one for all as the styles' maxzoom, a row with none shown on", {
+  skip_if_no_spatial()
+  d <- data.frame(lon = c(-20, -19), lat = c(64, 65), name = c("A", "B"), z = c(3, 5.4), e = c(6, NA))
+  st <- (og_map() |> og_text(d, label = name, minzoom = z, endzoom = e, id = "t"))$config$layers[[1]]$style[[1]]
+  expect_identical(st$filter, list("all",
+    list(">=", list("zoom"), list("to-number", list("get", "z"))),
+    list("<", list("zoom"), list("to-number", list("coalesce", list("get", "e"), 99)))))
+  expect_null(st$maxzoom)
+  st <- (og_map() |> og_text(d, label = name, endzoom = 9, id = "t"))$config$layers[[1]]$style[[1]]
+  expect_identical(st$maxzoom, 9)
+  expect_null(st$filter)
+  # an end alone, as a column
+  st <- (og_map() |> og_text(d, label = name, endzoom = e, id = "t"))$config$layers[[1]]$style[[1]]
+  expect_identical(st$filter[[1]], "<")
+  expect_error(og_map() |> og_text(d, label = name, minzoom = 8, endzoom = 6), "after `minzoom`")
+  expect_error(og_map() |> og_text(d, label = name, endzoom = 30), "a zoom from 0 to 24")
+  expect_error(og_map() |> og_text(d, label = name, endzoom = c(z, e)), "one column")
+  # a search knows each row's end
+  f <- (og_map() |> og_text(d, label = name, minzoom = z, endzoom = e, search = name, id = "t"))$layers$t$search
+  expect_equal(f$e, c(6, NA))
+})
+
+test_that("in the page, a row's text shows until the first whole zoom at or above its own end, whole and as tiles", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- data.frame(lon = c(-20, -19, -18), lat = c(64, 64.5, 65), name = c("Alfa", "Bravó", "Charlie"),
+                  z = c(3, NA, 4), e = c(6, 7.4, NA))
+  for (whole in c(TRUE, FALSE)) {
+    w <- paste("whole:", whole)
+    dir <- withr::local_tempdir()
+    m <- og_map(basemaps = list(list(id = "none", label = "None"))) |>
+      og_text(d, label = name, minzoom = z, endzoom = e, overlap = TRUE, whole = whole, search = name, id = "names")
+    og_bundle(m, dir, overwrite = TRUE)
+    b <- open_page(paste0(serve_dir(dir), "index.html"))
+    expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && map.loaded() && !!map.getLayer('names-text')")), 30), info = w)
+    shown <- function(name, zoom) {
+      i <- match(name, d$name)
+      page_eval(b, sprintf(paste0("(window.IDLE = false, map.once('idle', () => window.IDLE = true), ",
+                                  "map.jumpTo({ center: [%f, %f], zoom: %s }), map.triggerRepaint(), true)"), d$lon[i], d$lat[i], zoom))
+      expect_true(wait_until(function() isTRUE(page_eval(b, "window.IDLE")), 30), info = paste(w, name, zoom))
+      name %in% unlist(page_eval(b, 'map.queryRenderedFeatures({ layers: ["names-text"] }).map(f => f.properties.name)'))
+    }
+    expect_true(shown("Alfa", 5.9), info = w)       # from 3, to 6
+    expect_false(shown("Alfa", 6), info = w)
+    expect_true(shown("Bravó", 7.9), info = w)      # no start, to 7.4: through zoom 7
+    expect_false(shown("Bravó", 8), info = w)
+    expect_true(shown("Charlie", 12), info = w)     # from 4, no end
+    # a search takes the map to a zoom where the label shows: before its end, from a deeper view
+    page_eval(b, "(map.jumpTo({ center: [-18, 65], zoom: 13 }), true)")
+    page_eval(b, "(() => { const q = document.getElementById('find-q'); q.value = 'Alfa'; q.dispatchEvent(new Event('input')); return true; })()")
+    expect_true(wait_until(function() page_eval(b, "document.querySelectorAll('#find-hits li').length") > 0, 20), info = w)
+    page_eval(b, "document.querySelector('#find-hits li:not(.muted)').click() ?? true")
+    expect_true(wait_until(function() isTRUE(page_eval(b, "!!document.querySelector('.maplibregl-popup')")), 20), info = w)
+    expect_identical(page_eval(b, "map.getZoom()"), 5L, info = w)
+    b$close()
+  }
+})
+
+test_that("in the page, a layer's minzoom as a number holds for a layer sent whole, as for one in tiles", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- data.frame(lon = c(-20, -19.9), lat = c(64, 64.05), name = c("Alfa", "Bravó"))
+  for (whole in c(TRUE, FALSE)) {
+    w <- paste("whole:", whole)
+    dir <- withr::local_tempdir()
+    m <- og_map(basemaps = list(list(id = "none", label = "None"))) |>
+      og_point(d, minzoom = 8, whole = whole, id = "dots") |>
+      og_text(d, label = name, minzoom = 9, endzoom = 11, overlap = TRUE, whole = whole, id = "names")
+    og_bundle(m, dir, overwrite = TRUE)
+    b <- open_page(paste0(serve_dir(dir), "index.html"))
+    expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && map.loaded() && !!map.getLayer('names-text')")), 30), info = w)
+    drawn <- function(layer, zoom) {
+      page_eval(b, sprintf(paste0("(window.IDLE = false, map.once('idle', () => window.IDLE = true), ",
+                                  "map.jumpTo({ center: [-19.95, 64.025], zoom: %s }), map.triggerRepaint(), true)"), zoom))
+      expect_true(wait_until(function() isTRUE(page_eval(b, "window.IDLE")), 30), info = paste(w, layer, zoom))
+      page_eval(b, sprintf("map.queryRenderedFeatures({ layers: ['%s'] }).length", layer))
+    }
+    expect_identical(drawn("dots-dot", 7.5), 0L, info = w)
+    expect_gt(drawn("dots-dot", 8), 0, label = w)
+    expect_identical(drawn("names-text", 8.5), 0L, info = w)
+    expect_gt(drawn("names-text", 9), 0, label = w)
+    expect_gt(drawn("names-text", 10.9), 0, label = w)
+    expect_identical(drawn("names-text", 11), 0L, info = w)
+    b$close()
+  }
+})

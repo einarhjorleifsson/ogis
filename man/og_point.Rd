@@ -156,6 +156,7 @@ og_text(
   section = "Layers",
   visible = TRUE,
   minzoom = NULL,
+  endzoom = NULL,
   maxzoom = NULL,
   ...
 )
@@ -269,6 +270,11 @@ would meet, the higher (within a tile, as MapLibre places); \code{fontface}, \co
 \code{"bold.italic"}, in the base map's own fonts for that face; \code{offset}, \code{c(x, y)} in text heights, x to the right and y
 up (a column takes at most 256 pairs of values); \code{overlap}, \code{TRUE} to draw every text where others meet (MapLibre
 leaves out the later). A turned text keeps the upright box round it clear of others.}
+
+\item{endzoom}{For \code{og_text()}, the zoom a label stops showing at: a number, or a column written bare, each row
+until its own, hidden from the first whole zoom at or above it (a text due to end at 7.4 shows through zoom 7); a
+row with none shows on. With \code{minzoom}, a label shows in a band of zooms, as a name the map has room for only
+between two zooms; a search (\code{search}) takes the map to a zoom where its label shows.}
 }
 \value{
 An \code{\link[=og_map]{og_map()}} with the layer added.

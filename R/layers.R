@@ -252,7 +252,7 @@
   rows_nm <- .og_name(con, "og_rows_")
   DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT row_number() OVER () AS og_row, * FROM (%s)", rows_nm, src))
   # a search over a text column: each row's text and place, which the page reads on its first search
-  find <- .og_search_index(con, rows_nm, a$search, ctx, mark, a, tx$zcol)
+  find <- .og_search_index(con, rows_nm, a$search, ctx, mark, a, tx$zcol, tx$ecol)
   # every feature carries its row's number, its id in the page (MapLibre's promoteId): a click's row, a search's hit,
   # a script's feature state
   props <- unique(c(
@@ -396,7 +396,7 @@
 # middle), its number and, for a text with a start zoom of its own, that zoom. Read by the page on its first search,
 # so it is kept to a size a page reads at once
 .og_search_rows <- 500000
-.og_search_index <- function(con, rows_nm, q, ctx, mark, a, zcol = NULL) {
+.og_search_index <- function(con, rows_nm, q, ctx, mark, a, zcol = NULL, ecol = NULL) {
   col <- .og_select(q, ctx$cols, "search")
   if (!length(col)) {
     return(NULL)
@@ -420,15 +420,17 @@
                  format(n, big.mark = ","), format(.og_search_rows, big.mark = ",")), call. = FALSE)
   }
   d <- DBI::dbGetQuery(con, sprintf(
-    "SELECT CAST(%s AS VARCHAR) AS t, round(%s, 5) AS x, round(%s, 5) AS y, og_row AS r%s %s ORDER BY og_row",
-    qi(col), xy[1], xy[2], if (is.null(zcol)) "" else sprintf(", CAST(%s AS DOUBLE) AS z", qi(zcol)), from
+    "SELECT CAST(%s AS VARCHAR) AS t, round(%s, 5) AS x, round(%s, 5) AS y, og_row AS r%s%s %s ORDER BY og_row",
+    qi(col), xy[1], xy[2], if (is.null(zcol)) "" else sprintf(", CAST(%s AS DOUBLE) AS z", qi(zcol)),
+    if (is.null(ecol)) "" else sprintf(", CAST(%s AS DOUBLE) AS e", qi(ecol)), from
   ))
-  Filter(Negate(is.null), list(column = col, t = d$t, x = d$x, y = d$y, r = as.integer(d$r), z = d$z))
+  Filter(Negate(is.null), list(column = col, t = d$t, x = d$x, y = d$y, r = as.integer(d$r), z = d$z, e = d$e))
 }
 
 # A search's index as the page reads it: arrays, one a row
 .og_search_json <- function(find) {
-  .og_map_json(lapply(find[c("t", "x", "y", "r", "z")[c("t", "x", "y", "r", "z") %in% names(find)]], I))
+  keys <- intersect(c("t", "x", "y", "r", "z", "e"), names(find))
+  .og_map_json(lapply(find[keys], I))
 }
 
 # `fill = NA`: an argument written as NA
@@ -701,6 +703,10 @@
 #'   draws that zoom's tiles larger. For `og_text()`, `minzoom` may be a column written bare: each row from its own
 #'   zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
 #'   at 7.4 shows from 8.
+#' @param endzoom For `og_text()`, the zoom a label stops showing at: a number, or a column written bare, each row
+#'   until its own, hidden from the first whole zoom at or above it (a text due to end at 7.4 shows through zoom 7); a
+#'   row with none shows on. With `minzoom`, a label shows in a band of zooms, as a name the map has room for only
+#'   between two zooms; a search (`search`) takes the map to a zoom where its label shows.
 #' @param ... MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
 #'   `"circle-stroke-color" = "white"` (a ring of another colour round a filled point), `"line-dasharray" = list(2, 1)`,
 #'   `"text-halo-width" = 0`. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
@@ -809,7 +815,7 @@ og_text <- function(
   palette = NULL, limits = NULL, stretch = NULL, legend = FALSE,
   popup = FALSE, labels = NULL, codes = NULL, hover = NULL, choose = NULL, search = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
-  minzoom = NULL, maxzoom = NULL, ...
+  minzoom = NULL, endzoom = NULL, maxzoom = NULL, ...
 ) {
   if (!isTRUE(overlap) && !isFALSE(overlap)) stop("og_text(): `overlap` is TRUE or FALSE.", call. = FALSE)
   a <- .og_mark_args(list(
@@ -819,7 +825,8 @@ og_text <- function(
     palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
     choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id,
-    info = info, section = section, visible = visible, minzoom = rlang::enquo(minzoom), maxzoom = maxzoom
+    info = info, section = section, visible = visible, minzoom = rlang::enquo(minzoom), endzoom = rlang::enquo(endzoom),
+    maxzoom = maxzoom
   ), rlang::enquos(...), "og_text")
   .og_scope()
   .og_mark("text", map, data, a)
@@ -846,6 +853,10 @@ og_text <- function(
   num <- function(x) is.numeric(x) && is.finite(x)
   get <- function(col) list("to-number", list("get", col))
   z0 <- one(a$minzoom, "minzoom", function(x) num(x) && x >= 0 && x <= 24, "a zoom from 0 to 24")
+  z1 <- one(a$endzoom, "endzoom", function(x) num(x) && x > 0 && x <= 24, "a zoom from 0 to 24")
+  if (!is.null(z0$value) && !is.null(z1$value) && z1$value <= z0$value) {
+    stop("og_text(): `endzoom` is a zoom after `minzoom`.", call. = FALSE)
+  }
   angle <- one(a$angle, "angle", num, "an angle in degrees, counter-clockwise")
   prio <- one(a$priority, "priority", num, "a number (higher placed first)")
   size <- one(a$size, "size", function(x) num(x) && x > 0, "a size in pixels")
@@ -864,14 +875,21 @@ og_text <- function(
   }
   if (!is.null(off$layout)) layout[["text-offset"]] <- off$layout
   list(
-    props = unique(c(z0$column, angle$column, prio$column, size$column, face$column, if (!is.null(off$sql)) "og_off")),
+    props = unique(c(z0$column, z1$column, angle$column, prio$column, size$column, face$column,
+                     if (!is.null(off$sql)) "og_off")),
     sql = off$sql,
     layout = layout,
-    # a row drawn from the first whole zoom at or above its own: MapLibre judges a filter's zoom at whole zooms
-    filter = if (!is.null(z0$column)) list(">=", list("zoom"), get(z0$column)),
+    # a row drawn from the first whole zoom at or above its own start, and until the first at or above its own end:
+    # MapLibre judges a filter's zoom at whole zooms. A row with no end shows on (a missing value would read as 0)
+    filter = .og_both(
+      if (!is.null(z0$column)) list(">=", list("zoom"), get(z0$column)),
+      if (!is.null(z1$column)) list("<", list("zoom"), list("to-number", list("coalesce", list("get", z1$column), 99)))
+    ),
     face = if (!is.null(face$column)) list("get", face$column) else face$value,
     minzoom = z0$value,
-    zcol = z0$column
+    endzoom = z1$value,
+    zcol = z0$column,
+    ecol = z1$column
   )
 }
 
@@ -918,19 +936,22 @@ og_text <- function(
   )
 }
 
+# MapLibre filters, all of them (NULL for none given)
+.og_both <- function(...) {
+  f <- Filter(Negate(is.null), list(...))
+  if (!length(f)) NULL else if (length(f) == 1) f[[1]] else c(list("all"), f)
+}
+
 # A text layer's styles: at points (and in areas), and, where the data have lines, along them (MapLibre's line-center,
 # a long name on a line of its own); each with the start zoom's filter
 .og_text_styles <- function(id, sid, lab, tx, shapes, overlap, paint) {
   layout <- c(list("text-field" = list("to-string", list("get", lab)), "text-allow-overlap" = overlap,
                    "text-anchor" = "center"), tx$layout)
   lines <- list("in", list("geometry-type"), list("literal", list("LineString", "MultiLineString")))
-  both <- function(...) {
-    f <- Filter(Negate(is.null), list(...))
-    if (!length(f)) NULL else if (length(f) == 1) f[[1]] else c(list("all"), f)
-  }
+  both <- .og_both
   style <- function(st_id, lay, filter) {
     Filter(Negate(is.null), list(id = st_id, type = "symbol", "source-layer" = "features", filter = filter, layout = lay,
-                                 paint = paint, og_face = tx$face))
+                                 paint = paint, og_face = tx$face, maxzoom = tx$endzoom))
   }
   if (!shapes) {
     return(list(style(sid, layout, tx$filter)))

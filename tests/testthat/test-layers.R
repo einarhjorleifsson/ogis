@@ -17,7 +17,7 @@ test_that("every layer function takes its arguments in the plan's one order", {
     "palette", "limits", "breaks", "stretch", "legend",
     "popup", "labels", "codes", "hover", "choose", "search",
     "name", "id", "info", "section", "visible",
-    "minzoom", "maxzoom", "..."
+    "minzoom", "endzoom", "maxzoom", "..."
   )
   for (f in c("og_point", "og_line", "og_segment", "og_polygon", "og_text", "og_path")) {
     args <- names(formals(get(f)))
