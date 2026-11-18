@@ -59,6 +59,14 @@
   if (isFALSE(e)) {
     return(character())
   }
+  # a variable holding the columns' names, no column itself: taken as all_of() it, as tidyselect asks (it warns of a
+  # bare one)
+  if (rlang::is_symbol(e) && !rlang::as_string(e) %in% cols) {
+    v <- tryCatch(rlang::eval_tidy(e, env = rlang::quo_get_env(q)), error = function(err) NULL)
+    if (is.character(v)) {
+      q <- rlang::new_quosure(rlang::expr(tidyselect::all_of(!!v)), rlang::quo_get_env(q))
+    }
+  }
   pos <- tryCatch(
     tidyselect::eval_select(q, stats::setNames(as.list(seq_along(cols)), cols), allow_rename = FALSE),
     error = function(err) {
@@ -573,9 +581,9 @@
 #'   percentile), and how the colours spread between them, `"linear"`, `"log"` or `"equal"` (equal shares of the
 #'   values).
 #' @param legend Whether the layer has a legend.
-#' @param popup The columns a click shows, written bare; `TRUE`, every column; `FALSE`, no popup. A click shows the
-#'   row as a table, read from the server (a bundle carries the rows): a column's name, its unit beside it and its
-#'   description behind it, where the data's dictionary or `labels` give them.
+#' @param popup The columns a click shows, written bare, or a variable holding their names; `TRUE`, every column;
+#'   `FALSE`, no popup. A click shows the row as a table, read from the server (a bundle carries the rows): a column's
+#'   name, its unit beside it and its description behind it, where the data's dictionary or `labels` give them.
 #' @param labels The columns' names as the popup shows them, in place of the data's: `c(speed = "Speed (knots)")`. By
 #'   default a data frame's column attributes (`label`, `units`) or a parquet file's own dictionary (an entry of
 #'   data-dict.tidyverse.org's format in its metadata, as [rr_example()]'s files hold), else the column's name.

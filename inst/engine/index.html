@@ -2110,11 +2110,14 @@ const RR = {
     $("groups").insertBefore(d, $("g-base"));
     return d.querySelector(".body");
   },
-  // the page's own route (rr_serve(routes = )), fetched from this page: fetch()'s promise
+  // the page's own route (rr_serve(routes = )), fetched from this page: fetch()'s promise. The route's name, and after
+  // it a path and a query as written ("marks/12?full=1": the route marks, its path "/12", its query full = "1")
   fetch(name, init = {}) {
     if (BUNDLE) return Promise.reject(new Error("rr.fetch(): a bundle has no server (rr.served is false)"));
+    const m = /^([a-z][a-z0-9_-]*)([/?].*)?$/.exec(String(name));
+    if (!m) return Promise.reject(new Error(`rr.fetch(): "${name}" is no route: its name (lower-case letters, digits, _ and -), then a path or a query if any`));
     const json = typeof init.body === "string" ? { "Content-Type": "application/json" } : {};
-    return fetch(`${location.origin}/x/${encodeURIComponent(name)}`,
+    return fetch(`${location.origin}/x/${m[1]}${m[2] ?? ""}`,
                  { ...init, cache: "no-store", headers: { "X-RB-Notes": "1", ...json, ...(init.headers ?? {}) } });
   },
   // a file handed to the reader to save (what a page in a bundle, with no server, keeps)

@@ -136,6 +136,16 @@ test_that("popup, hover and the sidebar", {
     c("vid", "speed", "heading", "time", "behaviour")
   )
   expect_null(layer(rr_point(d, popup = FALSE))$popup)
+  # a variable holding the names, as all_of() it: no warning of tidyselect's, the same columns
+  shown <- c("vid", "speed")
+  expect_no_warning(m2 <- rr_point(d, popup = shown))
+  expect_equal(vapply(m2$layers$points$row(1)$cols, `[[`, "", "name"), c("vid", "speed"))
+  expect_no_warning(m3 <- rr_text(d, label = vid, popup = shown))
+  expect_equal(vapply(m3$layers$text$row(1)$cols, `[[`, "", "name"), c("vid", "speed"))
+  # a column of the same name as a variable is the column
+  vid <- c("speed")
+  expect_equal(vapply(rr_point(d, popup = vid)$layers$points$row(1)$cols, `[[`, "", "name"), "vid")
+  expect_error(rr_point(d, popup = c("nope")), "popup")
 })
 
 test_that("rr_map(data, choose = ) names the columns the reader picks", {

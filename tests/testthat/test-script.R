@@ -81,7 +81,8 @@ test_that("in the page: a script's click reads the row, its route keeps what it 
     rr_point(id = "positions", popup = c(vid, time)) |>
     rr_script(js)
   url <- rr_serve(m, open = FALSE, wait = FALSE,
-                  routes = list(mark = function(req) { marks <<- c(marks, as.integer(req$body$vid)); list(n = length(marks)) }))
+                  routes = list(mark = function(req) { marks <<- c(marks, as.integer(req$body$vid)); list(n = length(marks)) },
+                                echo = function(req) list(path = req$path, a = req$query$a, b = req$query$b)))
   withr::defer(rr_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
   b <- open_page(url)
   expect_true(wait_until(function() isTRUE(page_eval(b, "window.SCRIPT_RAN === true && map.loaded() && map.queryRenderedFeatures({ layers: ['positions-dot'] }).length > 0")), 40))
@@ -97,6 +98,19 @@ test_that("in the page: a script's click reads the row, its route keeps what it 
   expect_length(marks, 1)
   expect_match(page_eval(b, 'document.querySelector(".rr-panel .body").textContent'), sprintf("marked %d, 1 in all", marks))
   expect_false(page_eval(b, '!!document.querySelector(".maplibregl-popup")'))
+  # a route's path and query, after its name as written; anything else no route's. The promise is kept in the page
+  # and polled, as the server answers only while R's own loop runs (chromote's await would hold it)
+  fetched <- function(name) {
+    page_eval(b, sprintf(paste0("window.GOT = undefined; rr.fetch(%s).then(r => r.json())",
+                                ".then(v => window.GOT = { v }, e => window.GOT = { e: String(e) }) && true"), name))
+    wait_until(function() isTRUE(page_eval(b, "window.GOT !== undefined")), 20)
+    page_eval(b, "window.GOT")
+  }
+  expect_identical(fetched('"echo/one/two?a=1&b=" + encodeURIComponent("x y&z")')$v,
+                   list(path = "/one/two", a = "1", b = "x y&z"))
+  expect_identical(fetched('"echo?a=2"')$v, list(path = "", a = "2", b = NULL))
+  expect_match(fetched('"Echo"')$e, "is no route")
+  expect_match(fetched('"../notes"')$e, "is no route")
   # a filter of the script's, then none
   page_eval(b, 'rr.filter("positions", "none", ["==", ["get", "rr_row"], -1]) ?? true')
   expect_true(wait_until(function() identical(page_eval(b, 'map.queryRenderedFeatures({ layers: ["positions-dot"] }).length'), 0L), 20))

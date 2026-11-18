@@ -1,3 +1,14 @@
+# rebelrebel 2026.11.18.4
+
+* `rr.fetch()` reaches a route's `path` and `query`, as `rr_serve()` documents them: the route's name, then a path and
+  a query as written, `rr.fetch("marks/12?full=1")`. It encoded the whole name, so `?`, `=` and `/` went to the server
+  as part of a name no route has (404). A name that is no route's is refused in the page. Found by a page of place
+  names built on rebelrebel.
+* `popup = <a variable holding column names>` no longer draws tidyselect's warning of an external vector: such a
+  variable is taken as `all_of()` it, as the help says it may be given. A column of the same name still wins.
+* `rr_basemaps()`'s help: a style served by the map's own routes is given by a relative address (`"/x/style"`), for
+  the page may be opened as `localhost` or `127.0.0.1`, which a browser holds apart.
+
 # rebelrebel 2026.11.18.3
 
 * `rr_add_layer()` puts an `rr_layer()` of your own into the pipe: `rr_map() |> rr_add_layer(depth, section = "Sea

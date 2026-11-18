@@ -19,7 +19,7 @@ whole of what it may use of the page (the help of `rr_script()` lists it):
 | `setData(id, geojson)` | new data for a layer sent whole |
 | `filter(id, key, expr)` | a filter of your own, kept with the page's choices |
 | `panel(title)` | a box in the sidebar, yours to fill |
-| `fetch(name, init)` | your route `name` on the server; `rr.served` is false in a bundle |
+| `fetch(name, init)` | your route `name` on the server, a path and a query after it if any (`"marks/12?full=1"`); `rr.served` is false in a bundle |
 | `save(name, text)` | a file handed to the reader |
 
 ## A list of marked positions

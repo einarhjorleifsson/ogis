@@ -30,8 +30,10 @@
 #'   `background` (the colour beyond the picture's tiles), `labels` (a MapLibre style whose names are drawn over the
 #'   picture, with its fonts) and `label_layers` (a regular
 #'   expression for which of its layers: by default its symbol layers whose id starts `place_`, `watername_` or
-#'   `waterway_label`), or neither (none). A palette of your own, given to [rr_map()]'s `palettes`, needs
-#'   `id`, `label` and `colors`; with no `use` it is offered to the grid.
+#'   `waterway_label`), or neither (none). A style or tiles served by the map's own server (a route of
+#'   [rr_serve()]'s `routes`) are given by a relative address, `"/x/style"`: the page may be opened as `localhost` or
+#'   as `127.0.0.1`, two origins to a browser, which refuses the other's address. A palette of your own, given to
+#'   [rr_map()]'s `palettes`, needs `id`, `label` and `colors`; with no `use` it is offered to the grid.
 #' @export
 #' @examples
 #' vapply(rr_palettes(), `[[`, "", "id")

@@ -16,8 +16,10 @@
 #' * `rr.filter(id, key, expr)`: a filter of the script's on a layer (a MapLibre expression), kept with the page's own
 #'   choices; `null` removes it.
 #' * `rr.panel(title)`: a box in the sidebar, the script's to fill (its body element).
-#' * `rr.fetch(name, init)`: the map's own route `name` ([rr_serve()]'s `routes`), as `fetch()`; `rr.served` is
-#'   `false` in a bundle, which has no server.
+#' * `rr.fetch(name, init)`: the map's own route `name` ([rr_serve()]'s `routes`), as `fetch()`; after the name, a
+#'   path and a query as written, for the route's `path` and `query` (`"marks/12?full=1"`; a value made safe with
+#'   `encodeURIComponent()`, or the query with `URLSearchParams`). `rr.served` is `false` in a bundle, which has no
+#'   server.
 #' * `rr.save(name, text)`: a file handed to the reader to save, which a page in a bundle keeps in place of a server.
 #'
 #' A map with a script is written into a bundle ([rr_bundle()]) with it, where it runs with no R: `rr.fetch()` is

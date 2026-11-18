@@ -26,9 +26,10 @@
 #'   title and place); a later one for the feature replaces it, and an empty answer withdraws it. [rr_verdicts()]
 #'   reads them. As the notes, answered only for a page opened from this computer, and never in a bundle.
 #' @param routes Opt-in, the map's own routes, for a page's own script ([rr_script()]): a named list of functions,
-#'   each answering `/x/<name>` (and `/x/<name>/...`) from the page by `rr.fetch(name, init)`. A function is given one
-#'   request, a list of `method` (`"GET"`, `"POST"`, ...), `path` (what follows its name), `query` (the address's
-#'   parameters, a named list) and `body` (a JSON body read, else its text, else `NULL`); it returns a list or a data
+#'   each answering `/x/<name>` (and `/x/<name>/...`) from the page by `rr.fetch(name, init)`, the name followed by a
+#'   path and a query if any (`rr.fetch("marks/12?full=1")`). A function is given one request, a list of `method`
+#'   (`"GET"`, `"POST"`, ...), `path` (what follows its name, `"/12"`), `query` (the address's parameters, a named
+#'   list, `list(full = "1")`) and `body` (a JSON body read, else its text, else `NULL`); it returns a list or a data
 #'   frame, sent as JSON, a string, sent as text, or `NULL`, not found; an error is sent as its message. As the notes,
 #'   answered only for a page opened from this computer. Keep each fast: the server answers one request at a time, and
 #'   a slow route holds the tiles behind it (read a file once, and again only when it changes).

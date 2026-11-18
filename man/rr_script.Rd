@@ -33,8 +33,10 @@ where \code{row()} is a promise of the clicked row's columns (those its \code{po
 \item \code{rr.filter(id, key, expr)}: a filter of the script's on a layer (a MapLibre expression), kept with the page's own
 choices; \code{null} removes it.
 \item \code{rr.panel(title)}: a box in the sidebar, the script's to fill (its body element).
-\item \code{rr.fetch(name, init)}: the map's own route \code{name} (\code{\link[=rr_serve]{rr_serve()}}'s \code{routes}), as \code{fetch()}; \code{rr.served} is
-\code{false} in a bundle, which has no server.
+\item \code{rr.fetch(name, init)}: the map's own route \code{name} (\code{\link[=rr_serve]{rr_serve()}}'s \code{routes}), as \code{fetch()}; after the name, a
+path and a query as written, for the route's \code{path} and \code{query} (\code{"marks/12?full=1"}; a value made safe with
+\code{encodeURIComponent()}, or the query with \code{URLSearchParams}). \code{rr.served} is \code{false} in a bundle, which has no
+server.
 \item \code{rr.save(name, text)}: a file handed to the reader to save, which a page in a bundle keeps in place of a server.
 }
 
