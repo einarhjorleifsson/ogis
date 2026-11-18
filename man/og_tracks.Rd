@@ -30,7 +30,8 @@ og_tracks(
 \arguments{
 \item{map}{A map the pipe makes (\code{\link[=og_map]{og_map()}}), or the pings, which start one.}
 
-\item{pings}{The pings: a data frame, a lazy DuckDB table, or a parquet file's path.}
+\item{pings}{The pings: a data frame, a lazy DuckDB table, or a parquet file's path; given here with no map, they
+start one, as in the map's place.}
 
 \item{vessel, time, lon, lat, speed, activity, trip, gear, hours}{The columns, as strings, where their names are not found:
 the vessel, the time, the position, the speed (more than one: the first shown, the others ticked on in the panel),

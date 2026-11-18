@@ -109,3 +109,56 @@ test_that("compare: two columns as lanes, and marks where one has a ping the oth
   expect_error(og_tracks(d, compare = c("trip_id", "nope")), "`compare` is two columns")
   expect_error(og_tracks(d, compare = "trip_id"), "`compare` is two columns")
 })
+
+test_that("the pings named, with no map, start one; something else in the map's place is refused", {
+  skip_if_no_spatial()
+  m <- og_tracks(pings = track_pings(), effort = FALSE)
+  expect_s3_class(m, "og_map")
+  expect_identical(vapply(m$config$layers, `[[`, "", "id"), "pings")
+  expect_identical(vapply(m$config$time$vessels, `[[`, "", "value"), c("A", "B"))
+  expect_error(og_tracks(track_pings(), pings = track_pings()), "`map` is an og_map\\(\\); the pings go to `pings`")
+})
+
+test_that("served: a vessel's id with a space or a plus reaches the effort's tiles and the panel's series", {
+  skip_if_no_spatial()
+  d <- track_pings()
+  d$vid <- unname(c(A = "vessel 4", B = "A+B 7")[d$vid])
+  m <- og_tracks(d)
+  app <- .og_map_app(m)
+  get <- function(path, q = "") app$call(list(REQUEST_METHOD = "GET", PATH_INFO = path, QUERY_STRING = q,
+                                              HTTP_HOST = "localhost:8811"))
+  z <- 9
+  x <- floor((10.1 + 180) / 360 * 2^z)
+  y <- floor((1 - log(tan(56.5 * pi / 180) + 1 / cos(56.5 * pi / 180)) / pi) / 2 * 2^z)
+  tile <- function(q) get(sprintf("/tiles/cells/%d/%d/%d.pbf", z, x, y), q)
+  # the page writes the tiles' query as a form does (URLSearchParams): a space as "+", a plus as "%2B"
+  r <- tile("cells_vid=vessel+4")
+  expect_identical(r$status, 200L)
+  expect_gt(unname(mvt_count(r$body)["cells"]), 0)
+  expect_identical(tile("cells_vid=vessel%204")$status, 200L)
+  expect_identical(tile("cells_vid=A%2BB+7")$status, 200L)
+  expect_identical(tile("cells_vid=vessel+5")$status, 400L)
+  # the panel's series: the page's %20, and a form's "+"
+  vs <- m$config$time$vessels
+  span <- utils::URLencode(vs[[1]]$spans[[2]]$value, reserved = TRUE)
+  expect_identical(get("/time", paste0("v=vessel%204&span=", span))$status, 200L)
+  expect_identical(get("/time", paste0("v=vessel+4&span=", span))$status, 200L)
+  expect_identical(get("/time", paste0("v=A%2BB%207&span=", utils::URLencode(vs[[2]]$spans[[2]]$value, reserved = TRUE)))$status, 200L)
+})
+
+test_that("in the page (served), the effort's tiles come for a vessel whose id has a space", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- track_pings()
+  d$vid <- unname(c(A = "vessel 4", B = "vessel 7")[d$vid])
+  url <- og_serve(og_tracks(d), open = FALSE, wait = FALSE)
+  withr::defer(og_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
+  b <- open_page(paste0(url, "?tv=vessel%204"))
+  # the page asks for the vessel's cells as a form writes it (cells_vid=vessel+4); refused, it draws none (its status
+  # says so only until the next reload of the tiles)
+  drawn <- function() isTRUE(page_eval(b, paste(
+    "typeof map !== 'undefined' && !!map.getSource('cells') && map.getSource('cells').tiles[0].includes('cells_vid=vessel+4')",
+    "&& map.areTilesLoaded() && map.queryRenderedFeatures({ layers: ['cells'] }).length > 0")))
+  expect_true(wait_until(drawn, 40))
+  expect_identical(page_eval(b, "document.getElementById('cells_vid').value"), "vessel 4")
+})

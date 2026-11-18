@@ -623,10 +623,17 @@ og_stop <- function(port = NULL) {
   if (!nzchar(q)) {
     return(list())
   }
-  kv <- strsplit(strsplit(q, "&", fixed = TRUE)[[1]], "=", fixed = TRUE)
+  # read as a form writes it, as the page's URLSearchParams does: "+" a space, a plus "%2B" (URLdecode() leaves "+",
+  # so a vessel "vessel 4" came as "vessel+4" and was refused); a value split at its first "=" only; the bytes UTF-8
+  dec <- function(s) {
+    v <- utils::URLdecode(gsub("+", " ", s, fixed = TRUE))
+    if (validUTF8(v)) Encoding(v) <- "UTF-8"
+    v
+  }
+  kv <- strsplit(q, "&", fixed = TRUE)[[1]]
   stats::setNames(
-    lapply(kv, function(x) utils::URLdecode(if (length(x) > 1) x[2] else "")),
-    vapply(kv, `[`, "", 1)
+    lapply(kv, function(x) dec(if (grepl("=", x, fixed = TRUE)) sub("^[^=]*=", "", x) else "")),
+    vapply(kv, function(x) dec(sub("=.*$", "", x)), "")
   )
 }
 

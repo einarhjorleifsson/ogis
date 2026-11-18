@@ -16,7 +16,8 @@
 #' `TRIP_ID`, `ACTIVITY`, `GEAR`), or given.
 #'
 #' @param map A map the pipe makes ([og_map()]), or the pings, which start one.
-#' @param pings The pings: a data frame, a lazy DuckDB table, or a parquet file's path.
+#' @param pings The pings: a data frame, a lazy DuckDB table, or a parquet file's path; given here with no map, they
+#'   start one, as in the map's place.
 #' @param vessel,time,lon,lat,speed,activity,trip,gear,hours The columns, as strings, where their names are not found:
 #'   the vessel, the time, the position, the speed (more than one: the first shown, the others ticked on in the panel),
 #'   what the vessel was doing (a lane, and the pings' colour), its trip (chosen in the panel, a trip at a time), its
@@ -55,8 +56,11 @@ og_tracks <- function(
   title = "Tracks", ...
 ) {
   if (!inherits(map, "og_map")) {
-    if (!is.null(pings)) stop("og_tracks(): `map` is an og_map(); the pings go to `pings`.", call. = FALSE)
-    pings <- map
+    # the pings as the first argument, or by name with no map; anything else in the map's place is refused
+    if (!is.null(map) && !is.null(pings)) {
+      stop("og_tracks(): `map` is an og_map(); the pings go to `pings`.", call. = FALSE)
+    }
+    if (is.null(pings)) pings <- map
     map <- NULL
   }
   if (is.character(pings) && length(pings) == 1) pings <- .og_data(pings)

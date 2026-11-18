@@ -43,6 +43,9 @@ test_that("a map's own routes answer from its page, as the function returns", {
   r <- route_call(app, "GET", "/x/echo/one/two", query = "a=1")
   expect_identical(r$status, 200L)
   expect_identical(jsonlite::fromJSON(r$body), list(method = "GET", path = "/one/two", a = "1", body = NULL))
+  # the query as a form writes it (URLSearchParams): "+" a space, "%2B" a plus
+  r <- route_call(app, "GET", "/x/echo", query = "a=vessel+4%2B1")
+  expect_identical(jsonlite::fromJSON(r$body)$a, "vessel 4+1")
   r <- route_call(app, "POST", "/x/echo", body = '{"vid": 1131, "names": ["a", "b"]}')
   expect_identical(r$status, 200L)
   expect_identical(seen$body, list(vid = 1131L, names = c("a", "b")))

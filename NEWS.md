@@ -1,3 +1,15 @@
+# ogis 2026.11.18.17
+
+* **A vessel whose id has a space has its effort's cells** in a served page. The page writes the tiles' query as a
+  form does (URLSearchParams), a space as `+`, and the server read the `+` as itself (`utils::URLdecode()`), so it
+  refused every cells tile that named such a vessel ("the server refused tiles (HTTP 400): cells_vid is vessel 4,
+  ..."), and the map stayed empty of effort. The server now reads every query as a form writes it: `+` a space, `%2B`
+  a plus, the bytes as UTF-8, a value split at its first `=` only; the tiles, the time panel's series, a fit's view
+  and a map's own routes alike (`og_serve(routes = )`: a `+` written in a route's query is now a space; write `%2B`).
+  A bundle was not touched: its page reads its own queries.
+* **`og_tracks(pings = x)` with no map starts one**, as `og_tracks(x)` does, where it stopped with "`map` is an
+  og_map(); the pings go to `pings`". Something else in the map's place with `pings` given is still refused.
+
 # ogis 2026.11.18.16
 
 * **Vessel tracks in one line**, `og_tracks()` (preparation for the EM4SSF hackathon, Ancona, December 2026: ogis as a

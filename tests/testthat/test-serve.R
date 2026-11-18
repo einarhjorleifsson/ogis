@@ -35,3 +35,12 @@ test_that("a map from data carries no port unless its first call gives one", {
   expect_null(attr(og_map(df) |> og_point(), "port"))
   expect_equal(attr(og_time(df, speed, time = "time_stamp", by = vessel_id, port = 9001), "port"), 9001L)
 })
+
+test_that("a query is read as a form writes it: a plus a space, %2B a plus, in UTF-8", {
+  q <- .og_map_query("a=vessel+4&b=vessel%204&c=A%2BB&d=%C3%9E%C3%B3r+1&e=&f&g%20h=1")
+  expect_identical(q, list(a = "vessel 4", b = "vessel 4", c = "A+B", d = "Þór 1", e = "", f = "", `g h` = "1"))
+  expect_identical(Encoding(q$d), "UTF-8")
+  expect_identical(.og_map_query("?a=1"), list(a = "1"))
+  expect_identical(.og_map_query(""), list())
+  expect_identical(.og_map_query(NULL), list())
+})
