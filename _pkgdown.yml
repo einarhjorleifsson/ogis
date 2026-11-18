@@ -16,6 +16,12 @@ reference:
   contents:
   - og_point
   - og_path
+- title: "The sea floor"
+  desc: >
+    A depth model's depth in colour, its relief and its contours, made in the page from its tiles: an MBTiles file, a
+    grid, or one named once by OGIS_DEPTH.
+  contents:
+  - og_relief
 - title: "Time"
   desc: >
     A panel under the map: a group's rows over time, linked to the map.

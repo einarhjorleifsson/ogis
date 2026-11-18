@@ -612,7 +612,7 @@ test_that("a dem layer: elevation images from an MBTiles file, served as images 
   expect_identical(tiles(1, 0, 0), as.raw(1:4))
   expect_null(tiles(1, 0, 1))
   expect_equal(attr(tiles, "bounds"), c(-30, 60, -5, 70))
-  expect_error(og_tiles_mbtiles(tempfile()), "path of an MBTiles file")
+  expect_error(og_tiles_mbtiles(tempfile()), "no such file")
 
   shade <- list(list(id = "depth-shade", type = "hillshade"))
   l <- og_layer("depth", "dem", tiles = tiles, style = shade)

@@ -197,8 +197,22 @@ og_tiles_table <- function(
 #' A tile function for an [og_layer()] that reads its tiles from an MBTiles file (SQLite), such as the image tiles
 #' of elevations a dem layer draws. The file is opened once, read-only, and stays open while the function lives.
 #'
+#' @section A depth model named once: A depth model kept in its own place on each computer, such as one shared
+#'   between colleagues, can be named once in the environment variable `OGIS_DEPTH` rather than in every script. Put
+#'   a line in your `.Renviron` (`usethis::edit_r_environ()` opens it), a path on Windows written with forward
+#'   slashes, and restart R:
+#'
+#'   ```
+#'   OGIS_DEPTH=D:/data/depth.mbtiles
+#'   ```
+#'
+#'   `og_tiles_mbtiles()` with no `file` then reads that file, and says so once a session; a `file` given wins. A
+#'   script written so runs on each computer with that computer's copy. A bundle ([og_bundle()]) holds the tiles
+#'   themselves and needs no such variable where it is opened.
+#'
 #' @param file An MBTiles file: a `tiles` table (`zoom_level`, `tile_column`, `tile_row` in the TMS order, from the
-#'   south, and `tile_data`) and a `metadata` table of `name` and `value`.
+#'   south, and `tile_data`) and a `metadata` table of `name` and `value`. By default (`NULL`, or `""`), the file named
+#'   by the environment variable `OGIS_DEPTH`.
 #' @return A function `function(z, x, y)` (`y` from the north, as the page asks) returning a tile's bytes, or `NULL`
 #'   where the file has none; with the file's `format`, `bounds`, `minzoom`, `maxzoom`, `encoding` and `tile_size` as
 #'   attributes where its metadata give them, which [og_layer()] takes for a dem layer, and `source`, the file's
@@ -206,27 +220,46 @@ og_tiles_table <- function(
 #' @seealso [og_layer()]
 #' @export
 #' @examples
-#' if (requireNamespace("RSQLite", quietly = TRUE)) {
-#'   f <- tempfile(fileext = ".mbtiles")
-#'   con <- DBI::dbConnect(RSQLite::SQLite(), f)
-#'   DBI::dbWriteTable(con, "metadata", data.frame(
-#'     name = c("format", "encoding", "bounds", "minzoom", "maxzoom"),
-#'     value = c("png", "terrarium", "-30,60,-5,70", "0", "1")
-#'   ))
-#'   DBI::dbExecute(con, paste("CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER,",
-#'                             "tile_row INTEGER, tile_data BLOB)"))
-#'   DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
-#'   DBI::dbDisconnect(con)
-#'   tiles <- og_tiles_mbtiles(f)
-#'   tiles(1, 0, 0) # the north-west tile at zoom 1, row 1 counted from the south
-#'   attributes(tiles)[c("format", "encoding", "bounds")]
-#' }
-og_tiles_mbtiles <- function(file) {
-  if (!requireNamespace("RSQLite", quietly = TRUE)) {
-    stop("og_tiles_mbtiles() needs the RSQLite package.", call. = FALSE)
+#' f <- tempfile(fileext = ".mbtiles")
+#' con <- DBI::dbConnect(RSQLite::SQLite(), f)
+#' DBI::dbWriteTable(con, "metadata", data.frame(
+#'   name = c("format", "encoding", "bounds", "minzoom", "maxzoom"),
+#'   value = c("png", "terrarium", "-30,60,-5,70", "0", "1")
+#' ))
+#' DBI::dbExecute(con, paste("CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER,",
+#'                           "tile_row INTEGER, tile_data BLOB)"))
+#' DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
+#' DBI::dbDisconnect(con)
+#' tiles <- og_tiles_mbtiles(f)
+#' tiles(1, 0, 0) # the north-west tile at zoom 1, row 1 counted from the south
+#' attributes(tiles)[c("format", "encoding", "bounds")]
+og_tiles_mbtiles <- function(file = NULL) {
+  from_env <- is.null(file) || (is.character(file) && length(file) == 1 && !is.na(file) && !nzchar(file))
+  if (from_env) {
+    file <- Sys.getenv("OGIS_DEPTH")
+    if (!nzchar(file)) {
+      stop(paste(
+        "og_tiles_mbtiles() needs `file`, the path of an MBTiles file, or one named by the environment variable",
+        "OGIS_DEPTH: a line `OGIS_DEPTH=<path>` in your .Renviron (usethis::edit_r_environ()), then restart R."
+      ), call. = FALSE)
+    }
   }
-  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+  if (!is.character(file) || length(file) != 1 || is.na(file)) {
     stop("`file` is the path of an MBTiles file.", call. = FALSE)
+  }
+  file <- path.expand(file)
+  whose <- if (from_env) sprintf("The environment variable OGIS_DEPTH names %s", file) else sprintf("`file` (%s)", file)
+  if (!file.exists(file) || dir.exists(file)) {
+    stop(sprintf("%s: no such file.", whose), call. = FALSE)
+  }
+  # an MBTiles file is SQLite: a GeoTIFF or any other file is refused here, not by SQLite's "file is not a database"
+  # at the first query
+  if (!identical(readBin(file, "raw", 16), c(charToRaw("SQLite format 3"), as.raw(0)))) {
+    stop(sprintf("%s: not an MBTiles file (SQLite). A grid of elevations goes to og_tiles_dem().", whose), call. = FALSE)
+  }
+  if (from_env) {
+    rlang::inform(sprintf("Tiles from %s (OGIS_DEPTH).", normalizePath(file)), .frequency = "once",
+                  .frequency_id = paste0("ogis_depth:", normalizePath(file)))
   }
   con <- DBI::dbConnect(RSQLite::SQLite(), file, flags = RSQLite::SQLITE_RO)
   md <- DBI::dbGetQuery(con, "SELECT name, value FROM metadata")

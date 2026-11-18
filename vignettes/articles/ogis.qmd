@@ -103,21 +103,58 @@ og_map() |>
           name = "Tows")
 ```
 
-## A layer of your own
+## The sea floor
 
-What the layer functions do not draw, an `og_layer()` does: elevations as colours and relief, contours, tiles of your
-own. `og_add_layer()` puts one into the pipe, in a box of the sidebar of its own. Here the depth of the Danish waters
-in colour, made into tiles from a grid of elevations by `og_tiles_dem()`, under the harbours:
+`og_relief()` draws a depth model's depth in colour and its relief shaded; `og_contour()` the lines of equal depth,
+the charts' depths a little heavier and labelled, thinner lines between. Here the Danish waters' depths, made into
+tiles once by `og_tiles_dem()` and given to both, under the harbours:
 
 ```{r}
-depth <- og_layer(
+depth <- og_tiles_dem(og_example("dansk_relief"), maxzoom = 6)
+og_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
+  og_relief(depth) |>
+  og_contour(depth) |>
+  og_polygon(og_example("dansk_harbours"), fill = NA, colour = "#b2182b",
+             name = "Harbours")
+```
+
+The arguments are where the map starts; the page's controls, folded under ▸ beside each layer's name, change the
+colours, the shading and the lines. The depth is grey at 75 % by default, quiet under the map's own data; a map whose
+subject is the sea floor might start otherwise:
+
+```{r}
+#| eval: false
+og_relief(depth, palette = "seabed", opacity = 100, limits = c(5, 60), shade = 0.8)
+og_contour(depth, major = c(10, 20, 30, 50), minor = FALSE)
+```
+
+A depth model kept as an MBTiles file in its own place on each computer can be named once there, by a line in
+`.Renviron` (`usethis::edit_r_environ()` opens it), so a script shared between colleagues carries no path:
+
+```
+OGIS_DEPTH=D:/data/depth.mbtiles
+```
+
+```{r}
+#| eval: false
+og_map() |> og_relief() |> og_contour() # the model OGIS_DEPTH names
+```
+
+## A layer of your own
+
+What the layer functions do not draw, an `og_layer()` does, in MapLibre's own terms: a style of your own on
+elevations, contours or tiles of your own. `og_add_layer()` puts one into the pipe, in a box of the sidebar of its own.
+Here the Danish depths again, in colour by a layer written out in full, as `og_relief()` writes it:
+
+```{r}
+own <- og_layer(
   "depth", "dem", label = "Depth",
   tiles = og_tiles_dem(og_example("dansk_relief"), maxzoom = 6),
   style = list(list(id = "depth-colour", type = "color-relief")),
   colour = list(palette = "seabed", opacity = 75)
 )
 og_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
-  og_add_layer(depth, section = "Sea floor") |>
+  og_add_layer(own, section = "Sea floor") |>
   og_polygon(og_example("dansk_harbours"), fill = NA, colour = "#b2182b",
              name = "Harbours")
 ```

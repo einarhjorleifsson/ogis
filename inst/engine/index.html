@@ -44,6 +44,13 @@
   .info-btn { border: 0; background: none; color: var(--bar); cursor: pointer; padding: 0 2px; font-size: 15px; }
   .info { color: #333; background: #f3f5f7; border-radius: 4px; padding: 6px 8px; margin: 2px 0 6px; }
   .layer.off .when-on { display: none; }
+  /* a layer whose controls open folded (og_relief(), og_contour()): ▸ beside its name shows them; a colour's scale bar
+     and a legend show either way */
+  .fold-btn { border: 0; background: none; color: var(--bar); cursor: pointer; padding: 0 4px; font-size: 16px; line-height: 1; }
+  .fold-btn::before { content: "▸"; display: inline-block; transition: transform .15s; }
+  .layer:not(.folded) .fold-btn::before { transform: rotate(90deg); }
+  .layer.folded .when-on:not(.swatches) > :not(.legend) { display: none; }
+  .layer.off .fold-btn { visibility: hidden; }
   .sub { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin: 10px 0 2px; }
   .row { display: flex; align-items: center; gap: 6px; margin: 5px 0; }
   .row[hidden] { display: none; }
@@ -244,6 +251,7 @@ const ENGINE = 7;
 const ENGINE_TEXTS = {
   menu: "Layers and filters", close: "Close", copyLink: "Copy a link to this view", copied: "link copied",
   notCopied: "the browser refused to copy the link", infoTip: "About this layer", gBase: "Base map", gAbout: "About",
+  foldTip: "Show or hide its settings",
   shMethod: "Shading", shStandard: "standard", shBasic: "basic", shCombined: "combined", shIgor: "igor (soft)",
   shMulti: "several lights", shDirection: "Light from", shAltitude: "Light height", shIntensity: "Intensity",
   shShadow: "Shadow", shHighlight: "Light",
@@ -1030,6 +1038,15 @@ function layerRow(l) {
   if (own) row.insertAdjacentHTML("beforeend", `<div class="when-on choose own">${chooseHtml(own)}</div>`);
   if (l.legend || l.variants?.options.some(o => o.legend))
     row.insertAdjacentHTML("beforeend", `<div class="when-on swatches" id="${l.id}-legend">${legendHtml(l.legend ?? [])}</div>`);
+  // controls folded under the layer's name (a config's `fold`: og_relief(), og_contour()), where it has any: ▸ shows
+  // them; the scale bar and a legend show either way
+  if (l.fold && row.querySelector(".when-on:not(.swatches) > :not(.legend)")) {
+    row.classList.add("folded");
+    const b = document.createElement("button");
+    b.className = "fold-btn"; b.id = `${l.id}-fold`; b.dataset.tt = "foldTip"; b.setAttribute("aria-expanded", "false");
+    b.addEventListener("click", () => b.setAttribute("aria-expanded", String(!row.classList.toggle("folded"))));
+    row.querySelector(".head .info-btn").before(b);
+  }
   return row;
 }
 for (const g of CONFIG.groups) {
@@ -1532,11 +1549,23 @@ function addLayer(l, meta) {
     // the lines are made in the browser from the elevation tiles, at the layer's intervals by zoom
     l.tileUrl = layerTiles(l, l.format ?? "png", meta.layers?.[l.id]?.v ?? meta.engine);  // its fit reads them too
     loadContour().then(mlcontour => {
-      // in a bundle on the page's own thread, its tiles read from the bundle where it would fetch them
+      // on the page's own thread, where its decoding can be reached (below); in a bundle its tiles read from the bundle
+      // where it would fetch them
       const dem = new mlcontour.DemSource({
         url: layerTiles(l, l.format ?? "png", meta.layers?.[l.id]?.v ?? meta.engine),
-        encoding: l.encoding ?? "terrarium", maxzoom: l.maxzoom ?? 12, worker: !BUNDLE
+        encoding: l.encoding ?? "terrarium", maxzoom: l.maxzoom ?? 12, worker: false
       });
+      // a value at nodata (0 by default: land, and the sea beyond a grid's edge) is no elevation to the lines:
+      // maplibre-contour draws none through a missing value (NaN), where the level 0 drew every depth between a grid's
+      // edge in open water and 0 as a wall of lines along the edge, and stacked lines along the coast. The colours and
+      // the shading, drawn by MapLibre from the same tiles, are as they were
+      const nodata = (BUNDLE ? BUNDLE.fit : CONFIG.fit)?.nodata ?? 0, decode = dem.manager.decodeImage;
+      if (typeof decode === "function") dem.manager.decodeImage = (blob, encoding, abort) =>
+        decode.call(dem.manager, blob, encoding, abort).then(t => {
+          const e = t?.data;
+          if (e) for (let i = 0; i < e.length; i++) if (e[i] === nodata) e[i] = NaN;
+          return t;
+        });
       // a tile outside the layer's bounds (maplibre-contour asks for its neighbours) is not tried as a file; it, and one
       // the bundle does not hold, is level at nodata, as a server answers: maplibre-contour draws no lines in a tile one
       // of whose eight neighbours is refused, so a grid's edge tiles had none

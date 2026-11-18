@@ -4,11 +4,12 @@
 \alias{og_tiles_mbtiles}
 \title{Tiles from an MBTiles file}
 \usage{
-og_tiles_mbtiles(file)
+og_tiles_mbtiles(file = NULL)
 }
 \arguments{
 \item{file}{An MBTiles file: a \code{tiles} table (\code{zoom_level}, \code{tile_column}, \code{tile_row} in the TMS order, from the
-south, and \code{tile_data}) and a \code{metadata} table of \code{name} and \code{value}.}
+south, and \code{tile_data}) and a \code{metadata} table of \code{name} and \code{value}. By default (\code{NULL}, or \code{""}), the file named
+by the environment variable \code{OGIS_DEPTH}.}
 }
 \value{
 A function \verb{function(z, x, y)} (\code{y} from the north, as the page asks) returning a tile's bytes, or \code{NULL}
@@ -20,22 +21,34 @@ path, by which \code{\link[=og_bundle]{og_bundle()}} writes the tiles of layers 
 A tile function for an \code{\link[=og_layer]{og_layer()}} that reads its tiles from an MBTiles file (SQLite), such as the image tiles
 of elevations a dem layer draws. The file is opened once, read-only, and stays open while the function lives.
 }
-\examples{
-if (requireNamespace("RSQLite", quietly = TRUE)) {
-  f <- tempfile(fileext = ".mbtiles")
-  con <- DBI::dbConnect(RSQLite::SQLite(), f)
-  DBI::dbWriteTable(con, "metadata", data.frame(
-    name = c("format", "encoding", "bounds", "minzoom", "maxzoom"),
-    value = c("png", "terrarium", "-30,60,-5,70", "0", "1")
-  ))
-  DBI::dbExecute(con, paste("CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER,",
-                            "tile_row INTEGER, tile_data BLOB)"))
-  DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
-  DBI::dbDisconnect(con)
-  tiles <- og_tiles_mbtiles(f)
-  tiles(1, 0, 0) # the north-west tile at zoom 1, row 1 counted from the south
-  attributes(tiles)[c("format", "encoding", "bounds")]
+\section{A depth model named once}{
+ A depth model kept in its own place on each computer, such as one shared
+between colleagues, can be named once in the environment variable \code{OGIS_DEPTH} rather than in every script. Put
+a line in your \code{.Renviron} (\code{usethis::edit_r_environ()} opens it), a path on Windows written with forward
+slashes, and restart R:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{OGIS_DEPTH=D:/data/depth.mbtiles
+}\if{html}{\out{</div>}}
+
+\code{og_tiles_mbtiles()} with no \code{file} then reads that file, and says so once a session; a \code{file} given wins. A
+script written so runs on each computer with that computer's copy. A bundle (\code{\link[=og_bundle]{og_bundle()}}) holds the tiles
+themselves and needs no such variable where it is opened.
 }
+
+\examples{
+f <- tempfile(fileext = ".mbtiles")
+con <- DBI::dbConnect(RSQLite::SQLite(), f)
+DBI::dbWriteTable(con, "metadata", data.frame(
+  name = c("format", "encoding", "bounds", "minzoom", "maxzoom"),
+  value = c("png", "terrarium", "-30,60,-5,70", "0", "1")
+))
+DBI::dbExecute(con, paste("CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER,",
+                          "tile_row INTEGER, tile_data BLOB)"))
+DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
+DBI::dbDisconnect(con)
+tiles <- og_tiles_mbtiles(f)
+tiles(1, 0, 0) # the north-west tile at zoom 1, row 1 counted from the south
+attributes(tiles)[c("format", "encoding", "bounds")]
 }
 \seealso{
 \code{\link[=og_layer]{og_layer()}}
