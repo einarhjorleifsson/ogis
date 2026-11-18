@@ -1,4 +1,18 @@
 # Browser checks: a page opened in headless Chrome (chromote), skipped where there is none, and on CRAN
+
+# Chrome's own temporary files (com.google.Chrome.*) in a folder inside R's session folder, which R removes as it ends:
+# left in the system's, R CMD check --as-cran reports them as detritus (Ubuntu, CI). Chrome starts with the first page
+# a test opens and takes the folder from its environment; restored when the tests end
+local({
+  # during a test run only: load_all() sources the helpers too, where there is no run to restore it after
+  run <- tryCatch(testthat::teardown_env(), error = function(e) NULL)
+  if (!is.null(run)) {
+    d <- file.path(tempdir(), "chrome-tmp")
+    dir.create(d, showWarnings = FALSE)
+    withr::local_envvar(c(TMPDIR = d, TMP = d, TEMP = d), .local_envir = run)
+  }
+})
+
 skip_if_no_chrome <- function() {
   skip_on_cran()
   skip_if_not_installed("chromote")

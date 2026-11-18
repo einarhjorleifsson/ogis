@@ -64,13 +64,14 @@ test_that("in the page, a row's text shows from the first whole zoom at or above
     og_bundle(m, dir, overwrite = TRUE)
     b <- open_page(paste0(serve_dir(dir), "index.html"))
     d <- names_data()
-    # whether a name is drawn with the view on it at a zoom
+    # whether a name is drawn with the view on it at a zoom: asked once MapLibre is idle (its tiles loaded and its
+    # labels placed, their fade done); a fixed wait after map.loaded() came too soon on a slower runner (Ubuntu, CI)
     shown <- function(name, zoom) {
       i <- match(name, d$name)
-      page_eval(b, sprintf("map.jumpTo({ center: [%f, %f], zoom: %s }) && true", d$lon[i], d$lat[i], zoom))
-      wait_until(function() isTRUE(page_eval(b, "map.loaded()")), 20)
-      later::run_now(0.3)
-      wait_until(function() isTRUE(page_eval(b, "map.loaded()")), 20)
+      page_eval(b, sprintf(paste0("(window.IDLE = false, map.once('idle', () => window.IDLE = true), ",
+                                  "map.jumpTo({ center: [%f, %f], zoom: %s }), map.triggerRepaint(), true)"),
+                           d$lon[i], d$lat[i], zoom))
+      expect_true(wait_until(function() isTRUE(page_eval(b, "window.IDLE")), 30), info = paste(name, zoom))
       name %in% unlist(page_eval(b, 'map.queryRenderedFeatures({ layers: ["names-text"] }).map(f => f.properties.name)'))
     }
     expect_true(wait_until(function() isTRUE(page_eval(b, 'map.loaded() && !!map.getLayer("names-text")')), 30))
