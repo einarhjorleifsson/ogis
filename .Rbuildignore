@@ -11,3 +11,5 @@
 ^vignettes/\.quarto$
 ^vignettes/\.gitignore$
 ^tools$
+^AGENTS\.md$
+^CLAUDE\.md$
