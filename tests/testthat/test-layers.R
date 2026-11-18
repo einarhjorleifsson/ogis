@@ -15,7 +15,7 @@ test_that("every layer function takes its arguments in the plan's one order", {
     "colour", "fill", "size", "stroke", "linewidth", "opacity", "whole", "thin", "label",
     "angle", "priority", "fontface", "offset", "overlap", # a text's own looks
     "palette", "limits", "breaks", "stretch", "legend",
-    "popup", "labels", "codes", "hover", "choose",
+    "popup", "labels", "codes", "hover", "choose", "search",
     "name", "id", "info", "section", "visible",
     "minzoom", "maxzoom", "..."
   )

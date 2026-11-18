@@ -28,6 +28,7 @@ rr_point(
   codes = NULL,
   hover = NULL,
   choose = NULL,
+  search = NULL,
   name = NULL,
   id = NULL,
   info = NULL,
@@ -54,6 +55,7 @@ rr_line(
   codes = NULL,
   hover = NULL,
   choose = NULL,
+  search = NULL,
   name = NULL,
   id = NULL,
   info = NULL,
@@ -84,6 +86,7 @@ rr_segment(
   codes = NULL,
   hover = NULL,
   choose = NULL,
+  search = NULL,
   name = NULL,
   id = NULL,
   info = NULL,
@@ -111,6 +114,7 @@ rr_polygon(
   codes = NULL,
   hover = NULL,
   choose = NULL,
+  search = NULL,
   name = NULL,
   id = NULL,
   info = NULL,
@@ -145,6 +149,7 @@ rr_text(
   codes = NULL,
   hover = NULL,
   choose = NULL,
+  search = NULL,
   name = NULL,
   id = NULL,
   info = NULL,
@@ -221,6 +226,12 @@ values, else a list to show one at a time), a fraction, a date or a time as a ra
 data's dictionary declares otherwise (as for \code{\link[=rr_map]{rr_map()}}); ‹ and › step through either. Several are linked:
 each offers only the values the others leave. For choices that drive every layer with the column, give \code{choose}
 to \code{\link[=rr_map]{rr_map()}}.}
+
+\item{search}{A column written bare (\code{search = name}), its values as text, for the page's \emph{Find} box: whole
+matches first, then values it begins, then any holding it, case and accents aside, each kind nearest the view's
+centre first, with their count; a click on one takes the map there, at zoom 10 or nearer (a text's own start zoom
+where it has one), turns its layer on and shows its row. The column's texts and places go to the page on its first
+search (a bundle carries them); a layer of more than 500,000 rows takes none.}
 
 \item{name, id, info}{The layer's name in the sidebar, its id, and the text behind its ⓘ. The id (lower-case letters,
 digits and _) is the key the page's address and a page's own script know the layer by, its styles \verb{<id>-dot},

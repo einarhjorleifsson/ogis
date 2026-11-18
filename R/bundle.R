@@ -286,6 +286,20 @@ rr_bundle <- function(
     rows_written <- c(rows_written, lc$id)
   }
 
+  # a layer's search: its rows' texts and places
+  for (lc in config$layers) {
+    find <- layers[[lc$id]]$search
+    if (is.null(find)) {
+      next
+    }
+    dir.create(file.path(dir, "data"), showWarnings = FALSE)
+    writeLines(
+      enc2utf8(sprintf('RB_BUNDLE("data/%s_search",%s);', lc$id, .rr_search_json(find))),
+      file.path(dir, "data", paste0(lc$id, "_search.js")),
+      useBytes = TRUE
+    )
+  }
+
   bundle <- list(
     meta = list(engine = .rr_map_engine, layers = Filter(Negate(is.null), .rr_map_metas(layers[keep]))),
     tiles = folder,

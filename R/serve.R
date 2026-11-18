@@ -396,6 +396,15 @@ rr_stop <- function(port = NULL) {
       }
       return(reply(200L, json(v), "application/json; charset=utf-8"))
     }
+    # a layer's search (`search = `): its rows' texts and places, read on the page's first search
+    sr <- regmatches(path, regexec("^/search/([a-z][a-z0-9_]*)$", path))[[1]]
+    if (length(sr) == 2) {
+      find <- layers[[sr[2]]]$search
+      if (is.null(find)) {
+        return(reply(404L, "no search for this layer"))
+      }
+      return(reply(200L, .rr_search_json(find), "application/json; charset=utf-8"))
+    }
     f <- regmatches(path, regexec("^/fit/([a-z][a-z0-9_]*)$", path))[[1]]
     if (length(f) == 2) {
       fit <- layers[[f[2]]]$fit

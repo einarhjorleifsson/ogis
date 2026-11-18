@@ -90,6 +90,19 @@ rr_map(positions, order = "tows") |>
           name = "Tows", section = "Reference")
 ```
 
+## Finding a row
+
+`search` names a column whose values the page's *Find* box, above the sidebar's boxes, looks through: whole matches
+first, then values that begin with what is typed, then any that hold it, case and accents aside, each kind nearest the
+view's centre first. A click on one takes the map there and shows its row. Here the tows by their id; type `4906`:
+
+```{r}
+#| out-height: 400px
+rr_map() |>
+  rr_line(rr_example("trawlsurveytows"), popup = id.lgs, search = id.lgs,
+          name = "Tows")
+```
+
 ## A layer of your own
 
 What the layer functions do not draw, an `rr_layer()` does: elevations as colours and relief, contours, tiles of your

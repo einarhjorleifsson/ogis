@@ -1,3 +1,14 @@
+# rebelrebel 2026.11.18.8
+
+* A search over a layer's column: `search = name` on `rr_point()`, `rr_line()`, `rr_segment()`, `rr_polygon()` and
+  `rr_text()` puts a *Find* box above the sidebar's boxes. It ranks whole matches first, then values that begin with
+  what is typed, then any that hold it, case and accents aside, each kind nearest the view's centre first, and says
+  how many there are when not all 40 are listed. A click on one (or Enter) takes the map there, at zoom 10 or nearer
+  (a text's own start zoom where it has one), turns its layer on and shows its row as a click would (a label MapLibre
+  left out, its text). The column's values and each row's place (a point's own, a point on a shape, a segment's
+  middle) are read by the page on its first search, from the server (`/search/<id>`) or the bundle; a layer of more
+  than 500,000 rows takes none. "Get started" finds the tows by their ids.
+
 # rebelrebel 2026.11.18.7
 
 * `rr_point(stroke = )`: each point drawn as a ring of its colour, `stroke` pixels wide, hollow, `size` the diameter

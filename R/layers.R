@@ -251,8 +251,11 @@
   }
   rows_nm <- .rr_name(con, "rr_rows_")
   DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT row_number() OVER () AS rr_row, * FROM (%s)", rows_nm, src))
+  # a search over a text column: each row's text and place, which the page reads on its first search
+  find <- .rr_search_index(con, rows_nm, a$search, ctx, mark, a, tx$zcol)
   props <- unique(c(
-    if (length(cols)) paste0("rr_c", seq_along(cols)), if (length(pop)) "rr_row", title, hov, lab, tx$props,
+    if (length(cols)) paste0("rr_c", seq_along(cols)), if (length(pop) || !is.null(find)) "rr_row", title, hov, lab,
+    tx$props,
     intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
     if (!is.null(t_s)) c("rr_t", ctx$by)
   ))
@@ -353,6 +356,10 @@
   if (length(pop)) {
     layer$row <- .rr_row_reader(con, rows_nm, pop, meta)
   }
+  if (!is.null(find)) {
+    layer$config$search <- TRUE
+    layer$search <- find
+  }
   s$state$layer_section[[id]] <- a$section
   .rr_hold(.rr_quick_map(s, layer, sent$table))
 }
@@ -380,6 +387,45 @@
   }
   tiles <- rr_tiles_table(x, geometry = geometry, lon = lon, lat = lat, properties = properties, thin = thin)
   list(kind = "vector", tiles = tiles, data = NULL, table = list(con = .rr_con_for(x), name = attr(tiles, "table")))
+}
+
+# A layer's search (`search = name`): each row's text, its place (a point's own, a point on a shape, a segment's
+# middle), its number and, for a text with a start zoom of its own, that zoom. Read by the page on its first search,
+# so it is kept to a size a page reads at once
+.rr_search_rows <- 500000
+.rr_search_index <- function(con, rows_nm, q, ctx, mark, a, zcol = NULL) {
+  col <- .rr_select(q, ctx$cols, "search")
+  if (!length(col)) {
+    return(NULL)
+  }
+  if (length(col) != 1) {
+    stop("`search` is one column, written bare: `search = name`.", call. = FALSE)
+  }
+  qi <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
+  xy <- if (mark == "segment") {
+    c(sprintf("(%s + %s) / 2", qi(ctx$lon), qi(a$lon_end)), sprintf("(%s + %s) / 2", qi(ctx$lat), qi(a$lat_end)))
+  } else if (!is.null(ctx$geometry)) {
+    p <- sprintf("ST_PointOnSurface(%s)", .rr_geom_sql(con, sprintf("SELECT * FROM %s", rows_nm), ctx$geometry))
+    c(sprintf("ST_X(%s)", p), sprintf("ST_Y(%s)", p))
+  } else {
+    c(qi(ctx$lon), qi(ctx$lat))
+  }
+  from <- sprintf("FROM %s WHERE %s IS NOT NULL AND %s IS NOT NULL", rows_nm, qi(col), xy[1])
+  n <- DBI::dbGetQuery(con, paste("SELECT count(*) AS n", from))$n
+  if (n > .rr_search_rows) {
+    stop(sprintf("`search`: %s rows, more than the %s a page searches at once; search a smaller table, or a column of fewer rows.",
+                 format(n, big.mark = ","), format(.rr_search_rows, big.mark = ",")), call. = FALSE)
+  }
+  d <- DBI::dbGetQuery(con, sprintf(
+    "SELECT CAST(%s AS VARCHAR) AS t, round(%s, 5) AS x, round(%s, 5) AS y, rr_row AS r%s %s ORDER BY rr_row",
+    qi(col), xy[1], xy[2], if (is.null(zcol)) "" else sprintf(", CAST(%s AS DOUBLE) AS z", qi(zcol)), from
+  ))
+  Filter(Negate(is.null), list(column = col, t = d$t, x = d$x, y = d$y, r = as.integer(d$r), z = d$z))
+}
+
+# A search's index as the page reads it: arrays, one a row
+.rr_search_json <- function(find) {
+  .rr_map_json(lapply(find[c("t", "x", "y", "r", "z")[c("t", "x", "y", "r", "z") %in% names(find)]], I))
 }
 
 # `fill = NA`: an argument written as NA
@@ -592,6 +638,11 @@
 #'   the least, 2 pixels, until the zoom at which most points lie that far apart, then doubling with each zoom in, as
 #'   a size on the ground does, up to the most, 8; `size = c(1, 12)` gives other bounds, one number a size that
 #'   stays.
+#' @param search A column written bare (`search = name`), its values as text, for the page's *Find* box: whole
+#'   matches first, then values it begins, then any holding it, case and accents aside, each kind nearest the view's
+#'   centre first, with their count; a click on one takes the map there, at zoom 10 or nearer (a text's own start zoom
+#'   where it has one), turns its layer on and shows its row. The column's texts and places go to the page on its first
+#'   search (a bundle carries them); a layer of more than 500,000 rows takes none.
 #' @param stroke For `rr_point()`, a ring: its width in pixels. Each point is drawn as a ring of its colour, hollow,
 #'   `size` the diameter inside it; a click on it or inside it shows the row.
 #' @param linewidth A line's width (an area's outline), in pixels.
@@ -668,7 +719,7 @@ rr_point <- function(
   map, data = NULL, lon = NULL, lat = NULL,
   colour = NULL, size = NULL, stroke = NULL, opacity = NULL, whole = NULL, thin = TRUE,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
-  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
+  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL, search = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
@@ -676,7 +727,7 @@ rr_point <- function(
     lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), stroke = stroke, opacity = opacity,
     whole = whole, thin = thin,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
-    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
+    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_point")
   .rr_scope()
@@ -689,14 +740,14 @@ rr_line <- function(
   map, data = NULL,
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
-  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
+  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL, search = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   a <- .rr_mark_args(list(
     colour = rlang::enquo(colour), linewidth = rlang::enquo(linewidth), opacity = opacity, whole = whole,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
-    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
+    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_line")
   .rr_scope()
@@ -709,7 +760,7 @@ rr_segment <- function(
   map, data = NULL, lon = NULL, lat = NULL, lon_end, lat_end,
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
-  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
+  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL, search = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
@@ -718,7 +769,7 @@ rr_segment <- function(
     lat_end = .rr_one_col(rlang::enquo(lat_end), "lat_end"),
     colour = rlang::enquo(colour), linewidth = rlang::enquo(linewidth), opacity = opacity, whole = whole,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
-    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
+    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_segment")
   .rr_scope()
@@ -731,7 +782,7 @@ rr_polygon <- function(
   map, data = NULL,
   colour = NULL, fill = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
-  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
+  popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL, search = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
@@ -739,7 +790,7 @@ rr_polygon <- function(
     colour = rlang::enquo(colour), fill = rlang::enquo(fill), linewidth = rlang::enquo(linewidth),
     opacity = opacity, whole = whole, palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
-    choose = rlang::enquo(choose), name = name, id = id,
+    choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id,
     info = info, section = section, visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_polygon")
   .rr_scope()
@@ -753,7 +804,7 @@ rr_text <- function(
   colour = NULL, size = NULL, opacity = NULL, whole = NULL, label,
   angle = NULL, priority = NULL, fontface = NULL, offset = NULL, overlap = FALSE,
   palette = NULL, limits = NULL, stretch = NULL, legend = FALSE,
-  popup = FALSE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
+  popup = FALSE, labels = NULL, codes = NULL, hover = NULL, choose = NULL, search = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
@@ -764,7 +815,7 @@ rr_text <- function(
     fontface = rlang::enquo(fontface), offset = rlang::enquo(offset), overlap = overlap,
     palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
-    choose = rlang::enquo(choose), name = name, id = id,
+    choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id,
     info = info, section = section, visible = visible, minzoom = rlang::enquo(minzoom), maxzoom = maxzoom
   ), rlang::enquos(...), "rr_text")
   .rr_scope()
@@ -816,7 +867,8 @@ rr_text <- function(
     # a row drawn from the first whole zoom at or above its own: MapLibre judges a filter's zoom at whole zooms
     filter = if (!is.null(z0$column)) list(">=", list("zoom"), get(z0$column)),
     face = if (!is.null(face$column)) list("get", face$column) else face$value,
-    minzoom = z0$value
+    minzoom = z0$value,
+    zcol = z0$column
   )
 }
 

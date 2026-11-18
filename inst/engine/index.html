@@ -19,6 +19,14 @@
   #side header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
   #side header h1 { font-size: 15px; margin: 0; flex: 1; }
   #groups { flex: 1; overflow-y: auto; scrollbar-gutter: stable; }   /* a scrollbar appearing moves nothing */
+  #find { padding: 8px 12px 6px; border-bottom: 1px solid var(--line); }
+  #find input { width: 100%; box-sizing: border-box; font: inherit; padding: 5px 8px; border: 1px solid #b9b9b9;
+                border-radius: 4px; }
+  #find-hits { list-style: none; margin: 4px 0 0; padding: 0; max-height: 220px; overflow-y: auto; }
+  #find-hits:empty { display: none; }
+  #find-hits li { padding: 3px 6px; cursor: pointer; border-radius: 3px; }
+  #find-hits li:hover, #find-hits li:focus { background: #eef3f9; outline: none; }
+  #find-hits li.muted { cursor: default; color: var(--muted); background: none; }
   details.group > summary { list-style: none; cursor: pointer; background: var(--bar); color: #fff; padding: 7px 12px;
                             border-bottom: 1px solid #fff; user-select: none; }
   details.group > summary::-webkit-details-marker { display: none; }
@@ -168,6 +176,8 @@
     <button id="copylink" data-tt="copyLink">🔗</button>
     <span class="langs"></span>
     <button id="close" data-tt="close">✕</button></header>
+  <!-- a search over the layers' texts (search = ), shown when a layer has one -->
+  <div id="find" hidden><input id="find-q" type="search" autocomplete="off" data-tp="findPlaceholder"><ol id="find-hits"></ol></div>
   <div id="groups">
     <!-- the time panel's controls (rr_time()), shown when the map has one -->
     <details class="group" id="g-time" open hidden>
@@ -248,6 +258,8 @@ const ENGINE_TEXTS = {
   chooseAll: "all", chooseAllTip: "Show every value", chooseBack: "The previous one", chooseNext: "The next one",
   legendTip: "The colour scale on a log axis, and below it the cells in view: values below the floor and above the cap in the end bars",
   yes: "yes", no: "no",
+  findPlaceholder: "Find…", findCount: "{1} found; the {2} nearest the view's centre listed, whole matches first",
+  findNone: "none found", findHere: "here", findFailed: "the search did not load",
   rowLoading: "loading the row…", rowNone: "the row did not come", rowYes: "yes", rowNo: "no", rowVideo: "video",
   gTime: "Time", tVessel: "Group", tSpan: "Span", tCols: "Columns", tMarks: "Marks", tWholeBtn: "Whole span", tWholeTip: "Show the whole span; a double click on the chart does the same",
   tWhole: "whole ({1})", tLoading: "loading…", tFailed: "the rows did not come: {1}",
@@ -1271,6 +1283,7 @@ function applyLang(l) {
   document.title = tr(CONFIG.title);
   for (const el of document.querySelectorAll("[data-t]")) el.textContent = tr(el.dataset.t);
   for (const el of document.querySelectorAll("[data-tt]")) el.title = tr(el.dataset.tt);
+  for (const el of document.querySelectorAll("[data-tp]")) el.placeholder = tr(el.dataset.tp);
   for (const b of document.querySelectorAll("[data-lang]")) b.classList.toggle("on", b.dataset.lang === LANG);
   for (const l of OTHER) countText(l);
   if (TP && TU) timeLang();
@@ -2013,6 +2026,76 @@ function clickAt(e, again) {
   featurePopup(CLICK.get(f.layer.id), { lngLat: e.lngLat, point: e.point, originalEvent: e.originalEvent, features: [f] });
 }
 map.on("click", e => clickAt(e));
+// A search over the layers' text columns (search = ): the box above the groups, each layer's texts and places read on
+// the first search. Whole matches first, then values the search begins, then any holding it, case and accents aside,
+// each kind nearest the view's centre first, with their count when not all are listed; a click on one (or Enter) goes
+// there, at zoom 10 or nearer (a text's own start zoom where it has one), turns its layer on and shows its row
+const FIND = OTHER.filter(l => l.search);
+const fold = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+let findIndex = null, findSeq = 0;
+function findLoad() {
+  return findIndex ??= Promise.all(FIND.map(l =>
+    (BUNDLE ? bundleLoad(`data/${l.id}_search`) : fetch(`/search/${l.id}`).then(r => r.ok ? r.json() : Promise.reject(r.status)))
+      .then(d => ({ l, d, f: d.t.map(fold) }))))
+    .catch(e => { findIndex = null; throw e; });   // tried again on the next search
+}
+function findNote(text) {
+  const li = document.createElement("li");
+  li.className = "muted"; li.textContent = text;
+  $("find-hits").append(li);
+}
+function findList() {
+  const q = fold($("find-q").value.trim()), seq = ++findSeq;
+  if (q.length < 2) { $("find-hits").innerHTML = ""; return; }
+  findLoad().then(idx => {
+    if (seq !== findSeq) return;
+    const c = map.getCenter(), cl = Math.cos(c.lat * Math.PI / 180), ARROW = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const all = [];
+    for (const { l, d, f } of idx) f.forEach((n, i) => {
+      if (!n.includes(q)) return;
+      const dx = (d.x[i] - c.lng) * 111.32 * cl, dy = (d.y[i] - c.lat) * 110.57;
+      all.push({ l, d, i, rank: n === q ? 0 : n.startsWith(q) ? 1 : 2, km: Math.hypot(dx, dy),
+                 dir: ARROW[Math.round((Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360 / 45) % 8] });
+    });
+    all.sort((a, b) => a.rank - b.rank || a.km - b.km);
+    const hits = all.slice(0, 40);
+    $("find-hits").innerHTML = "";
+    if (!all.length) findNote(tr("findNone"));
+    else if (all.length > hits.length) findNote(tr("findCount", all.length.toLocaleString(loc()), hits.length));
+    for (const h of hits) {
+      const li = document.createElement("li");
+      li.tabIndex = 0;
+      li.textContent = `${h.d.t[h.i]}${FIND.length > 1 ? " · " + tr(h.l.label) : ""} · ` +
+                       (h.km < 1 ? tr("findHere") : `${fmt(h.km)} km ${h.dir}`);
+      li.addEventListener("click", () => findGo(h));
+      li.addEventListener("keydown", e => { if (e.key === "Enter") findGo(h); });
+      $("find-hits").append(li);
+    }
+  }).catch(() => { if (seq === findSeq) { $("find-hits").innerHTML = ""; findNote(tr("findFailed")); } });
+}
+function findGo({ l, d, i }) {
+  const at = new maplibregl.LngLat(d.x[i], d.y[i]), z = d.z?.[i];
+  const start = z !== undefined && z !== null ? Math.ceil(z) : Math.max(l.minzoom ?? 0, 10);
+  if (!$(l.id).checked) { $(l.id).checked = true; $(l.id).dispatchEvent(new Event("change")); }
+  popup?.remove();
+  map.jumpTo({ center: at, zoom: Math.min(18, Math.max(map.getZoom(), start)) });
+  // once drawn there: its feature's popup, as a click's; one not drawn (filtered, or a label hidden by another) its text
+  map.once("idle", () => {
+    const p = map.project(at), ids = l.style.map(s => s.id).filter(id => map.getLayer(id));
+    const f = query([[p.x - 6, p.y - 6], [p.x + 6, p.y + 6]], ids).find(x => x.properties.rr_row === d.r[i]);
+    const pl = f && CLICK.get(f.layer.id);
+    if (pl) featurePopup(pl, { lngLat: at, point: p, originalEvent: {}, features: [f] });
+    else popup = new maplibregl.Popup({ closeButton: false }).setLngLat(at).setHTML(`<b>${esc(d.t[i])}</b>`).addTo(map);
+  });
+  map.triggerRepaint();
+}
+if (FIND.length) {
+  $("find").hidden = false;
+  $("find-q").addEventListener("input", findList);
+  // Enter in the box goes to the first hit, as a click on it
+  $("find-q").addEventListener("keydown", e => { if (e.key === "Enter") $("find-hits").querySelector("li:not(.muted)")?.click(); });
+  $("find-q").addEventListener("focus", () => findLoad().catch(() => null));   // read while the reader types
+}
 // The pointer a hand over what a click answers (the layers', the notes', the grid's, the time panel's): one guarded
 // query a frame, where MapLibre's own mouseenter and mouseleave query unguarded
 let pointerFrame = 0, pointerEvent = null;
