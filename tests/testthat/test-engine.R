@@ -28,7 +28,8 @@ test_that("a click survives MapLibre's lost index: the layer's data sent again, 
   }
   expect_true(wait_until(function() isTRUE(page_eval(b, '!!document.querySelector(".maplibregl-popup")')), 20))
   expect_identical(page_eval(b, "window.SENT"), 1L)
-  expect_match(page_eval(b, 'document.querySelector(".maplibregl-popup").textContent'), "speed")
+  # the row as a table once read from the bundle's rows (a moment after the popup opens)
+  expect_true(wait_until(function() grepl("speed", page_eval(b, 'document.querySelector(".maplibregl-popup")?.textContent ?? ""')), 20))
   expect_length(errors, 0)
 })
 

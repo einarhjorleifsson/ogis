@@ -70,9 +70,16 @@
 }
 
 # The id and the name of a new layer: the name the call gives, else the mark's, numbered where taken
-.rr_layer_names <- function(state, name, kind) {
+.rr_layer_names <- function(state, name, kind, id = NULL) {
   label <- .rr_quick_label(state, .rr_or(name, kind))
   taken <- vapply(state$layers, function(l) l$config$id, "")
+  if (!is.null(id)) {
+    if (!is.character(id) || length(id) != 1 || is.na(id) || !grepl("^[a-z][a-z0-9_]*$", id)) {
+      stop("`id` is a layer's id: lower-case letters, digits and _, starting with a letter.", call. = FALSE)
+    }
+    if (id %in% taken) stop(sprintf("Layer id \"%s\" is taken by another layer of the map.", id), call. = FALSE)
+    return(list(id = id, label = label))
+  }
   id <- .rr_slug(label)
   while (id %in% taken) id <- paste0(id, "_2")
   list(id = id, label = label)
@@ -118,7 +125,7 @@
   own <- .rr_own_choose(a$choose, ctx)
   con <- ctx$con
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
-  nm <- .rr_layer_names(s$state, a$name, mk$kind)
+  nm <- .rr_layer_names(s$state, a$name, mk$kind, a$id)
   id <- nm$id
   data_cols <- setdiff(ctx$cols, c(ctx$lon, ctx$lat, ctx$geometry, a$lon_end, a$lat_end))
 
@@ -293,7 +300,7 @@
     .rr_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), mark, outline)
   what <- switch(mark, point = "point", line = "line", segment = "line from its start to its end",
                  polygon = "area", text = "label")
-  style <- .rr_styles_for(style, sent$kind)
+  style <- .rr_styles_for(.rr_style_props(style, a$props, paste0("rr_", mark)), sent$kind)
   layer <- rr_layer(
     id, sent$kind,
     label = nm$label,
@@ -469,10 +476,47 @@
     env$colour <- dq[["color"]]
     dq[["color"]] <- NULL
   }
-  if (length(dq)) {
-    stop(sprintf("%s() has no argument %s.", fname, paste(names(dq), collapse = ", ")), call. = FALSE)
-  }
+  env$props <- .rr_maplibre_props(dq, fname)
   env
+}
+
+# A layer function's `...`: MapLibre's paint and layout properties by their own names ("circle-stroke-width" = 2), each
+# a value or an expression as a list; any other name is an argument the function has not
+.rr_maplibre_props <- function(dq, fname) {
+  nms <- names(dq) %||% rep("", length(dq))
+  bad <- nms[!grepl("^(circle|line|fill|text|icon|symbol)(-[a-z]+)+$", nms)]
+  if (length(bad) || any(!nzchar(nms))) {
+    stop(sprintf("%s() has no argument %s.", fname, paste(ifelse(nzchar(bad), bad, "unnamed"), collapse = ", ")),
+         call. = FALSE)
+  }
+  lapply(dq, rlang::eval_tidy)
+}
+
+# MapLibre's properties put on a layer's styles: each on the styles of its kind (circle, line, fill, and text, icon and
+# symbol on symbols), as layout or paint as MapLibre has it
+.rr_layout_props <- c("line-cap", "line-join", "line-miter-limit", "line-round-limit", "line-sort-key", "fill-sort-key",
+                      "circle-sort-key")
+.rr_symbol_paint <- c(outer(c("text", "icon"), c("color", "halo-color", "halo-width", "halo-blur", "opacity", "translate",
+                                                   "translate-anchor"), paste, sep = "-"))
+.rr_style_props <- function(style, props, fname) {
+  if (!length(props)) return(style)
+  kind <- function(p) switch(sub("-.*", "", p), circle = "circle", line = "line", fill = "fill", "symbol")
+  for (p in names(props)) {
+    k <- kind(p)
+    where <- if (p %in% .rr_layout_props || (k == "symbol" && !p %in% .rr_symbol_paint)) "layout" else "paint"
+    hit <- FALSE
+    for (i in seq_along(style)) {
+      if (identical(style[[i]]$type, k)) {
+        style[[i]][[where]][[p]] <- props[[p]]
+        hit <- TRUE
+      }
+    }
+    if (!hit) {
+      stop(sprintf("%s(): `%s` is MapLibre's for %s layers; this layer draws %s.", fname, p, k,
+                   paste(unique(vapply(style, `[[`, "", "type")), collapse = " and ")), call. = FALSE)
+    }
+  }
+  style
 }
 
 #' Points, lines, areas, segments and text
@@ -544,14 +588,20 @@
 #'   data's dictionary declares otherwise (as for [rr_map()]); ‹ and › step through either. Several are linked:
 #'   each offers only the values the others leave. For choices that drive every layer with the column, give `choose`
 #'   to [rr_map()].
-#' @param name,info The layer's name in the sidebar and the text behind its ⓘ.
+#' @param name,id,info The layer's name in the sidebar, its id, and the text behind its ⓘ. The id (lower-case letters,
+#'   digits and _) is the key the page's address and a page's own script know the layer by, its styles `<id>-dot`,
+#'   `<id>-line`, `<id>-fill` and `<id>-text`; by default made from the name.
 #' @param section The sidebar's box the layer sits in, by its title.
 #' @param visible Whether the layer is on when the page opens.
 #' @param minzoom,maxzoom The zoom the layer is drawn from, and its tiles' deepest (14 by default), past which the map
 #'   draws that zoom's tiles larger. For `rr_text()`, `minzoom` may be a column written bare: each row from its own
 #'   zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
 #'   at 7.4 shows from 8.
-#' @param ... Not used; `color` is taken for `colour`.
+#' @param ... MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
+#'   `"circle-stroke-width" = 2`, `"circle-stroke-color" = "cyan"`, `"fill-opacity" = 0` (an outline alone),
+#'   `"text-halo-width" = 0`. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
+#'   as paint or layout as MapLibre has it; an expression is a list, `list("get", "size")`. `color` is taken for
+#'   `colour`.
 #' @return An [rr_map()] with the layer added.
 #' @seealso [rr_map()]; [rr_layer()] for a layer in MapLibre's own terms.
 #' @name rr_point
@@ -569,13 +619,13 @@ rr_point <- function(
   colour = NULL, size = NULL, opacity = NULL, whole = NULL, thin = TRUE,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
   popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
-  name = NULL, info = NULL, section = "Layers", visible = TRUE,
+  name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   a <- .rr_mark_args(list(
     lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), opacity = opacity, whole = whole, thin = thin,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
-    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, info = info, section = section,
+    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_point")
   .rr_scope()
@@ -589,13 +639,13 @@ rr_line <- function(
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
   popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
-  name = NULL, info = NULL, section = "Layers", visible = TRUE,
+  name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   a <- .rr_mark_args(list(
     colour = rlang::enquo(colour), linewidth = rlang::enquo(linewidth), opacity = opacity, whole = whole,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
-    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, info = info, section = section,
+    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_line")
   .rr_scope()
@@ -609,7 +659,7 @@ rr_segment <- function(
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
   popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
-  name = NULL, info = NULL, section = "Layers", visible = TRUE,
+  name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   a <- .rr_mark_args(list(
@@ -617,7 +667,7 @@ rr_segment <- function(
     lat_end = .rr_one_col(rlang::enquo(lat_end), "lat_end"),
     colour = rlang::enquo(colour), linewidth = rlang::enquo(linewidth), opacity = opacity, whole = whole,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
-    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, info = info, section = section,
+    labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_segment")
   .rr_scope()
@@ -631,14 +681,14 @@ rr_polygon <- function(
   colour = NULL, fill = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
   popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
-  name = NULL, info = NULL, section = "Layers", visible = TRUE,
+  name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   a <- .rr_mark_args(list(
     colour = rlang::enquo(colour), fill = rlang::enquo(fill), linewidth = rlang::enquo(linewidth),
     opacity = opacity, whole = whole, palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
-    choose = rlang::enquo(choose), name = name,
+    choose = rlang::enquo(choose), name = name, id = id,
     info = info, section = section, visible = visible, minzoom = minzoom, maxzoom = maxzoom
   ), rlang::enquos(...), "rr_polygon")
   .rr_scope()
@@ -653,7 +703,7 @@ rr_text <- function(
   angle = NULL, priority = NULL, fontface = NULL, offset = NULL, overlap = FALSE,
   palette = NULL, limits = NULL, stretch = NULL, legend = FALSE,
   popup = FALSE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
-  name = NULL, info = NULL, section = "Layers", visible = TRUE,
+  name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   if (!isTRUE(overlap) && !isFALSE(overlap)) stop("rr_text(): `overlap` is TRUE or FALSE.", call. = FALSE)
@@ -663,7 +713,7 @@ rr_text <- function(
     fontface = rlang::enquo(fontface), offset = rlang::enquo(offset), overlap = overlap,
     palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
-    choose = rlang::enquo(choose), name = name,
+    choose = rlang::enquo(choose), name = name, id = id,
     info = info, section = section, visible = visible, minzoom = rlang::enquo(minzoom), maxzoom = maxzoom
   ), rlang::enquos(...), "rr_text")
   .rr_scope()
@@ -826,7 +876,7 @@ rr_path <- function(
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
   popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
-  name = NULL, info = NULL, section = "Layers", visible = TRUE,
+  name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   dq <- rlang::enquos(...)
@@ -835,9 +885,7 @@ rr_path <- function(
     colour_q <- dq[["color"]]
     dq[["color"]] <- NULL
   }
-  if (length(dq)) {
-    stop(sprintf("rr_path() has no argument %s.", paste(names(dq), collapse = ", ")), call. = FALSE)
-  }
+  ml_props <- .rr_maplibre_props(dq, "rr_path") # MapLibre's paint and layout from `...`
   .rr_scope()
   .rr_check_gap(max_gap_s)
   if (!inherits(map, "rr_map")) {
@@ -866,7 +914,7 @@ rr_path <- function(
   }
   con <- ctx$con
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
-  nm <- .rr_layer_names(s$state, name, "Paths")
+  nm <- .rr_layer_names(s$state, name, "Paths", id)
   id <- nm$id
   grp <- .rr_select(rlang::enquo(group), ctx$cols, "group")
   keys <- unique(c(grp, intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields))
@@ -959,13 +1007,13 @@ rr_path <- function(
     count = list(text = "{1} lines"),
     minzoom = minzoom,
     maxzoom = maxzoom,
-    style = .rr_styles_for(list(list(
+    style = .rr_styles_for(.rr_style_props(list(list(
       id = sid, type = "line", "source-layer" = "features",
       layout = list("line-cap" = "round", "line-join" = "round"),
       paint = list("line-color" = if (length(cc)) colours$colour else fixed,
                    "line-width" = .rr_or(linewidth, list("interpolate", list("linear"), list("zoom"), 3, 1, 8, 2, 13, 3.5)),
                    "line-opacity" = .rr_or(opacity, 0.85))
-    )), sent$kind),
+    )), ml_props, "rr_path"), sent$kind),
     legend = if (!isTRUE(legend)) NULL else if (length(cc)) .rr_swatches(colours$legend, "line") else
       .rr_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), "line"),
     popup = if (!is.null(title)) {

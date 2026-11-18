@@ -1,3 +1,12 @@
+# rebelrebel 2026.11.18.1
+
+* Every layer function takes `id`, the layer's id (by default made from its name, as before), which the page's address
+  and a page's own script know it by, and MapLibre's own paint and layout properties by their names in `...`:
+  `rr_point("circle-stroke-width" = 2, "circle-stroke-color" = "cyan")`, `rr_polygon("fill-opacity" = 0)` (an outline
+  alone), `rr_text("text-halo-width" = 0)`. Each goes to the layer's styles of its kind, as paint or layout as MapLibre
+  has it. A map's lists need no editing by hand to restyle a layer, nor its generated ids guessing. An argument a
+  function has not still stops, as before.
+
 # rebelrebel 2026.11.18
 
 * `rr_text()` writes labels with a look of their own for each row: `minzoom` may be a column, each row drawn from the

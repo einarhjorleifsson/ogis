@@ -16,7 +16,7 @@ test_that("every layer function takes its arguments in the plan's one order", {
     "angle", "priority", "fontface", "offset", "overlap", # a text's own looks
     "palette", "limits", "breaks", "stretch", "legend",
     "popup", "labels", "codes", "hover", "choose",
-    "name", "info", "section", "visible",
+    "name", "id", "info", "section", "visible",
     "minzoom", "maxzoom", "..."
   )
   for (f in c("rr_point", "rr_line", "rr_segment", "rr_polygon", "rr_text", "rr_path")) {
@@ -525,4 +525,35 @@ test_that("a click's row: names, units and descriptions from the data's dictiona
   page <- .rr_map_page("{}")
   expect_match(page, "esc(c.label ?? c.name)", fixed = TRUE)
   expect_match(page, "c.code ?", fixed = TRUE)
+})
+
+test_that("a layer's id may be given, and MapLibre's own paint and layout go to its styles", {
+  skip_if_no_spatial()
+  pings <- rr_example("trawlsurvey")
+  m <- rr_map(pings) |>
+    rr_path(group = vid, time = time, colour = "#999999", id = "tracks", "line-dasharray" = list("literal", c(2, 1))) |>
+    rr_point(id = "cases", "circle-stroke-width" = 3, "circle-stroke-color" = "cyan", "circle-radius" = 11,
+             "circle-sort-key" = list("get", "speed"))
+  ids <- vapply(m$config$layers, `[[`, "", "id")
+  expect_identical(ids, c("tracks", "cases"))
+  dot <- m$config$layers[[2]]$style[[1]]
+  expect_identical(dot$id, "cases-dot")
+  expect_identical(dot$paint[["circle-stroke-color"]], "cyan") # a ring of a fixed size, as a hand check wants
+  expect_identical(dot$paint[["circle-radius"]], 11)
+  expect_identical(dot$layout[["circle-sort-key"]], list("get", "speed")) # MapLibre's layout, not paint
+  expect_identical(m$config$layers[[1]]$style[[1]]$paint[["line-dasharray"]], list("literal", c(2, 1)))
+  # an area's outline alone
+  a <- rr_example("dansk_harbours") |> rr_polygon("fill-opacity" = 0, "line-width" = 3)
+  st <- a$config$layers[[1]]$style
+  expect_identical(st[[1]]$paint[["fill-opacity"]], 0)
+  expect_identical(st[[2]]$paint[["line-width"]], 3)
+  # a text's halo off, its letters spaced (layout)
+  t <- rr_example("dansk_harbours") |> rr_text(label = SI_HARB, "text-halo-width" = 0, "text-letter-spacing" = 0.15)
+  expect_identical(t$config$layers[[1]]$style[[1]]$paint[["text-halo-width"]], 0)
+  expect_identical(t$config$layers[[1]]$style[[1]]$layout[["text-letter-spacing"]], 0.15)
+  # mistakes
+  expect_error(rr_map(pings) |> rr_point(id = "Cases"), "lower-case")
+  expect_error(rr_map(pings) |> rr_point(id = "a") |> rr_point(id = "a"), "taken")
+  expect_error(rr_map(pings) |> rr_point("fill-color" = "red"), "circle")
+  expect_error(rr_map(pings) |> rr_point(colr = "red"), "has no argument colr")
 })

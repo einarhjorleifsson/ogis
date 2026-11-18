@@ -26,6 +26,7 @@ rr_path(
   hover = NULL,
   choose = NULL,
   name = NULL,
+  id = NULL,
   info = NULL,
   section = "Layers",
   visible = TRUE,
@@ -98,7 +99,9 @@ data's dictionary declares otherwise (as for \code{\link[=rr_map]{rr_map()}}); �
 each offers only the values the others leave. For choices that drive every layer with the column, give \code{choose}
 to \code{\link[=rr_map]{rr_map()}}.}
 
-\item{name, info}{The layer's name in the sidebar and the text behind its ⓘ.}
+\item{name, id, info}{The layer's name in the sidebar, its id, and the text behind its ⓘ. The id (lower-case letters,
+digits and _) is the key the page's address and a page's own script know the layer by, its styles \verb{<id>-dot},
+\verb{<id>-line}, \verb{<id>-fill} and \verb{<id>-text}; by default made from the name.}
 
 \item{section}{The sidebar's box the layer sits in, by its title.}
 
@@ -109,7 +112,11 @@ draws that zoom's tiles larger. For \code{rr_text()}, \code{minzoom} may be a co
 zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
 at 7.4 shows from 8.}
 
-\item{...}{Not used; \code{color} is taken for \code{colour}.}
+\item{...}{MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
+\code{"circle-stroke-width" = 2}, \code{"circle-stroke-color" = "cyan"}, \code{"fill-opacity" = 0} (an outline alone),
+\code{"text-halo-width" = 0}. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
+as paint or layout as MapLibre has it; an expression is a list, \code{list("get", "size")}. \code{color} is taken for
+\code{colour}.}
 }
 \value{
 An \code{\link[=rr_map]{rr_map()}} with the layer added.

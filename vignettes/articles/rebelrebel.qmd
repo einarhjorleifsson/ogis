@@ -51,6 +51,21 @@ rr_map() |>
 
 `visible = FALSE` leaves a layer off when the page opens; its box in the sidebar turns it on.
 
+## In MapLibre's own terms
+
+Every layer function takes MapLibre's paint and layout properties by their own names, in quotes, for what its own
+arguments do not reach; and `id`, the name a page's address and a script know the layer by. Here the positions faster
+than 12 knots get a ring of a fixed size over the others:
+
+```{r}
+fast <- dplyr::filter(positions, speed > 12)
+rr_map(positions) |>
+  rr_point(colour = behaviour, name = "Positions") |>
+  rr_point(fast, colour = "#00a5c8", id = "fast", name = "Over 12 knots",
+           "circle-color" = "rgba(0, 0, 0, 0)", "circle-radius" = 7,
+           "circle-stroke-color" = "#00a5c8", "circle-stroke-width" = 2)
+```
+
 ## Showing and sharing
 
 - **In R**, printing a map serves it on this computer and opens it in RStudio's Viewer or a browser.
