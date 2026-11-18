@@ -33,6 +33,14 @@ jobs:
         with:
           extra-packages: any::pkgdown, any::quarto, local::.
           needs: website
+      # ramb's example data are Git LFS objects, which GitHub's source archive (how pak installs ramb) holds only as
+      # pointers; the "Vessel tracks" article reads them, so ramb is installed again from a clone that fetches them
+      - name: ramb with its example data
+        run: |
+          git lfs install
+          git clone --depth 1 https://github.com/einarhjorleifsson/ramb.git "$RUNNER_TEMP/ramb"
+          test "$(stat -c %s "$RUNNER_TEMP/ramb/inst/extdata/dansk.parquet")" -gt 100000
+          R CMD INSTALL "$RUNNER_TEMP/ramb"
       - name: Build the site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
