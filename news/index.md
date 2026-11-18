@@ -1,5 +1,78 @@
 # Changelog
 
+## ogis 2026.11.18.14
+
+- **The sea floor as two layer functions** (plan 072’s step 3, at the
+  maintainer’s word: “can we not just have a ogis wrapper”).
+  [`og_relief()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)
+  draws a depth model’s depth in colour and its relief shaded, as two
+  layers;
+  [`og_contour()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)
+  its lines of equal depth, the charts’ depths (`major`, by default 10,
+  25, 50, 100, 150, 200, 300, 400, 500, 1,000 m and on) a little heavier
+  and labelled, thinner lines between them spaced by depth and zoom
+  (`minor`), as the names map of Icelandic waters drew them.
+  `og_map() |> og_relief() |> og_contour()` replaces some twenty lines
+  of
+  [`og_layer()`](https://einarhjorleifsson.github.io/ogis/reference/og_layer.md)s.
+  - The depth model (`tiles`): nothing, the one `OGIS_DEPTH` names; an
+    MBTiles file; a grid (a GeoTIFF, a terra raster, a data frame of
+    cells), made into tiles by
+    [`og_tiles_dem()`](https://einarhjorleifsson.github.io/ogis/reference/og_tiles_dem.md);
+    or a tile function. Given first, it starts a map that opens on its
+    extent.
+  - The starting look as plain arguments: `palette` (by default
+    `"grey"`, at 75 % `opacity`, quiet under the map’s own data, as the
+    maintainer set the names map’s), `limits` (fitted to the view by
+    default), `scale`, `shade` (`TRUE`, an intensity, or `FALSE`);
+    `major`, `minor`, `labels` and `colour` for the lines.
+  - A major depth shows from the zoom whose shallowest spacing it is at
+    least; the lines are made at the common divisor of the spacings and
+    the depths shown (with 25 m among them, every 5 m from zoom 7). On
+    the Olex grid in headless Chrome a view settled in 2.6 s at zooms 7,
+    8 and 10, labels at 10-200 m. A label may bend as sharply as the
+    line: at 30 or 90 degrees no label was placed on that grid’s stepped
+    lines at zoom 10.
+- **No wall of contours along a grid’s edge.** Elevation tiles hold 0
+  (sea level) beyond a grid and on land, so every depth between a grid’s
+  edge in open water and 0 was drawn along the edge (a box of 5-25 m
+  lines round the Danish example’s North Sea; on the Olex grid, whose
+  edges lie at 1,000-3,000 m, a band of hundreds). A contour layer now
+  hands maplibre-contour a value at the fit’s `nodata` (0 by default) as
+  missing, and it draws no line through a missing value; lines no longer
+  stack along the coast either. The colours and the shading are as they
+  were (the shading still marks the edge with a thin seam: MapLibre’s
+  hillshade has no missing values). This needs the lines made on the
+  page’s own thread when served, as a bundle already made them; on the
+  Olex grid a view settled as fast. The test fails without it (12 lines
+  along a flat grid’s edge, against none).
+- **A layer’s controls can open folded** (the maintainer: the depth
+  layer’s details not shown until the reader expands it). A layer whose
+  config has `fold` (as
+  [`og_relief()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)‘s
+  and
+  [`og_contour()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)’s
+  have, unless `open = TRUE`) shows ▸ beside its name, a click showing
+  its controls; its colours’ scale bar and a legend show either way.
+- [`og_tiles_mbtiles()`](https://einarhjorleifsson.github.io/ogis/reference/og_tiles_mbtiles.md)
+  with no `file` reads the file named by the environment variable
+  `OGIS_DEPTH`, a line in `.Renviron`
+  (`OGIS_DEPTH=D:/data/depth.mbtiles`), and says so once a session; a
+  `file` given wins. A depth model shared between colleagues as one
+  MBTiles file, each keeping it where they like, is then named once on
+  each computer and in no script. Errors say what to do: with neither,
+  how to set the variable; with a path that is no file, or no MBTiles
+  (SQLite) file, which path and from where, a grid pointed to
+  [`og_tiles_dem()`](https://einarhjorleifsson.github.io/ogis/reference/og_tiles_dem.md).
+  `~` in a path is expanded. At the maintainer’s word (“Yes, build it”),
+  from the side study of the Icelandic depth model in ogis.
+- RSQLite is imported, no longer suggested:
+  [`og_tiles_mbtiles()`](https://einarhjorleifsson.github.io/ogis/reference/og_tiles_mbtiles.md)
+  works as soon as ogis is installed. DuckDB’s own SQLite reader was
+  measured and set aside: it scans the whole tiles table for each tile
+  (110 ms a tile on a 547 MB file, against RSQLite’s 0.2-0.7 ms), as it
+  uses no index of the file.
+
 ## ogis 2026.11.18.13
 
 - `og_text(endzoom = )`: where a label stops, a number (the styles’ own

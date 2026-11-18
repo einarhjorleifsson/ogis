@@ -75,7 +75,9 @@ then stops and says so.
 ## Status
 
 Young, and changing: the layer functions are new, and a one-call
-`og_view()`, cells (`og_grid()`), depth (`og_relief()`, `og_contour()`)
+`og_view()`, cells (`og_grid()`), depth
+([`og_relief()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md),
+[`og_contour()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md))
 and figures saved at a chosen size and resolution (`og_save()`) are to
 come. The package began as the map viewer of the R package
 [ramb](https://github.com/einarhjorleifsson/ramb).

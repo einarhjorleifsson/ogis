@@ -21,6 +21,16 @@ in time), lines, segments, areas and text.
 - [`og_path()`](https://einarhjorleifsson.github.io/ogis/reference/og_path.md)
   : Paths: rows joined in time, a line per group
 
+## The sea floor
+
+A depth model’s depth in colour, its relief and its contours, made in
+the page from its tiles: an MBTiles file, a grid, or one named once by
+OGIS_DEPTH.
+
+- [`og_relief()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)
+  [`og_contour()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)
+  : The sea floor: depth in colour, its relief, and depth contours
+
 ## Time
 
 A panel under the map: a group’s rows over time, linked to the map.
