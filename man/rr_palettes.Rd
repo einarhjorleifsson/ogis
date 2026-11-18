@@ -16,10 +16,14 @@ A list, each element with \code{id} and \code{label}: a palette with \code{sourc
 \code{background} (the colour beyond the picture's tiles), \code{labels} (a MapLibre style whose names are drawn over the
 picture, with its fonts) and \code{label_layers} (a regular
 expression for which of its layers: by default its symbol layers whose id starts \code{place_}, \code{watername_} or
-\code{waterway_label}), or neither (none). A style or tiles served by the map's own server (a route of
-\code{\link[=rr_serve]{rr_serve()}}'s \code{routes}) are given by a relative address, \code{"/x/style"}: the page may be opened as \code{localhost} or
-as \verb{127.0.0.1}, two origins to a browser, which refuses the other's address. A palette of your own, given to
-\code{\link[=rr_map]{rr_map()}}'s \code{palettes}, needs \code{id}, \code{label} and \code{colors}; with no \code{use} it is offered to the grid.
+\code{waterway_label}), or neither (none). A raster address names a tile by \code{{z}}, \code{{x}} and \code{{y}}, or is a WMS's
+GetMap in \code{EPSG:3857} whose box is \code{BBOX={bbox-epsg-3857}}; MapLibre fills them in for each tile, and the server
+must allow the page to read its pictures (CORS). Any base map may be the first, the one a map opens on. One with
+neither \code{style} nor \code{labels} has no fonts of its own: the layers' texts are drawn in the browser's. A style served
+by the map's own server (a route of \code{\link[=rr_serve]{rr_serve()}}'s \code{routes}) is given by a relative address, \code{"/x/style"}: the
+page may be opened as \code{localhost} or as \verb{127.0.0.1}, two origins to a browser, which refuses the other's address.
+A palette of your own, given to \code{\link[=rr_map]{rr_map()}}'s \code{palettes}, needs \code{id}, \code{label} and \code{colors}; with no \code{use} it is
+offered to the grid.
 }
 \description{
 \code{rr_palettes()}: eighteen palettes, each marked by \code{use} for the grid's colours, a depth's or both.

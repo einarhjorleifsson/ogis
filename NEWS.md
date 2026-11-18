@@ -1,3 +1,13 @@
+# rebelrebel 2026.11.18.5
+
+* A base map given as a tile address, by `{z}/{x}/{y}` or a WMS's `GetMap` with `BBOX={bbox-epsg-3857}`, opens the
+  page when it is the first, and the page switches to it and back; now tested in the page. Before 2026.11.12 such a
+  page never loaded its style (`glyphs: undefined`, mended then with base maps written as styles), so maps of place
+  names put a style first to get round it. `rr_basemaps()`'s help says how such an address is written, that its
+  server must let the page read its pictures (CORS), and that a picture alone has no fonts, so the layers' texts are
+  drawn in the browser's; it no longer says a route of `rr_serve()` may serve tiles (a route answers JSON or text).
+  "Get started" opens a map on GEBCO's sea floor from its WMS.
+
 # rebelrebel 2026.11.18.4
 
 * `rr.fetch()` reaches a route's `path` and `query`, as `rr_serve()` documents them: the route's name, then a path and

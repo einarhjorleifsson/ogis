@@ -88,6 +88,29 @@ The harbours reach from Greenland to the Black Sea, so `view` opens the map on t
 contours go under the base map's place names, whatever their order in the pipe; the box *Depth* has the colours'
 controls.
 
+## A base map of your own
+
+A base map is a MapLibre style, or a picture's tiles by address: by zoom and place (`{z}/{x}/{y}`), or a WMS's
+`GetMap` with each tile's box (`{bbox-epsg-3857}`). The first given is the one the map opens on, the others choices
+under *Base map*. Here GEBCO's shaded sea floor from its WMS, which reaches past Europe's seas, then rebelrebel's own:
+
+```{r}
+gebco <- list(
+  id = "gebco", label = "Sea floor (GEBCO)",
+  attribution = "Imagery reproduced from the GEBCO Grid, GEBCO Compilation Group",
+  tiles = paste0(
+    "https://wms.gebco.net/mapserv?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap",
+    "&LAYERS=GEBCO_LATEST&STYLES=&FORMAT=image/png&CRS=EPSG:3857",
+    "&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}"
+  )
+)
+rr_map(positions, basemaps = c(list(gebco), rr_basemaps())) |>
+  rr_point(colour = behaviour, name = "Positions")
+```
+
+A picture alone has no place names, and the layers' texts are drawn in the browser's own font. `labels`, a style's
+address, puts that style's names over it with its fonts, as on `rr_basemaps()`'s, which take Carto's.
+
 ## Showing and sharing
 
 - **In R**, printing a map serves it on this computer and opens it in RStudio's Viewer or a browser.

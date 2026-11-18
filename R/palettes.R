@@ -30,10 +30,14 @@
 #'   `background` (the colour beyond the picture's tiles), `labels` (a MapLibre style whose names are drawn over the
 #'   picture, with its fonts) and `label_layers` (a regular
 #'   expression for which of its layers: by default its symbol layers whose id starts `place_`, `watername_` or
-#'   `waterway_label`), or neither (none). A style or tiles served by the map's own server (a route of
-#'   [rr_serve()]'s `routes`) are given by a relative address, `"/x/style"`: the page may be opened as `localhost` or
-#'   as `127.0.0.1`, two origins to a browser, which refuses the other's address. A palette of your own, given to
-#'   [rr_map()]'s `palettes`, needs `id`, `label` and `colors`; with no `use` it is offered to the grid.
+#'   `waterway_label`), or neither (none). A raster address names a tile by `{z}`, `{x}` and `{y}`, or is a WMS's
+#'   GetMap in `EPSG:3857` whose box is `BBOX={bbox-epsg-3857}`; MapLibre fills them in for each tile, and the server
+#'   must allow the page to read its pictures (CORS). Any base map may be the first, the one a map opens on. One with
+#'   neither `style` nor `labels` has no fonts of its own: the layers' texts are drawn in the browser's. A style served
+#'   by the map's own server (a route of [rr_serve()]'s `routes`) is given by a relative address, `"/x/style"`: the
+#'   page may be opened as `localhost` or as `127.0.0.1`, two origins to a browser, which refuses the other's address.
+#'   A palette of your own, given to [rr_map()]'s `palettes`, needs `id`, `label` and `colors`; with no `use` it is
+#'   offered to the grid.
 #' @export
 #' @examples
 #' vapply(rr_palettes(), `[[`, "", "id")
