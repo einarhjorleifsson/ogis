@@ -1,11 +1,16 @@
 ogis is licensed GPL (>= 3). Its code was moved from the R package ramb (GPL (>= 3)) by its author.
 
-The page's libraries, in inst/engine/vendor, each unchanged as published on npm and with its licence beside it:
+The page's libraries, in inst/engine/vendor, each with its licence beside it, unchanged as published on npm but for
+MapLibre's two modules, made classic scripts:
 
-inst/engine/vendor/maplibre-gl.js, maplibre-gl.css
-  MapLibre GL JS 5.24.1, https://github.com/maplibre/maplibre-gl-js
+inst/engine/vendor/maplibre-gl.js, maplibre-gl-worker.js, maplibre-gl.css
+  MapLibre GL JS 6.19.0, https://github.com/maplibre/maplibre-gl-js
   BSD 3-Clause, Copyright (c) 2023, MapLibre contributors (LICENSE-maplibre-gl.txt, which also lists the code it
-  carries from others).
+  carries from others). Modified: its ES modules dist/maplibre-gl.mjs and dist/maplibre-gl-worker.mjs are made
+  classic scripts by tools/vendor-maplibre.R, so a page opened from its folder loads them: the first wrapped in a
+  function, `import.meta.url` replaced by the script's own address and its export list returned as the global
+  `maplibregl`; the second carried as a string, which the first hands to MapLibre as its worker. Their code is
+  otherwise as published; maplibre-gl.css is unchanged.
 
 inst/engine/vendor/maplibre-contour.min.js
   maplibre-contour 0.1.1, https://github.com/onthegomap/maplibre-contour

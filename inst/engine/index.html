@@ -7,6 +7,9 @@
 <!-- ogis's map viewer (og_map(), og_serve()): the engine. What it shows comes from its config, which the server
      writes into the script tag "config" below as it serves the page. -->
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
+<!-- MapLibre 6 as classic scripts (tools/vendor-maplibre.R), so a page opened from its folder loads it: its worker's
+     code first, which the library hands to MapLibre as a blob -->
+<script src="vendor/maplibre-gl-worker.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
 <style>
   /* a sidebar of groups that fold, each layer with its info and, when ticked, its controls and legend under it
@@ -1220,9 +1223,9 @@ const map = new maplibregl.Map({
 if (!BASEMAPS[0].style) setBase(BASEMAPS[0].id);
 // a page laid out after the map was made (a tab opened in the background) left the canvas at 400 x 300
 new ResizeObserver(() => map.resize()).observe($("map"));
-// MapLibre 5.x loses a tile's index when the tile is loaded again while an earlier load of it is still being read
-// (fixed only in 6.0 and 6.3, maplibre-gl-js 7765 and 8064; this page stays on 5.x, which a page opened from its folder
-// can load): queryRenderedFeatures() then throws ("Out of bounds") on that layer until its source is loaded again.
+// MapLibre 5.x lost a tile's index when the tile was loaded again while an earlier load of it was still being read
+// (fixed in 6.0 and 6.3, maplibre-gl-js 7765 and 8064; kept until a reproduction shows 6 has done with it, plan 077 in
+// fishycode): queryRenderedFeatures() then threw ("Out of bounds") on that layer until its source was loaded again.
 // Every query of the page goes through query(): a layer that throws is left out of the answer, its source loaded
 // again (a whole layer's own data sent again, which cured every such failure seen; a tiled layer's tiles fetched
 // again), and `again` called once the map is idle. `geom` is a point, a box, or null for the view
@@ -1230,7 +1233,7 @@ const healing = new Set();
 function heal(src) {
   if (healing.has(src)) return;
   healing.add(src);
-  console.warn(`ogis: the index of ${src} was lost (a fault of MapLibre 5), its data loaded again`);
+  console.warn(`ogis: the index of ${src} was lost (a fault of MapLibre 5, fixed in 6), its data loaded again`);
   try {
     const s = map.getSource(src);
     if (s?.type === "geojson") s.setData(s.serialize().data);
