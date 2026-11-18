@@ -18,9 +18,11 @@ og_tracks(
   hours = NULL,
   lanes = NULL,
   marks = NULL,
+  compare = NULL,
   fishing = NULL,
   effort = TRUE,
   cell = 0.01,
+  time_label = "UTC",
   title = "Tracks",
   ...
 )
@@ -40,6 +42,11 @@ method's trips, an observer's activity, ...}
 
 \item{marks}{Columns that mark pings, as \code{\link[=og_time]{og_time()}}'s \code{marks}.}
 
+\item{compare}{Two columns to hold against each other, as strings, named for their sources (\code{c(ramb = "trip_id", EM4SSF = "TRIP_ID")}), or a list of such pairs: two methods' trips, an inferred activity against an observer's.
+Each is a lane, and the panel marks, each a row of its own, the pings that one has and the other has not (in a
+trip by one method alone), and, where the two share their values (\code{"fishing"} in both), the pings they give
+differently.}
+
 \item{fishing}{The values of \code{activity} that are fishing, for the effort: by default those beginning "fish" (any
 case), or \code{TRUE} in a logical column.}
 
@@ -47,6 +54,9 @@ case), or \code{TRUE} in a logical column.}
 degrees; \code{FALSE}, none; or a table of cells for \code{\link[=og_cells]{og_cells()}}.}
 
 \item{cell}{The cells' side in degrees, when the effort is summed here.}
+
+\item{time_label}{The clock the times are on, shown beside them in the panel ("UTC" by default; "as written" for a
+file whose zone is not known).}
 
 \item{title}{The page's title.}
 
@@ -56,15 +66,15 @@ degrees; \code{FALSE}, none; or a table of cells for \code{\link[=og_cells]{og_c
 The map.
 }
 \description{
-\code{og_tracks()} draws vessel tracks, a row a ping, for a look at what a track's processing made of them: each
-vessel's track and pings (coloured by what the vessel was doing), a time panel under the map with its speed over
-time and lanes of what it was doing and of its trips (a vessel chosen there, then one of its trips, the map
-following), and the fishing effort by cell, summed from the fishing pings' hours, showing the chosen vessel's, its
-gear's or the fleet's (\code{\link[=og_cells]{og_cells()}}'s \code{follow}).
+\code{og_tracks()} draws vessel tracks, a row a ping, for a look at what a track's processing made of them: a time panel
+under the map with a vessel's speed over time and lanes of what it was doing and of its trips (a vessel chosen
+there, then one of its trips), the map showing that span's path and the pings coloured by what the vessel was doing;
+and the fishing effort by cell, summed from the fishing pings' hours, showing the chosen vessel's, its gear's or the
+fleet's (\code{\link[=og_cells]{og_cells()}}'s \code{follow}).
 }
 \details{
-The columns are found by their names: ramb's (\code{vid}, \code{time}, \code{lon}, \code{lat}, \code{speed}, \code{trip_id}, \code{gear}, \code{hours}, and
-\code{behaviour} or \code{activity}) or EM4SSF's D2.1 format's (\code{VESSEL_ID}, \code{DATE_TIME}, \code{LONGITUDE}, \code{LATITUDE}, \code{SPEED},
+The columns are found by their names: ramb's (\code{vid}, \code{time}, \code{lon}, \code{lat}, \code{speed}, \code{voyage_key} or \code{trip_id},
+\code{gear}, \code{hours}, and \code{behaviour} or \code{activity}) or EM4SSF's D2.1 format's (\code{VESSEL_ID}, \code{DATE_TIME}, \code{LONGITUDE}, \code{LATITUDE}, \code{SPEED},
 \code{TRIP_ID}, \code{ACTIVITY}, \code{GEAR}), or given.
 }
 \examples{

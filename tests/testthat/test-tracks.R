@@ -19,7 +19,7 @@ track_pings <- function() {
 test_that("og_tracks(): the track, the pings by what the vessel did, a panel of speed with its trips, the effort", {
   skip_if_no_spatial()
   m <- og_tracks(track_pings())
-  expect_identical(vapply(m$config$layers, `[[`, "", "id"), c("cells", "track", "pings"))
+  expect_identical(vapply(m$config$layers, `[[`, "", "id"), c("cells", "pings"))
   tp <- m$config$time
   expect_identical(vapply(tp$vessels, `[[`, "", "value"), c("A", "B"))
   # a vessel's trips, known by the vessel too
@@ -34,8 +34,16 @@ test_that("og_tracks(): the track, the pings by what the vessel did, a panel of 
   expect_identical(mt$follow, list(A = "GN", B = "OTB"))
   expect_setequal(mt$options$cells_gear$value, c("GN", "OTB"))
   # no effort; the effort given; the arguments passed on to og_cells()
-  expect_identical(vapply(og_tracks(track_pings(), effort = FALSE)$config$layers, `[[`, "", "id"), c("track", "pings"))
+  expect_identical(vapply(og_tracks(track_pings(), effort = FALSE)$config$layers, `[[`, "", "id"), "pings")
   expect_identical(og_tracks(track_pings(), palette = "blues")$layers$cells$config$start$palette, "blues")
+})
+
+test_that("ramb's voyage_key is a trip's key as it is, taken before its trip_id", {
+  skip_if_no_spatial()
+  d <- track_pings()
+  d$voyage_key <- paste0(d$vid, ":2020:", d$trip_id)
+  lab <- vapply(og_tracks(d, effort = FALSE)$config$time$vessels[[1]]$spans, function(s) .og_or(s$label, ""), "")[-1]
+  expect_identical(substr(lab, 1, 8), c("A:2020:1", "A:2020:2"))
 })
 
 test_that("EM4SSF's D2.1 names are found; what is missing said", {
@@ -79,4 +87,25 @@ test_that("in the page (a bundle), the effort follows the panel's vessel: its ow
   expect_identical(st(), list(vessel = "A", vid = "", gear = "GN"))
   set("cells_follow", "fleet")
   expect_identical(st(), list(vessel = "A", vid = "", gear = ""))
+})
+
+test_that("compare: two columns as lanes, and marks where one has a ping the other has not, or gives it otherwise", {
+  skip_if_no_spatial()
+  d <- track_pings()
+  # another method's trips: the first trip two pings later, B's none
+  d$other_trip <- ifelse(d$vid == "B", NA, d$trip_id)
+  d$other_trip[1:2] <- NA
+  # an observer's activity: fishing two pings earlier on A's first trip
+  d$observed <- d$behaviour
+  d$observed[9:10] <- "Fishing"
+  m <- og_tracks(d, compare = list(c(ramb = "trip_id", other = "other_trip"),
+                                   c(rule = "behaviour", observer = "observed")), effort = FALSE)
+  tp <- m$config$time
+  expect_setequal(vapply(tp$lanes, `[[`, "", "label"), c("behaviour", "trip", "other", "observer"))
+  # trips: B's and A's first two pings in ramb's alone, none in the other's alone (left out), the values of two id
+  # systems not compared; activity: two pings given differently, none missing on either side
+  expect_setequal(vapply(tp$marks, `[[`, "", "label"), c("ramb only", "rule ≠ observer"))
+  expect_setequal(vapply(tp$marks, `[[`, "", "field"), c("og_cmp1a", "og_cmp2d"))
+  expect_error(og_tracks(d, compare = c("trip_id", "nope")), "`compare` is two columns")
+  expect_error(og_tracks(d, compare = "trip_id"), "`compare` is two columns")
 })

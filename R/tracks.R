@@ -5,14 +5,14 @@
 
 #' Vessel tracks: the track, a time panel of speed, trips, and the effort by cell
 #'
-#' `og_tracks()` draws vessel tracks, a row a ping, for a look at what a track's processing made of them: each
-#' vessel's track and pings (coloured by what the vessel was doing), a time panel under the map with its speed over
-#' time and lanes of what it was doing and of its trips (a vessel chosen there, then one of its trips, the map
-#' following), and the fishing effort by cell, summed from the fishing pings' hours, showing the chosen vessel's, its
-#' gear's or the fleet's ([og_cells()]'s `follow`).
+#' `og_tracks()` draws vessel tracks, a row a ping, for a look at what a track's processing made of them: a time panel
+#' under the map with a vessel's speed over time and lanes of what it was doing and of its trips (a vessel chosen
+#' there, then one of its trips), the map showing that span's path and the pings coloured by what the vessel was doing;
+#' and the fishing effort by cell, summed from the fishing pings' hours, showing the chosen vessel's, its gear's or the
+#' fleet's ([og_cells()]'s `follow`).
 #'
-#' The columns are found by their names: ramb's (`vid`, `time`, `lon`, `lat`, `speed`, `trip_id`, `gear`, `hours`, and
-#' `behaviour` or `activity`) or EM4SSF's D2.1 format's (`VESSEL_ID`, `DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`,
+#' The columns are found by their names: ramb's (`vid`, `time`, `lon`, `lat`, `speed`, `voyage_key` or `trip_id`,
+#' `gear`, `hours`, and `behaviour` or `activity`) or EM4SSF's D2.1 format's (`VESSEL_ID`, `DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`,
 #' `TRIP_ID`, `ACTIVITY`, `GEAR`), or given.
 #'
 #' @param map A map the pipe makes ([og_map()]), or the pings, which start one.
@@ -24,11 +24,18 @@
 #' @param lanes More lanes under the panel's chart, columns as strings (`c(observed = "ACTIVITY_L1")`): another
 #'   method's trips, an observer's activity, ...
 #' @param marks Columns that mark pings, as [og_time()]'s `marks`.
+#' @param compare Two columns to hold against each other, as strings, named for their sources (`c(ramb = "trip_id",
+#'   EM4SSF = "TRIP_ID")`), or a list of such pairs: two methods' trips, an inferred activity against an observer's.
+#'   Each is a lane, and the panel marks, each a row of its own, the pings that one has and the other has not (in a
+#'   trip by one method alone), and, where the two share their values (`"fishing"` in both), the pings they give
+#'   differently.
 #' @param fishing The values of `activity` that are fishing, for the effort: by default those beginning "fish" (any
 #'   case), or `TRUE` in a logical column.
 #' @param effort The effort by cell: `TRUE`, summed from the fishing pings' `hours` by vessel, gear and year at `cell`
 #'   degrees; `FALSE`, none; or a table of cells for [og_cells()].
 #' @param cell The cells' side in degrees, when the effort is summed here.
+#' @param time_label The clock the times are on, shown beside them in the panel ("UTC" by default; "as written" for a
+#'   file whose zone is not known).
 #' @param title The page's title.
 #' @param ... More for [og_cells()]: `palette`, `sizes`, `follow`, ...
 #' @return The map.
@@ -44,7 +51,8 @@
 og_tracks <- function(
   map = NULL, pings = NULL,
   vessel = NULL, time = NULL, lon = NULL, lat = NULL, speed = NULL, activity = NULL, trip = NULL, gear = NULL,
-  hours = NULL, lanes = NULL, marks = NULL, fishing = NULL, effort = TRUE, cell = 0.01, title = "Tracks", ...
+  hours = NULL, lanes = NULL, marks = NULL, compare = NULL, fishing = NULL, effort = TRUE, cell = 0.01, time_label = "UTC",
+  title = "Tracks", ...
 ) {
   if (!inherits(map, "og_map")) {
     if (!is.null(pings)) stop("og_tracks(): `map` is an og_map(); the pings go to `pings`.", call. = FALSE)
@@ -77,7 +85,7 @@ og_tracks <- function(
   lat <- find(lat, c("lat", "LATITUDE", "latitude"), "lat")
   speed <- find(speed, c("speed", "SPEED", "speed_kn"), "speed")
   activity <- find(activity, c("behaviour", "activity", "ACTIVITY", "fishing", "state"), "activity", need = FALSE)
-  trip <- find(trip, c("trip_key", "trip_id", "TRIP_ID", "trip"), "trip", need = FALSE)
+  trip <- find(trip, c("voyage_key", "trip_key", "trip_id", "TRIP_ID", "trip"), "trip", need = FALSE)
   gear <- find(gear, c("gear", "GEAR", "gid", "gear_code"), "gear", need = FALSE)
   hours <- find(hours, c("hours", "HOURS"), "hours", need = FALSE)
   if (!is.null(lanes) && (!is.character(lanes) || !all(lanes %in% cols))) {
@@ -87,16 +95,63 @@ og_tracks <- function(
     stop("og_tracks(): `cell` is the cells' side in degrees, above 0.", call. = FALSE)
   }
 
-  # the pings with the names the layer functions look for, a trip known by its vessel too (a vessel's trips are
-  # numbered from 1)
+  # the pings with the names the layer functions look for, a trip known by its vessel too where its key is not its
+  # own (a vessel's trips numbered from 1): ramb's `voyage_key` ("EX_1:2018:1") carries its vessel and year
   sym <- rlang::sym
   x <- dplyr::rename(pings, vid = !!sym(vessel), time = !!sym(time), lon = !!sym(lon), lat = !!sym(lat))
   if (!is.null(trip)) {
-    x <- dplyr::mutate(x, og_trip = dplyr::if_else(is.na(!!sym(trip)), NA_character_,
-                                                    paste(as.character(!!sym("vid")), as.character(!!sym(trip)))))
+    own <- trip %in% c("voyage_key", "trip_key")
+    x <- dplyr::mutate(x, og_trip = dplyr::if_else(
+      is.na(!!sym(trip)), NA_character_,
+      !!(if (own) rlang::expr(as.character(!!sym(trip))) else rlang::expr(paste(as.character(!!sym("vid")), as.character(!!sym(trip)))))
+    ))
   }
-  popup <- unique(c("vid", "time", speed, activity, trip, gear))
-  m <- if (is.null(map)) og_map(x, title = title) else map
+  # where two columns disagree (two methods' trips, an inferred activity against an observer's): a row of marks for
+  # the pings one has and the other has not, and, where the two share their values, for those they give differently
+  cmp_marks <- character()
+  cmp_lanes <- character()
+  pairs <- if (is.null(compare)) list() else if (is.list(compare)) compare else list(compare)
+  for (i in seq_along(pairs)) {
+    pr <- pairs[[i]]
+    if (!is.character(pr) || length(pr) != 2 || !all(pr %in% colnames(x))) {
+      stop("og_tracks(): `compare` is two columns of the pings, as strings (`c(ramb = \"trip_id\", EM4SSF = \"TRIP_ID\")`), or a list of such pairs.",
+           call. = FALSE)
+    }
+    lab <- if (!is.null(names(pr)) && all(nzchar(names(pr)))) names(pr) else unname(pr)
+    a <- sym(pr[1])
+    b <- sym(pr[2])
+    vals <- function(cn) stats::na.omit(as.character(dplyr::pull(dplyr::distinct(dplyr::select(x, dplyr::all_of(cn))))))
+    shared <- length(intersect(vals(pr[1]), vals(pr[2]))) > 0
+    k <- paste0("og_cmp", i, c("a", "b", "d"))
+    x <- dplyr::mutate(x, !!!stats::setNames(list(
+      rlang::expr(dplyr::if_else(!is.na(!!a) & is.na(!!b), "only", NA_character_)),
+      rlang::expr(dplyr::if_else(is.na(!!a) & !is.na(!!b), "only", NA_character_)),
+      if (shared) {
+        rlang::expr(dplyr::if_else(!is.na(!!a) & !is.na(!!b) & as.character(!!a) != as.character(!!b), "differs",
+                                   NA_character_))
+      } else {
+        NA_character_
+      }
+    ), k))
+    keep <- if (is.data.frame(x)) vapply(k, function(cn) any(!is.na(x[[cn]])), NA) else c(TRUE, TRUE, shared)
+    cmp_marks <- c(cmp_marks, stats::setNames(k, c(paste(lab[1], "only"), paste(lab[2], "only"),
+                                                   paste(lab[1], "\u2260", lab[2])))[keep])
+    cmp_lanes <- c(cmp_lanes, stats::setNames(pr, lab)[!pr %in% c(activity, trip, lanes)])
+  }
+  marks <- c(if (!is.null(marks)) if (is.null(names(marks))) stats::setNames(marks, marks) else marks, cmp_marks)
+  if (!length(marks)) marks <- NULL
+  popup <- unique(c("vid", "time", speed, activity, trip, gear, unlist(pairs)))
+  # the time panel first: it draws the chosen vessel's span (its path and points) itself, and the pings added after it
+  # carry its vessel, so they show that vessel and span alone. A path of each vessel's whole series, as a layer of its
+  # own, ran over every span's ends and was drawn whole: on a year of a vessel, a tangle over the trip chosen
+  ln <- c(if (!is.null(activity)) stats::setNames(activity, activity), if (!is.null(trip)) c(trip = "og_trip"),
+          if (!is.null(lanes)) if (is.null(names(lanes))) stats::setNames(lanes, lanes) else lanes, cmp_lanes)
+  panel <- function(m, data = NULL) {
+    og_time(m, col = !!speed, lanes = if (length(ln)) as.list(ln), marks = !!marks, data = data,
+            time = "time", by = !!sym("vid"),
+            span = if (!is.null(trip)) c(trip = "og_trip"), time_label = time_label, title = title)
+  }
+  m <- if (is.null(map)) panel(x) else panel(map, x)
 
   # the effort by cell: the fishing pings' hours, by vessel, gear and year
   if (is.data.frame(effort) || inherits(effort, "tbl_lazy") || (is.character(effort) && length(effort) == 1)) {
@@ -134,11 +189,6 @@ og_tracks <- function(
     stop("og_tracks(): `effort` is TRUE, FALSE or a table of cells.", call. = FALSE)
   }
 
-  m <- og_path(m, group = !!sym("vid"), time = !!sym("time"), name = "Track")
-  m <- og_point(m, colour = !!(if (!is.null(activity)) sym(activity) else sym(speed[1])),
-                popup = !!popup, name = "Pings")
-  ln <- c(if (!is.null(activity)) stats::setNames(activity, activity), if (!is.null(trip)) c(trip = "og_trip"),
-          if (!is.null(lanes)) if (is.null(names(lanes))) stats::setNames(lanes, lanes) else lanes)
-  og_time(m, col = !!speed, lanes = if (length(ln)) as.list(ln), marks = !!marks,
-          span = if (!is.null(trip)) c(trip = "og_trip"))
+  og_point(m, data = if (!is.null(map)) x, colour = !!(if (!is.null(activity)) sym(activity) else sym(speed[1])),
+           popup = !!popup, name = "Pings")
 }
