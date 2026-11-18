@@ -87,8 +87,10 @@ test_that("in the page, the Find box ranks whole matches, then beginnings, then 
   expect_match(h[3], "^Eyja · ")
   expect_match(h[4], "^Éyjar · ")
   expect_match(h[5], "^Stóra Ey · ")
-  expect_identical(hits("fjord")[1], "none found")
+  expect_identical(hits("fjrd")[1], "none found")
   expect_identical(hits("FJÖRÐ"), hits("fjorð"))
+  # a letter no accent makes, as a keyboard without it writes it: ð as d
+  expect_match(hits("fjord")[1], "^Hvalfjörður · ")
   # Enter in the box: the first hit
   hits("Eyja")
   page_eval(b, "document.getElementById('find-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })) ?? true")

@@ -1348,6 +1348,9 @@ Promise.all([BUNDLE ? BUNDLE.meta : fetch("/meta").then(r => r.json()), styleLoa
   const q = new URLSearchParams(location.search);
   if (G) {
     gridMeta = meta.layers?.[G.id] ?? {};
+    // the grid's first view: what its layer starts with (`start`, og_cells()'s arguments), the address winning
+    const gq = new URLSearchParams(Object.entries(G.start ?? {}).map(([k, v]) => [k, String(v)]));
+    for (const [k, v] of q) gq.set(k, v);
     for (const f of G.filters ?? []) {
       if (f.type === "range") {
         const [a, b] = gridMeta.ranges?.[f.id] ?? [];
@@ -1357,7 +1360,7 @@ Promise.all([BUNDLE ? BUNDLE.meta : fetch("/meta").then(r => r.json()), styleLoa
         const opts = gridMeta.options?.[f.id] ?? [];
         for (const o of opts) $(f.id).append(new Option(optionLabel(f, o), o.value));
         // several values, from the address: named by their options' names and codes
-        const v = q.get(f.id);
+        const v = gq.get(f.id);
         if (v && ![...$(f.id).options].some(o => o.value === v)) {
           const os = v.split(",").map(x => opts.find(o => String(o.value) === x) ?? { value: x });
           const codes = [...new Set(os.map(o => o.code).filter(Boolean))];
@@ -1370,16 +1373,16 @@ Promise.all([BUNDLE ? BUNDLE.meta : fetch("/meta").then(r => r.json()), styleLoa
     // the first view from the address: a value the page does not offer is left out
     const sel = [...(G.filters ?? []).flatMap(f => f.type === "range" ? f.params : [f.type === "metric" ? "metric" : f.id]),
                  "palette", "stretch"];
-    for (const k of sel) if (q.get(k) !== null && [...$(k).options].some(o => o.value === q.get(k))) $(k).value = q.get(k);
+    for (const k of sel) if (gq.get(k) !== null && [...$(k).options].some(o => o.value === gq.get(k))) $(k).value = gq.get(k);
     for (const f of G.filters ?? []) if (f.type === "range" && +$(f.params[0]).value > +$(f.params[1]).value)
       [$(f.params[0]).value, $(f.params[1]).value] = [$(f.params[1]).value, $(f.params[0]).value];
-    if (+q.get("floor") > 0 && +q.get("cap") > +q.get("floor")) {
-      widen(Math.log10(+q.get("floor")), Math.log10(+q.get("cap")));
-      $("lo").value = Math.log10(+q.get("floor")); $("hi").value = Math.log10(+q.get("cap"));
+    if (+gq.get("floor") > 0 && +gq.get("cap") > +gq.get("floor")) {
+      widen(Math.log10(+gq.get("floor")), Math.log10(+gq.get("cap")));
+      $("lo").value = Math.log10(+gq.get("floor")); $("hi").value = Math.log10(+gq.get("cap"));
       fitted = userColour = true;   // a floor and cap given are kept, not fitted to the view
     }
-    if (q.get("opacity") !== null && q.get("opacity") !== "" && +q.get("opacity") >= 0 && +q.get("opacity") <= 100)
-      $("opacity").value = Math.round(+q.get("opacity"));
+    if (gq.get("opacity") !== null && gq.get("opacity") !== "" && +gq.get("opacity") >= 0 && +gq.get("opacity") <= 100)
+      $("opacity").value = Math.round(+gq.get("opacity"));
   }
   // a layer on by default is turned off by id=0, one off by default on by id=1
   for (const l of LAYERS) if (q.get(l.id) === (l.visible ? "0" : "1")) {
@@ -2050,7 +2053,12 @@ map.on("click", e => clickAt(e));
 // each kind nearest the view's centre first, with their count when not all are listed; a click on one (or Enter) goes
 // there, at zoom 10 or nearer (a text's own start zoom where it has one), turns its layer on and shows its row
 const FIND = OTHER.filter(l => l.search);
-const fold = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+// letters no accent makes (eth, thorn, ash, o-slash, oe, sharp s, d-stroke, l-stroke), written as a keyboard without
+// them would: the Icelandic bay Hloduvik, written with an eth, found by "hloduvik"
+const FOLD_LETTERS = { "\u00f0": "d", "\u00fe": "th", "\u00e6": "ae", "\u00f8": "o", "\u0153": "oe", "\u00df": "ss",
+                       "\u0111": "d", "\u0142": "l" };
+const fold = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/[\u00f0\u00fe\u00e6\u00f8\u0153\u00df\u0111\u0142]/g, c => FOLD_LETTERS[c]);
 let findIndex = null, findSeq = 0;
 function findLoad() {
   return findIndex ??= Promise.all(FIND.map(l =>

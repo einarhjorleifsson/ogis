@@ -431,13 +431,15 @@ og_add_layer <- function(map, layer, section = "Layers") {
   )
 }
 
-# A shape column as DuckDB's GEOMETRY in SQL: as it is, or read from WKB (a BLOB)
+# A shape column as DuckDB's GEOMETRY in SQL: as it is, or read from WKB (a BLOB). A collection (as st_make_valid() or
+# a union leaves some) as its parts of the highest dimension, a multi-shape: ST_AsMVT() refuses collections, and a tile
+# with one was refused whole; other shapes pass as they are
 .og_geom_sql <- function(con, src, geometry) {
   .og_extension(con, "spatial")
   q <- as.character(DBI::dbQuoteIdentifier(con, geometry))
   type <- DBI::dbGetQuery(con, sprintf("SELECT typeof(%s) AS t FROM (%s) LIMIT 1", q, src))$t
   # DuckDB's GEOMETRY may carry its CRS in the type, GEOMETRY('OGC:CRS84')
-  if (length(type) && startsWith(type, "GEOMETRY")) q else sprintf("ST_GeomFromWKB(%s)", q)
+  sprintf("ST_CollectionExtract(%s)", if (length(type) && startsWith(type, "GEOMETRY")) q else sprintf("ST_GeomFromWKB(%s)", q))
 }
 
 .og_quick_need <- function(ctx, need) {

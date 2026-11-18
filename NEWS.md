@@ -1,3 +1,41 @@
+# ogis 2026.11.18.15
+
+* **Values by cell as one layer function**, `og_cells()` (the maintainer: "would like that the user could do similar
+  thing but from within ogis", of fishycode's effort map; named for its format, not its first use, as other data have
+  it). A table of cells (`ix` and `iy`, a cell's south-west corner in steps of `unit` degrees; the columns chosen by;
+  the values summed) is coloured by a value per square kilometre on ogis's grid layer: the page has a control for each
+  column chosen by (all, one, or several from the address; a column of years as a span; `one_of`, two counts of the
+  same thing such as two definitions of fishing, one at a time) and the colours' own. As the page asks for a tile,
+  DuckDB sums the cells under it to about a screen pixel at that zoom, no finer than the cells' own (read from their
+  corners), finer or coarser by the page's *Cells*. The cells: a table, a Parquet file read where it is, or nothing,
+  the file `OGIS_CELLS` names (as `OGIS_DEPTH`). Labels and the names of codes (a gear's id as its name) from the
+  file's data dictionary, else `codes`. The starting choices and look as arguments (`filter`, `metric`, `palette`,
+  `opacity`, `limits`, `stretch`), the page's address winning. `og_bundle()` carries it with no `grids` given, summed
+  in the browser at 0.01 degrees and up.
+  - On fishycode's 0.005-degree effort grid, its `fishing` preset alone sorted by cell (381 MB, 32 million rows): the
+    map built in 1.2 s; a tile at zooms 5-8 in 0.03-0.26 s (up to 5.5 MB), at zoom 10 in 0.02 s, filtered faster;
+    finer cells up to 0.9 s and 20 MB. On its whole 0.001-degree grid (5.1 GB, both presets as `one_of`): built in
+    0.7 s, its lists in 0.9 s, a tile at zoom 6 in 1 s. Bundled with the place names in 9 s, 205 MB (the cells 192
+    MB, at 0.01-0.5 degrees).
+* **Place names as one layer function**, `og_names()` (the maintainer: a curated list of names, searched, clicked,
+  "more detailed informations"; no editing). Each name from its own zoom (`min_zoom`), the larger first where they meet
+  (`level`, then `n`), written beside its point where crowded; found by the page's *Find* box, the map going to its
+  zoom; a click shows the rest of its row, labelled by the file's data dictionary. Its controls, folded: the names'
+  colour, and the zoom they appear at (a zoom later to two earlier), as fishycode's names map has them. Where the names
+  have areas, those are a layer of their own (`<id>_areas`), off when the page opens, a click inside one showing the
+  same; sent whole, one file, for a few large areas (a sea's) covered so many tiles that a bundle of them as tiles took
+  minutes (13,330 tiles to zoom 8 in 4.4 minutes). The names: a table, a (Geo)Parquet file, any file sf reads, or
+  nothing, the file `OGIS_NAMES` names. Built on `og_text()` and `og_polygon()`, so a bundle carries them and their
+  search. Fishycode's 9,139 names (1,575 with an area) as one 1.9 MB file: built and served in a second or two,
+  bundled in 2.8 s (13 MB).
+* **The Find box takes letters no accent makes as a keyboard without them writes them**: `ð` as `d`, `þ` as `th`, `æ`
+  as `ae`, `ø` as `o` (and `œ`, `ß`, `đ`, `ł`), so `hloduvik` finds Hlöðuvík, where only accents were set aside.
+* **A shape that is a collection is drawn as its parts.** DuckDB's `ST_AsMVT()` refuses a geometry collection (as
+  `sf::st_make_valid()` or a union leaves some), and a tile holding one was refused whole (HTTP 500), its other
+  features with it. Every layer function now takes a collection's parts of the highest dimension (`ST_CollectionExtract()`).
+* **A grid's first view from R** (`start` in its config): the page opens on the choices and colours its layer gives,
+  the address winning, as it already did for a dem layer's. `og_cells()` sets it.
+
 # ogis 2026.11.18.14
 
 * **The sea floor as two layer functions** (plan 072's step 3, at the maintainer's word: "can we not just have a ogis

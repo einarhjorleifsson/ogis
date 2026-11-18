@@ -22,6 +22,18 @@ reference:
     grid, or one named once by OGIS_DEPTH.
   contents:
   - og_relief
+- title: "Place names"
+  desc: >
+    A list of place names, each from its own zoom, found by the page's Find box, what is known of each on a click; a
+    table, a file, or one named once by OGIS_NAMES.
+  contents:
+  - og_names
+- title: "Values by cell"
+  desc: >
+    A table of cells coloured by a value per square kilometre, such as fishing effort by gear and year, chosen in the
+    page; a table, a Parquet file, or one named once by OGIS_CELLS.
+  contents:
+  - og_cells
 - title: "Time"
   desc: >
     A panel under the map: a group's rows over time, linked to the map.

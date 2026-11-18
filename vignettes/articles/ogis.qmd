@@ -140,6 +140,70 @@ OGIS_DEPTH=D:/data/depth.mbtiles
 og_map() |> og_relief() |> og_contour() # the model OGIS_DEPTH names
 ```
 
+## Values by cell
+
+`og_cells()` colours a table of cells by a value per square kilometre, such as hours of fishing by cell, gear and
+year; the page has a control for each of the table's other columns, and the colours' own. As the page asks for a tile,
+DuckDB sums the cells under it to about a screen pixel at that zoom, the reader's choices applied. Here the survey's
+positions counted by 0.02-degree cell (each corner in thousandths of a degree), vessel and what it was doing; choose a
+vessel, or hauling:
+
+```{r}
+by_cell <- positions |>
+  dplyr::mutate(ix = floor(lon * 50) * 20, iy = floor(lat * 50) * 20, one = 1) |>
+  dplyr::count(vid, behaviour, ix, iy, wt = one, name = "positions")
+og_map() |>
+  og_cells(by_cell, name = "Positions by cell",
+           labels = c(vid = "Vessel", behaviour = "Doing", positions = "Positions"))
+```
+
+`labels` names the columns where the file's data dictionary does not, as it can a gear's code (`codes`). A column of
+years is chosen as a span, from and to; `one_of` names a column whose values are ways of counting the same thing (two
+definitions of fishing), shown one at a time. The arguments are where the map starts:
+
+```{r}
+#| eval: false
+og_cells(effort, filter = list(gid = 6, year = c(2015, 2020)), one_of = "preset",
+         palette = "blues", opacity = 60, limits = c(0.5, 300), name = "Fishing effort")
+```
+
+## Place names
+
+`og_names()` writes a list of place names, each from its own zoom (`min_zoom`), the larger first where they meet
+(`level`); the page's *Find* box looks through them, accents aside and `ð` as `d`, and a click on one shows what else
+the table holds. Its controls, folded under ▸, set the names' colour and the zoom they appear at; where the names have
+areas, those are a layer of their own. Here a few of Iceland's bays and banks, at rough places:
+
+```{r}
+places <- data.frame(
+  name = c("Faxaflói", "Breiðafjörður", "Ísafjarðardjúp", "Húnaflói", "Skagafjörður",
+           "Eyjafjörður", "Skjálfandi", "Þistilfjörður", "Vopnafjörður", "Selvogsbanki"),
+  lon = c(-22.6, -23.1, -22.8, -20.6, -19.6, -18.3, -17.5, -15.4, -14.6, -21.6),
+  lat = c(64.4, 65.25, 66.12, 65.8, 65.95, 65.95, 66.12, 66.2, 65.8, 63.6),
+  min_zoom = c(5, 5, 6, 5, 6, 6, 6, 6, 7, 6), level = c(1, 1, 2, 1, 2, 2, 2, 2, 3, 2),
+  kind = c("bay", "bay", "fjord", "bay", "fjord", "fjord", "bay", "fjord", "fjord",
+           "bank")
+)
+og_map() |>
+  og_cells(by_cell, name = "Positions by cell",
+           labels = c(vid = "Vessel", behaviour = "Doing", positions = "Positions")) |>
+  og_names(places)
+```
+
+Type `thistil` in *Find*. A list of names kept as a file in its own place on each computer is named once, as the
+depth model is; and the cells too:
+
+```
+OGIS_NAMES=D:/data/ornefni.parquet
+OGIS_CELLS=D:/data/effort.parquet
+```
+
+```{r}
+#| eval: false
+og_map() |>
+  og_relief() |> og_contour() |> og_cells(name = "Fishing effort") |> og_names()
+```
+
 ## A layer of your own
 
 What the layer functions do not draw, an `og_layer()` does, in MapLibre's own terms: a style of your own on

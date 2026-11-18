@@ -77,13 +77,15 @@ needs a server;
 \item a vector layer from \code{\link[=og_tiles_table]{og_tiles_table()}} or a layer function (\code{\link[=og_point]{og_point()}} and the others), the tiles that hold a
 feature, to the deepest zoom written, and the rows a click shows;
 \item a time panel (\code{\link[=og_time]{og_time()}}), each vessel's spans, the whole and each month, a file each (\verb{time/});
-\item a grid layer named in \code{grids}, its rows: summed by cell at a few cell sizes and written in blocks of cells
-(\verb{grids/}), from which the page makes each tile, its filters applied and its cells summed in the browser, with the
-fields its server would send. Its cells hold one to two screen pixels (the filter \code{px} times that), from the
-cell sizes written. A filter the rows have no column for is left out, with a message.
+\item a grid layer named in \code{grids}, or made by \code{\link[=og_cells]{og_cells()}} (which gives its own), its rows: summed by cell at a few
+cell sizes and written in blocks of cells (\verb{grids/}), from which the page makes each tile, its filters applied and
+its cells summed in the browser, with the fields its server would send. Its cells hold one to two screen pixels
+(the filter \code{px} times that), from the cell sizes written. A filter the rows have no column for is left out, with
+a message.
 }
 
-Another vector layer, or a grid layer not in \code{grids}, is left out, with a message: their tiles are made by a server.
+Another vector layer, or a grid layer of \code{\link[=og_layer]{og_layer()}}'s not in \code{grids}, is left out, with a message: their tiles are
+made by a server.
 }
 \examples{
 places <- sf::st_as_sf(

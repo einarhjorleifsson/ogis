@@ -25,12 +25,14 @@
 #' * a vector layer from [og_tiles_table()] or a layer function ([og_point()] and the others), the tiles that hold a
 #'   feature, to the deepest zoom written, and the rows a click shows;
 #' * a time panel ([og_time()]), each vessel's spans, the whole and each month, a file each (`time/`);
-#' * a grid layer named in `grids`, its rows: summed by cell at a few cell sizes and written in blocks of cells
-#'   (`grids/`), from which the page makes each tile, its filters applied and its cells summed in the browser, with the
-#'   fields its server would send. Its cells hold one to two screen pixels (the filter `px` times that), from the
-#'   cell sizes written. A filter the rows have no column for is left out, with a message.
+#' * a grid layer named in `grids`, or made by [og_cells()] (which gives its own), its rows: summed by cell at a few
+#'   cell sizes and written in blocks of cells (`grids/`), from which the page makes each tile, its filters applied and
+#'   its cells summed in the browser, with the fields its server would send. Its cells hold one to two screen pixels
+#'   (the filter `px` times that), from the cell sizes written. A filter the rows have no column for is left out, with
+#'   a message.
 #'
-#' Another vector layer, or a grid layer not in `grids`, is left out, with a message: their tiles are made by a server.
+#' Another vector layer, or a grid layer of [og_layer()]'s not in `grids`, is left out, with a message: their tiles are
+#' made by a server.
 #'
 #' @param map An [og_map()].
 #' @param dir The folder to write. If it already holds a bundle (`index.html`, `tiles/`, `data/`, `grids/`, `time/` or
@@ -132,6 +134,9 @@ og_bundle <- function(
   if (length(unknown)) {
     stop(sprintf("`grids` names no grid layer of the map: %s.", paste(unknown, collapse = ", ")), call. = FALSE)
   }
+  # a grid that gives its own rows (og_cells()'s), unless `grids` gives others
+  own <- Filter(Negate(is.null), lapply(layers[kind == "grid"], `[[`, "bundle_grid"))
+  grids <- c(grids, own[setdiff(names(own), names(grids))])
   listed <- vapply(layers, function(l) is.function(attr(l$tiles, "tiles_at")), logical(1))
   out <- names(layers)[(kind == "vector" & !listed) | (kind == "grid" & !names(layers) %in% names(grids))]
   if (length(out)) {
