@@ -599,7 +599,8 @@
 #' @param name,id,info The layer's name in the sidebar, its id, and the text behind its ⓘ. The id (lower-case letters,
 #'   digits and _) is the key the page's address and a page's own script know the layer by, its styles `<id>-dot`,
 #'   `<id>-line`, `<id>-fill` and `<id>-text`; by default made from the name.
-#' @param section The sidebar's box the layer sits in, by its title.
+#' @param section The sidebar's box the layer sits in, by its title. The layer is drawn over those added before it,
+#'   whatever their boxes, unless [rr_map()]'s `order` says otherwise.
 #' @param visible Whether the layer is on when the page opens.
 #' @param minzoom,maxzoom The zoom the layer is drawn from, and its tiles' deepest (14 by default), past which the map
 #'   draws that zoom's tiles larger. For `rr_text()`, `minzoom` may be a column written bare: each row from its own

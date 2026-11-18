@@ -222,7 +222,8 @@ to \code{\link[=rr_map]{rr_map()}}.}
 digits and _) is the key the page's address and a page's own script know the layer by, its styles \verb{<id>-dot},
 \verb{<id>-line}, \verb{<id>-fill} and \verb{<id>-text}; by default made from the name.}
 
-\item{section}{The sidebar's box the layer sits in, by its title.}
+\item{section}{The sidebar's box the layer sits in, by its title. The layer is drawn over those added before it,
+whatever their boxes, unless \code{\link[=rr_map]{rr_map()}}'s \code{order} says otherwise.}
 
 \item{visible}{Whether the layer is on when the page opens.}
 

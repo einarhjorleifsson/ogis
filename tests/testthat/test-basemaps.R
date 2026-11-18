@@ -32,8 +32,7 @@ test_that("a page opens on a base map given as a tile address, switches to a WMS
   asked <- function(re) {
     page_eval(b, sprintf("performance.getEntriesByType('resource').filter(e => /%s/.test(e.name)).length", re))
   }
-  # the base map's layers, under the others
-  under <- function() setdiff(unlist(page_eval(b, "map.getStyle().layers.map(l => l.id)")), c("positions-dot", "ids-text"))
+  drawn_ids <- function() unlist(page_eval(b, "map.getStyle().layers.map(l => l.id)"))
   drawn <- function() {
     wait_until(function() isTRUE(page_eval(b, "map.loaded() && map.isStyleLoaded()")), 30) &&
       wait_until(function() page_eval(b, 'map.queryRenderedFeatures({ layers: ["ids-text"] }).length') > 0, 30)
@@ -42,7 +41,7 @@ test_that("a page opens on a base map given as a tile address, switches to a WMS
   # no style has glyphs (MapLibre draws them in the browser's own font)
   expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && !!map.getLayer('ids-text')")), 40))
   expect_true(drawn())
-  expect_identical(under(), c("base-bg", "base"))
+  expect_identical(drawn_ids(), c("base-bg", "base", "positions-dot", "ids-text"))
   expect_gt(asked("tile\\.png\\?z=\\d+&x=\\d+&y=\\d+$"), 0)
   expect_identical(page_eval(b, "document.querySelector('#bases input:checked').value"), "xyz")
   # a WMS: its box filled in for each tile, the layers kept over it
@@ -50,7 +49,7 @@ test_that("a page opens on a base map given as a tile address, switches to a WMS
   expect_true(wait_until(function() asked("BBOX=-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,") > 0, 30))
   expect_true(drawn())
   expect_match(page_eval(b, "map.getSource('base').tiles[0]"), "{bbox-epsg-3857}", fixed = TRUE)
-  expect_identical(under(), c("base-bg", "base"))
+  expect_identical(drawn_ids(), c("base-bg", "base", "positions-dot", "ids-text"))
   # none, then the tiles again
   page_eval(b, "document.querySelector('#bases input[value=none]').click() ?? true")
   expect_true(drawn())

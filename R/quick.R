@@ -106,7 +106,7 @@
   list(
     data = p$data, choose_q = p$choose_q,
     layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections,
-    view = p$view, basemaps = p$basemaps, scripts = state$scripts
+    order = p$order, view = p$view, basemaps = p$basemaps, scripts = state$scripts
   )
 }
 
@@ -115,8 +115,9 @@
 #' `rr_add_layer()` adds an [rr_layer()] to a map the pipe makes ([rr_map()], with data or none, and the layer
 #' functions), for what the layer functions do not draw: elevations as relief and colours (`"dem"`), contours made in
 #' the page (`"contour"`), tiles of your own (`"vector"`, `"grid"`), features as GeoJSON with a style of your own. It
-#' sits in the sidebar's box `section` with the others and is drawn in the order added, the later over the earlier;
-#' elevations, contours and a grid go under the base map's labels, as in any map.
+#' sits in the sidebar's box `section` with the others and is drawn in the order added, the later over the earlier,
+#' whatever their boxes (or as [rr_map()]'s `order` says); elevations, contours and a grid go under the base map's
+#' labels, as in any map.
 #'
 #' The first view covers the rows of the map's layer functions; a map with none fits the layers' tiles (their
 #' `bounds`, which [rr_tiles_dem()] and [rr_tiles_mbtiles()] give), unless `rr_map(view = )` is given. The layer is
@@ -508,8 +509,12 @@ rr_add_layer <- function(map, layer, section = "Layers") {
   if (!length(sections)) {
     sections <- list(rr_section("track", "Track", list())) # a time panel alone
   }
+  # drawn in the order added, the later over the earlier, whatever their boxes; those `order` names first. One it
+  # names that is not added yet is left for a later call (checked once the map is shown)
+  ids <- vapply(state$layers, function(l) l$config$id, "")
   m <- do.call(rr_map, c(sections, list(
     title = state$title,
+    order = c(intersect(state$order, ids), setdiff(ids, state$order)),
     # the rows' extent, which the page fits to the frame it has (a window, an article's iframe); the centre and zoom
     # for a page whose address holds no view and no extent
     # (a view given to rr_map() wins)

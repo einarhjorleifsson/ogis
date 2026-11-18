@@ -22,8 +22,9 @@ The map, with the layer.
 \code{rr_add_layer()} adds an \code{\link[=rr_layer]{rr_layer()}} to a map the pipe makes (\code{\link[=rr_map]{rr_map()}}, with data or none, and the layer
 functions), for what the layer functions do not draw: elevations as relief and colours (\code{"dem"}), contours made in
 the page (\code{"contour"}), tiles of your own (\code{"vector"}, \code{"grid"}), features as GeoJSON with a style of your own. It
-sits in the sidebar's box \code{section} with the others and is drawn in the order added, the later over the earlier;
-elevations, contours and a grid go under the base map's labels, as in any map.
+sits in the sidebar's box \code{section} with the others and is drawn in the order added, the later over the earlier,
+whatever their boxes (or as \code{\link[=rr_map]{rr_map()}}'s \code{order} says); elevations, contours and a grid go under the base map's
+labels, as in any map.
 }
 \details{
 The first view covers the rows of the map's layer functions; a map with none fits the layers' tiles (their

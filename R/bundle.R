@@ -95,6 +95,7 @@ rr_bundle <- function(
   if (!inherits(map, "rr_map")) {
     stop("`map` is an rr_map().", call. = FALSE)
   }
+  .rr_order_shown(map)
   if (!is.character(dir) || length(dir) != 1 || is.na(dir) || !nzchar(dir)) {
     stop("`dir` is the path of a folder.", call. = FALSE)
   }

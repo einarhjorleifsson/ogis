@@ -1,3 +1,19 @@
+# rebelrebel 2026.11.18.6
+
+* `rr_map(order = )`: the order the layers are drawn in, by their ids, from the lowest up; those named first, under
+  the others, which keep theirs. The sidebar keeps its own order, so a layer may be listed in one place and drawn in
+  another (a coast listed last under "Reference", drawn under the rest). A map started from data names the layers its
+  layer functions add later by their `id`; one never added is an error once the map is shown. A map of
+  `rr_section()`s checks its `order` at once. Elevations and contours stay under the base map's labels.
+* A piped map draws its layers in the order added, the later over the earlier, as "Get started" and
+  `rr_add_layer()`'s help said. It drew them by their sidebar boxes, in the order the boxes were first named, so a
+  layer added later in an earlier box went under one added before it in a later box.
+* The page draws the layers in the map's order, not in the order their data arrive: a layer read from a file (every
+  GeoJSON layer in a bundle, a served one whose count is not known) or made once a library has loaded (contours) went
+  over all the others when it came, so a large layer (an 8 MB coast) could cover a small one meant over it. Each now
+  goes under the first of its kind already drawn that comes after it.
+* "Get started" has a section on the order of layers.
+
 # rebelrebel 2026.11.18.5
 
 * A base map given as a tile address, by `{z}/{x}/{y}` or a WMS's `GetMap` with `BBOX={bbox-epsg-3857}`, opens the

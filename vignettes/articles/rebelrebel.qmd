@@ -66,6 +66,19 @@ rr_map(positions) |>
            "circle-stroke-color" = "#00a5c8", "circle-stroke-width" = 2)
 ```
 
+## The order of layers
+
+Each layer is drawn over the ones before it, whatever box of the sidebar it sits in (`section`). `order` in `rr_map()`
+draws the layers it names first, by their `id`, under the others; the sidebar keeps its own order. Here the tows,
+listed last under *Reference*, drawn under the positions:
+
+```{r}
+rr_map(positions, order = "tows") |>
+  rr_point(colour = behaviour, name = "Positions") |>
+  rr_line(rr_example("trawlsurveytows"), colour = "#4a5560", id = "tows",
+          name = "Tows", section = "Reference")
+```
+
 ## A layer of your own
 
 What the layer functions do not draw, an `rr_layer()` does: elevations as colours and relief, contours, tiles of your

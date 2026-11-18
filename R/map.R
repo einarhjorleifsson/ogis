@@ -670,6 +670,11 @@ rr_section <- function(id, title = id, layers, open = TRUE) {
 #'   whole runs.
 #' @param sections For a map started from data, the sidebar's boxes the layers name (their `section`), each a `title`
 #'   and whether it is `open`: `list(Reference = list(open = FALSE))`.
+#' @param order The order the layers are drawn in, by their ids, from the lowest up: those named first, under the
+#'   others, which keep theirs (in a map started from data, the order of its layer functions, the later over the
+#'   earlier; else that of the sections). The sidebar keeps its own order. Elevations and contours stay under the base
+#'   map's labels whatever their place, in this order among themselves. A map started from data names the layers its
+#'   layer functions are to add by their `id`; one it never adds is an error when the map is shown.
 #' @param palette The grid's palette when the page opens: an `id` of `palettes`.
 #' @param palettes,basemaps The palettes and base maps to choose from: [rr_palettes()], [rr_basemaps()]. The
 #'   grid offers the palettes for its use (`use` holding `"grid"`, or no `use`); a dem layer's colour offers its own
@@ -698,6 +703,7 @@ rr_map <- function(
   about = NULL,
   choose = NULL,
   sections = NULL,
+  order = NULL,
   palette = NULL,
   palettes = rr_palettes(),
   basemaps = rr_basemaps()
@@ -718,6 +724,7 @@ rr_map <- function(
       class = "rr_map",
       # the map's own settings kept for its layers: a view given, base maps given
       quick = list(pending = list(data = first, choose_q = choose_q, title = title, port = NULL, sections = sections,
+                                  order = .rr_order_checked(order),
                                   view = if (!missing(view)) view, basemaps = if (!missing(basemaps)) basemaps))
     ))
   }
@@ -745,6 +752,12 @@ rr_map <- function(
   ) {
     stop("A map has one grid layer at most.", call. = FALSE)
   }
+  # the order the layers are drawn in: those `order` names first, the others after in theirs
+  order <- .rr_order_checked(order)
+  .rr_order_known(order, ids)
+  at <- c(match(order, ids), setdiff(seq_along(ids), match(order, ids)))
+  layers <- layers[at]
+  ids <- ids[at]
   # a layer's state goes into the address and MapLibre's global state as <id>_<name>
   state_keys <- unlist(lapply(layers, function(l) {
     if (length(l$config$state)) paste0(l$config$id, "_", vapply(l$config$state, `[[`, "", "id"))
@@ -1192,4 +1205,32 @@ format.rr_map <- function(x, ...) {
     e
   })
   choose
+}
+
+# `order` (rr_map()): layer ids, each once
+.rr_order_checked <- function(order) {
+  if (is.null(order)) {
+    return(NULL)
+  }
+  if (!is.character(order) || anyNA(order) || !all(nzchar(order)) || anyDuplicated(order)) {
+    stop("`order` is the layers' ids, each once, from the lowest drawn up.", call. = FALSE)
+  }
+  order
+}
+
+# Each id `order` names a layer of the map
+.rr_order_known <- function(order, ids) {
+  if (length(miss <- setdiff(order, ids))) {
+    stop(sprintf("`order` names no layer of the map: %s (a layer's id is its `id`; the map's are %s).",
+                 paste(miss, collapse = ", "), paste(ids, collapse = ", ")), call. = FALSE)
+  }
+  invisible(order)
+}
+
+# A map started from data names in `order` the layers its layer functions are to add: checked once it is shown
+.rr_order_shown <- function(map) {
+  q <- attr(map, "quick")
+  want <- q$order %||% q$pending$order
+  if (length(want)) .rr_order_known(want, vapply(map$config$layers, function(l) l$id, ""))
+  invisible(map)
 }

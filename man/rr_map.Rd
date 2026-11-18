@@ -15,6 +15,7 @@ rr_map(
   about = NULL,
   choose = NULL,
   sections = NULL,
+  order = NULL,
   palette = NULL,
   palettes = rr_palettes(),
   basemaps = rr_basemaps()
@@ -65,6 +66,12 @@ whole runs.}
 
 \item{sections}{For a map started from data, the sidebar's boxes the layers name (their \code{section}), each a \code{title}
 and whether it is \code{open}: \code{list(Reference = list(open = FALSE))}.}
+
+\item{order}{The order the layers are drawn in, by their ids, from the lowest up: those named first, under the
+others, which keep theirs (in a map started from data, the order of its layer functions, the later over the
+earlier; else that of the sections). The sidebar keeps its own order. Elevations and contours stay under the base
+map's labels whatever their place, in this order among themselves. A map started from data names the layers its
+layer functions are to add by their \code{id}; one it never adds is an error when the map is shown.}
 
 \item{palette}{The grid's palette when the page opens: an \code{id} of \code{palettes}.}
 

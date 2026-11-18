@@ -289,6 +289,7 @@ rr_stop <- function(port = NULL) {
 
 # The app behind rr_serve(), a list with `call(req)` for httpuv: its routes in the header of this file
 .rr_map_app <- function(map, notes = NULL, host = "127.0.0.1", verdicts = NULL, routes = NULL) {
+  .rr_order_shown(map)
   json <- .rr_map_json
   if (!is.null(notes)) {
     map$config$notes <- list(file = basename(notes))
