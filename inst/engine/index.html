@@ -457,15 +457,30 @@ function gridBlock(L, b) {
 }
 async function gridTile(url) {
   const m = url.match(/\/(\d+)\/(\d+)\/(\d+)(?:\?(.*))?$/), z = +m[1], x = +m[2], y = +m[3], q = new URLSearchParams(m[4] ?? "");
-  const px = Math.max(0.25, +(GRID.px ? q.get(GRID.px) : 1) || 1);
-  const target = 360 / 2 ** z / 512 * px / GRID.unit * 2;
-  const L = [...GRID.levels].reverse().find(l => l <= target) ?? GRID.levels[0];
-  const side = L * GRID.unit, n = 2 ** z, B = GRID.block, S = GRID.sums.length;
+  // the cells' size, in steps of the unit across (kx) and up (ky), made from the level L written: a size chosen
+  // (`s<degrees>`, `r<x>x<y>`) at a whole number of it no narrower than half a pixel, from the largest level that
+  // divides it; else about a pixel, the level that makes a cell one to two pixels (`px` times that)
+  const sv = (GRID.px ? q.get(GRID.px) : null) ?? "1", pix = 360 / 2 ** z / 512 / GRID.unit;
+  const fixed = /^([sr])([0-9.]+)(?:x([0-9.]+))?$/.exec(sv);
+  let kx = 0, ky = 0, L;
+  if (fixed) {
+    const kk = (fixed[1] === "s" ? [fixed[2], fixed[2]] : [fixed[2], fixed[3]]).map(v => Math.round(+v / GRID.unit));
+    const k = Math.max(1, Math.ceil(pix / 2 / Math.min(...kk)));
+    [kx, ky] = [kk[0] * k, kk[1] * k];
+    L = [...GRID.levels].reverse().find(l => kx % l === 0 && ky % l === 0);
+  }
+  if (!L) {
+    const px = Math.max(0.25, fixed ? 1 : +sv || 1);
+    L = [...GRID.levels].reverse().find(l => l <= pix * px * 2) ?? GRID.levels[0];
+    kx = ky = L;
+  }
+  const fx = kx / L, fy = ky / L, sideX = kx * GRID.unit, sideY = ky * GRID.unit;
+  const n = 2 ** z, B = GRID.block, S = GRID.sums.length;
   const lon0 = x / n * 360 - 180, lon1 = (x + 1) / n * 360 - 180;
   const latOf = t => Math.atan(Math.sinh(Math.PI * (1 - 2 * t / n))) * 180 / Math.PI;
   const lat0 = latOf(y + 1), lat1 = latOf(y);
-  const cx0 = Math.floor(lon0 / side) - 1, cx1 = Math.floor(lon1 / side) + 1;
-  const cy0 = Math.floor(lat0 / side) - 1, cy1 = Math.floor(lat1 / side) + 1;
+  const cx0 = Math.floor(lon0 / sideX) - 1, cx1 = Math.floor(lon1 / sideX) + 1;
+  const cy0 = Math.floor(lat0 / sideY) - 1, cy1 = Math.floor(lat1 / sideY) + 1;
   const W = cx1 - cx0 + 1, H = cy1 - cy0 + 1;
   // the codes each filter keeps, or none where it keeps all: a range between its two values, a list of values, an
   // empty value all of them, or a filter with no "all" its default
@@ -483,16 +498,21 @@ async function gridTile(url) {
     const set = new Set(v.split(","));
     return Uint8Array.from(c.values, x => x !== null && set.has(x));
   });
+  // the blocks of level-L cells under the tile's cells
   const want = new Set(GRID.blocks[L] ?? []), jobs = [];
-  for (let bx = Math.floor(cx0 / B); bx <= Math.floor(cx1 / B); bx++)
-    for (let by = Math.floor(cy0 / B); by <= Math.floor(cy1 / B); by++) if (want.has(`${bx}_${by}`)) jobs.push([bx, by]);
+  for (let bx = Math.floor(cx0 * fx / B); bx <= Math.floor(((cx1 + 1) * fx - 1) / B); bx++)
+    for (let by = Math.floor(cy0 * fy / B); by <= Math.floor(((cy1 + 1) * fy - 1) / B); by++)
+      if (want.has(`${bx}_${by}`)) jobs.push([bx, by]);
   const blocks = await Promise.all(jobs.map(([bx, by]) => gridBlock(L, `${bx}_${by}`)));
   const acc = new Float64Array(W * H * S), seen = new Uint8Array(W * H);
+  // each cell's vessels, where the cells name them: their codes, counted, and the fewest a cell shown has
+  const V = GRID.vessels, vesselsOf = V ? new Map() : null, least = V ? Math.max(1, +q.get(V.least) || 1) : 1;
   blocks.forEach((b, j) => {
     const tests = GRID.columns.map((c, i) => keep[i] && [b.codes[c.id], keep[i]]).filter(Boolean);
-    const ox = jobs[j][0] * B - cx0, oy = jobs[j][1] * B - cy0;
+    const vcodes = V && b.codes[V.column];
+    const ax0 = jobs[j][0] * B, ay0 = jobs[j][1] * B;
     for (let i = 0; i < b.n; i++) {
-      const gx = ox + b.cell[i] % B, gy = oy + ((b.cell[i] / B) | 0);
+      const gx = Math.floor((ax0 + b.cell[i] % B) / fx) - cx0, gy = Math.floor((ay0 + ((b.cell[i] / B) | 0)) / fy) - cy0;
       if (gx < 0 || gx >= W || gy < 0 || gy >= H) continue;
       let pass = true;
       for (const [codes, mask] of tests) if (!mask[codes[i]]) { pass = false; break; }
@@ -500,6 +520,7 @@ async function gridTile(url) {
       const at = gy * W + gx;
       seen[at] = 1;
       for (let s = 0; s < S; s++) acc[at * S + s] += b.sums[s][i];
+      if (vcodes) { let set = vesselsOf.get(at); if (!set) vesselsOf.set(at, set = new Set()); set.add(vcodes[i]); }
     }
   });
   // each cell a rectangle in the tile's units (4,096, 64 beyond its edges), its fields a sum or a sum per km²
@@ -509,18 +530,21 @@ async function gridTile(url) {
   const names = Object.keys(GRID.fields), from = names.map(k => [GRID.sums.indexOf(GRID.fields[k][0]), GRID.fields[k][1] === "km2"]);
   const feats = [];
   for (let gy = 0; gy < H; gy++) {
-    const la0 = (cy0 + gy) * side, la1 = la0 + side, top = ty(la1), bottom = ty(la0);
+    const la0 = (cy0 + gy) * sideY, la1 = la0 + sideY, top = ty(la1), bottom = ty(la0);
     if (top === bottom) continue;
-    const km2 = side * 111.32 * Math.cos((la0 + la1) / 2 * Math.PI / 180) * side * 110.574;
+    const km2 = sideX * 111.32 * Math.cos((la0 + la1) / 2 * Math.PI / 180) * sideY * 110.574;
     for (let gx = 0; gx < W; gx++) {
       const at = gy * W + gx;
       if (!seen[at]) continue;
-      const left = tx((cx0 + gx) * side), right = tx((cx0 + gx + 1) * side);
+      const nv = V ? vesselsOf.get(at)?.size ?? 0 : null;
+      if (V && nv < least) continue;
+      const left = tx((cx0 + gx) * sideX), right = tx((cx0 + gx + 1) * sideX);
       if (left === right) continue;
-      feats.push([left, top, right, bottom, from.map(([s, per]) => per ? acc[at * S + s] / km2 : acc[at * S + s])]);
+      const vals = from.map(([s, per]) => per ? acc[at * S + s] / km2 : acc[at * S + s]);
+      feats.push([left, top, right, bottom, V ? [...vals, nv] : vals]);
     }
   }
-  return mvtRectangles(GRID.layer, names, feats);
+  return mvtRectangles(GRID.layer, V ? [...names, "vessels"] : names, feats);
 }
 // A vector tile of one layer of rectangles, each [left, top, right, bottom, values] in tile units, its values doubles
 function pbfWriter() {
@@ -1418,6 +1442,7 @@ Promise.all([BUNDLE ? BUNDLE.meta : fetch("/meta").then(r => r.json()), styleLoa
   FONT = map.getStyle().layers.find(l => l.type === "symbol" && l.layout?.["text-font"])?.layout["text-font"] ?? FONT;
   FACES = facesOf(map.getStyle());
   if (G) {
+    G.followNow?.();   // the cells following the time panel's vessel, before their first tiles
     const firstSymbol = map.getStyle().layers.find(l => l.type === "symbol")?.id;
     map.addSource(G.id, { type: "vector", tiles: [tileUrl()], minzoom: G.minzoom ?? 2, maxzoom: G.maxzoom ?? 12 });
     map.addLayer({ id: G.id, type: "fill", source: G.id, "source-layer": G.source_layer ?? "cells",
@@ -2459,6 +2484,35 @@ if (G) {
         tileError = "";
         map.getSource(G.id)?.setTiles([tileUrl()]);   // before the first load, the start reads the filters itself
       });
+  }
+  // the cells following the time panel's vessel (og_cells(follow = )): its own, its gear's, or the fleet's, by setting
+  // the cells' own vessel and gear choices; a map with no panel has nothing to follow, and no such control
+  if (G.follow) {
+    if (!TP) $(G.follow.id).closest(".row").hidden = true;
+    const put = (id, v) => {
+      const s = id && $(id);
+      if (!s || s.value === v) return false;
+      if (![...s.options].some(o => o.value === v)) s.add(new Option(v, v));
+      s.value = v;
+      return true;
+    };
+    G.followNow = () => {
+      if (!TP) return false;
+      // before the panel is set up, the vessel it opens on: the address's, else its first
+      const mode = $(G.follow.id).value, v = $("t-vessel").value ||
+        (TP.vessels.find(x => x.value === new URLSearchParams(location.search).get("tv")) ?? TP.vessels[0])?.value;
+      const a = put(G.follow.vessel, mode === "vessel" ? v : "");
+      const b = put(G.follow.gear, mode === "gear" ? String(gridMeta.follow?.[v] ?? "") : "");
+      return a || b;
+    };
+    const follow = () => {
+      if (!G.followNow()) return;
+      popup?.remove();
+      map.getSource(G.id)?.setTiles([tileUrl()]);
+      writeAddress();
+    };
+    $(G.follow.id).addEventListener("change", follow);
+    if (TP) $("t-vessel").addEventListener("change", follow);
   }
   $("metric")?.addEventListener("change", () => { userColour = false; sampleView(); paint(); fitToView(); });
   $("lo").addEventListener("input", () => { userColour = true; paint(); });

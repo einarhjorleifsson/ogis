@@ -13,6 +13,13 @@ og_cells(
   one_of = NULL,
   range = "year",
   unit = 0.001,
+  sizes = c(0.01, 0.05, 0.1, 0.5),
+  ices = TRUE,
+  cell = NULL,
+  vessels = NULL,
+  min_vessels = 1,
+  follow = "vessel",
+  gear = NULL,
   filter = list(),
   metric = NULL,
   palette = "magma",
@@ -42,6 +49,23 @@ fishing, say): one value shown at a time, the first by default, with no "all".}
 \item{range}{Columns of \code{by} chosen as a span of two values, from and to: \code{"year"} by default, where there is one.}
 
 \item{unit}{The degrees of one step of \code{ix} and \code{iy}.}
+
+\item{sizes, ices}{The cell sizes in degrees the page offers besides about a pixel, those that are a whole number of the
+cells' own; \code{ices}, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them.}
+
+\item{cell}{The cells' size when the page opens: \code{NULL}, about a pixel; one of \code{sizes}; or \code{"ices"}.}
+
+\item{vessels}{The column of \code{by} that names a vessel, for the cells' number of vessels: by default the first of
+\code{vid}, \code{vessel_id}, \code{VESSEL_ID}, \code{vessel} and \code{mmsi} there is; \code{FALSE}, none.}
+
+\item{min_vessels}{The fewest vessels a cell shown has when the page opens: 1 (all), 2, 3, 5 or 10.}
+
+\item{follow}{On a map with a time panel (\code{\link[=og_time]{og_time()}}) whose groups are the cells' vessels, the cells shown follow
+the vessel chosen there: \code{"vessel"}, its own; \code{"gear"}, its gear's (the gear of most of its first value); or
+\code{"fleet"}, all of them. The page's \emph{Show} changes it; \code{FALSE}, no such control. Needs \code{vessels}.}
+
+\item{gear}{The column of \code{by} that names a gear, for \code{follow}: by default the first of \code{gear}, \code{gid}, \code{GEAR},
+\code{gear_code} and \code{metier} there is.}
 
 \item{filter}{The choices when the page opens, by column: \code{list(gid = 6, year = c(2015, 2020))}, a value or several
 of a list (several, comma-separated in the address), the first and last of a span. Those not given: all, the
@@ -82,10 +106,17 @@ summed by the browser from the cells at sizes from 0.01 degrees up.
 and year. The page has a control for each column the cells are chosen by (all of a gear, one, or several from the
 address; a span of years), and the colours' own: the palette, the stretch, the floor and the cap on a histogram of
 the cells in view, fitted to the view. As the page asks for a tile, DuckDB sums the cells under it to about a screen
-pixel at that zoom (finer or coarser by the page's \emph{Cells}), the reader's choices applied; a cell's value is its sum
-over its area, so a colour holds across zooms. A click on a cell shows its values.
+pixel at that zoom, the reader's choices applied; a cell's value is its sum over its area, so a colour holds across
+zooms. A click on a cell shows its values.
 }
 \details{
+The page's \emph{Cells} sets their size, live: about a screen pixel at each zoom (finer or coarser), or one size at every
+zoom (by default 0.01, 0.05, a c-square, 0.1 and 0.5 degrees, and the ICES statistical rectangle, 1 by 0.5
+degrees), so the reader sees what a grid's resolution does to the picture. A size narrower than half a pixel at the
+zoom is drawn at a whole number of it that is not. Where the cells name their vessel (\code{vessels}), the page also hides
+the cells of fewer than a number of vessels chosen there (all by default), as a confidentiality rule would, and a
+click shows each cell's.
+
 The arguments are the starting look and choices; the page's controls change them, and a value in the page's address
 wins over both.
 }

@@ -34,6 +34,12 @@ reference:
     page; a table, a Parquet file, or one named once by OGIS_CELLS.
   contents:
   - og_cells
+- title: "Vessel tracks"
+  desc: >
+    Pings as a track, a time panel of speed (a vessel, then a trip), lanes of what the vessel did, and the effort
+    following the vessel chosen: a quick look at each step of a track's processing.
+  contents:
+  - og_tracks
 - title: "Time"
   desc: >
     A panel under the map: a group's rows over time, linked to the map.

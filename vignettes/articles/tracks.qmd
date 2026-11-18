@@ -1,0 +1,112 @@
+---
+title: "Vessel tracks"
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+    message: false
+---
+
+`og_tracks()` draws vessel tracks, a row a ping, for a quick look at what a step of their processing made of them:
+each vessel's track and pings, a time panel of speed under the map (a vessel chosen there, then one of its trips),
+lanes of what the vessel was doing and of its trips, and the fishing effort by cell, which follows the vessel chosen.
+The processing is [ramb](https://github.com/einarhjorleifsson/ramb)'s: flags, harbours, trips, fishing and effort.
+ogis only draws, so a step's output, ramb's or another workflow's, can be looked at as soon as it is made.
+
+```{r}
+library(ogis)
+library(dplyr)
+```
+
+## Trips and effort
+
+Two Danish small-scale vessels, a gillnetter and a trawler, a ping a minute: ramb flags the pings that cannot be
+right, finds those in a harbour, cuts the track into trips there (the ICES workshop's rule, `"jepol"`), and gives each
+ping the hours it stands for.
+
+```{r}
+h <- ramb::rb_read_example("dansk_harbours") |> collect()
+harbours <- sf::st_sf(
+  port_id = h$SI_HARB,
+  geometry = sf::st_as_sfc(structure(h$geometry, class = "WKB"), crs = 4326)
+)
+pings <- ramb::rb_read_example("dansk") |>
+  collect() |>
+  filter(vessel_id %in% c("EX_6", "EX_12")) |>
+  rename(vid = vessel_id, time = time_stamp) |>
+  arrange(vid, time) |>
+  group_by(vid) |>
+  slice(seq(1, n(), by = 6)) |>
+  ungroup() |>
+  ramb::rb_flag_ping_invalid() |>
+  ramb::rb_flag_ping_impossible(method = "clean") |>
+  filter(is.na(ping_flag)) |>
+  ramb::rb_flag_ping_port(harbours)
+pings <- pings |>
+  ramb::rb_add_voyages(ramb::rb_create_voyages(pings, method = "jepol")) |>
+  ramb::rb_add_effort()
+og_tracks(pings, title = "Danish vessels")
+```
+
+What to look at:
+
+- **The trips.** Under *Time*, choose a vessel, then a trip: the map and the panel show that trip alone. The lane
+  *trip* shows where each trip begins and ends against the speed: a trip should leave a harbour and come back to one.
+  A trip is known by its vessel and ramb's number for it, which starts again each year.
+- **What the vessel was doing.** The lane *behaviour* and the pings' colours: fishing at slow, steady speed, steaming
+  fast between.
+- **The effort.** *Show* follows the panel's vessel: its own effort, its gear's, or the whole fleet's. *Cells* sets
+  their size, live: about a pixel at each zoom, or 0.01 to 0.5 degrees at every zoom, a c-square (0.05) or an ICES
+  rectangle (1 by 0.5), so the picture's dependence on the grid is seen. *Vessels, at least* hides the cells of fewer
+  vessels, as a confidentiality rule would; a click on a cell shows its number.
+
+## Flags against the truth
+
+A flagging step is checked against faults known to be there. ramb's `dansk_planted` is a vessel's track with faults
+planted in it (a ping moved, its time shifted, ...). The panel marks both, the planted faults and the pings ramb
+flags, each a row of ticks along the chart's top and a ring on the map:
+
+```{r}
+planted <- ramb::rb_read_example("dansk_planted") |>
+  collect() |>
+  filter(vid == first(vid)) |>
+  arrange(time) |>
+  ramb::rb_flag_ping_impossible(method = "clean")
+count(planted, planted = !is.na(fault), flagged = !is.na(ping_flag))
+og_tracks(planted, activity = "fishing",
+          marks = c(planted = "fault", flagged = "ping_flag"),
+          effort = FALSE, title = "Planted faults")
+```
+
+The map opens on the whole track, a line across the Baltic among it: a ping moved a thousand kilometres east, as
+one of the planted faults does. A planted fault with no flag is one the step missed; a flag with no planted fault, a
+good ping it took for a bad one. Drag across the chart where they cluster, to see them on the map.
+
+## What an observer saw, against a rule
+
+An observer's labels, ping by ping, against what a rule infers from the track: here Malagasy small-scale gillnet
+trips (ramb's `ird_mg_gillnet`), the observer's `label` beside a speed rule's fishing. Each is a lane; where they
+disagree is seen at once, and so is the state of the labels themselves (the same activity spelled three ways).
+
+```{r}
+gillnet <- ramb::rb_read_example("ird_mg_gillnet") |>
+  collect() |>
+  mutate(rule = if_else(speed < 1.5, "slow", "moving"))
+og_tracks(gillnet, activity = "rule", trip = "trip", lanes = c(observed = "label"),
+          effort = FALSE, title = "Gillnet trips")
+```
+
+## Another workflow's output
+
+`og_tracks()` finds its columns by name: ramb's, or those of the EM4SSF project's track format (D2.1: `VESSEL_ID`,
+`DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`, `TRIP_ID`, `ACTIVITY`, `GEAR`), or those given. A file written by any
+step of such a workflow is looked at in one line, more lanes beside it for another method's trips or an observer's
+activity:
+
+```{r}
+#| eval: false
+og_tracks("trips_step01.parquet", lanes = c(option_b = "TRIP_ID_B"), effort = FALSE)
+```
+
+A set and its haul, drawn as a segment with a time (`og_segment()`), follow the panel as the pings do: a static gear's
+soak is checked on the map beside the track that made it.

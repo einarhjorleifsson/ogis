@@ -1,3 +1,30 @@
+# ogis 2026.11.18.16
+
+* **Vessel tracks in one line**, `og_tracks()` (preparation for the EM4SSF hackathon, Ancona, December 2026: ogis as a
+  quick visual check of each step of a track's processing, ramb doing the processing). Pings, as ramb leaves them
+  (`vid`, `time`, `lon`, `lat`, `speed`, `trip_id`, `gear`, `hours`, `behaviour`) or in EM4SSF's D2.1 format
+  (`VESSEL_ID`, `DATE_TIME`, ...), become the track and its pings coloured by what the vessel did; a time panel of
+  speed under the map, a vessel chosen there and then one of its trips, with lanes of activity, trips and any more
+  given (another method's trips, an observer's labels) and marks (flags, planted faults); and the fishing effort by
+  cell, summed from the fishing pings' hours by vessel, gear and year, following the vessel chosen. On ramb's `dansk`
+  (395,000 pings, 14 vessels; ramb's flags, harbours, `jepol` trips and hours in 4 s) the map built in 1.7 s.
+* **`og_cells()`: the grid's resolution, live.** The page's *Cells* offers, beside about a pixel at each zoom, sizes
+  fixed at every zoom: 0.01, 0.05 (a c-square), 0.1 and 0.5 degrees and the ICES statistical rectangle (1 by 0.5
+  degrees), those a whole number of the cells' own (`sizes`, `ices`, `cell` for the start). A size narrower than half
+  a pixel at a zoom is drawn at a whole number of it. Served and in a bundle alike (the browser sums a rectangle from
+  the largest level written that divides it; the c-square's 0.05 is now written).
+* **`og_cells()`: at least N vessels.** Where the cells name their vessel (`vessels`, found by name), the page hides
+  the cells of fewer than 2, 3, 5 or 10 vessels on the reader's choice (none hidden by default: a look, not a rule),
+  counted after the other choices, and a click shows a cell's number of vessels.
+* **`og_cells()` follows a time panel's vessel** (`follow`): *Show* the panel's vessel's effort, its gear's (the gear
+  of most of its hours) or the fleet's, by setting the cells' own vessel and gear choices as the panel's vessel
+  changes; hidden on a map with no panel.
+* **A segment with a time follows the time panel**, as a point does: a set and its haul, drawn as a segment, show the
+  panel's vessel and span alone.
+* **A new article, "Vessel tracks"**, on ramb's public examples: trips and effort (`dansk`), ramb's flags against
+  planted faults (`dansk_planted`: 44 of 92 caught, 82 good pings flagged), an observer's labels against a speed rule
+  (`ird_mg_gillnet`). The site's build installs ramb (`Config/Needs/website`).
+
 # ogis 2026.11.18.15
 
 * **Values by cell as one layer function**, `og_cells()` (the maintainer: "would like that the user could do similar

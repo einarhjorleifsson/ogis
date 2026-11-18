@@ -1,7 +1,7 @@
 Package: ogis
 Type: Package
 Title: Fast Maps on 'MapLibre' for Marine Data
-Version: 2026.11.18.15
+Version: 2026.11.18.16
 Authors@R: c(
   person("Einar", "Hjörleifsson", role = c("aut", "cre"), email = "einar.hjorleifsson@gmail.com")
   )
@@ -55,3 +55,4 @@ Suggests:
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.0
+Config/Needs/website: einarhjorleifsson/ramb

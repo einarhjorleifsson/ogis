@@ -176,7 +176,9 @@
   } else ""
   # a point's time in seconds on the time panel's clock, where the map has a time, so a panel (og_time()) shows only
   # its group's span
-  t_s <- if (mark == "point" && !is.null(ctx$time)) .og_time_s_sql(con, ctx$src, ctx$time)
+  # points and segments (a set to its haul, say) carry their time: on a map with a time panel they show its group and
+  # span alone
+  t_s <- if (mark %in% c("point", "segment") && !is.null(ctx$time)) .og_time_s_sql(con, ctx$src, ctx$time)
   src <- sprintf("SELECT *%s%s%s FROM (%s)", paste(props_sql, collapse = ""), geo_sql,
                  if (is.null(t_s)) "" else sprintf(", %s AS og_t", t_s), ctx$src)
   colours <- lapply(seq_along(cols), function(i) {

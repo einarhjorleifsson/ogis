@@ -107,8 +107,8 @@ test_that("served: the choices checked against the cells' own values; bundled wi
   dir <- withr::local_tempdir()
   expect_no_message(og_bundle(m, dir, overwrite = TRUE), message = "Left out")
   expect_true(dir.exists(file.path(dir, "grids", "cells")))
-  # the cells at sizes from 0.01 degrees up (their own here), in steps of their thousandths
-  expect_setequal(list.files(file.path(dir, "grids", "cells")), c("10", "20", "40", "100", "200", "500"))
+  # the cells at sizes from 0.01 degrees up (their own here), and the c-square's 0.05, in steps of their thousandths
+  expect_setequal(list.files(file.path(dir, "grids", "cells")), c("10", "20", "40", "50", "100", "200", "500"))
 })
 
 test_that("a Parquet file: read where it is, labelled by its dictionary; OGIS_CELLS when none is given", {
@@ -194,4 +194,86 @@ test_that("in the page (a bundle): the cells drawn with the choices and colours 
   expect_true(wait_until(function() isTRUE(page_eval(b2, "typeof map !== 'undefined' && !!map.getLayer('cells')")), 40))
   expect_identical(page_eval(b2, "document.getElementById('cells_gear').value"), "trawl")
   expect_identical(page_eval(b2, "document.getElementById('palette').value"), "magma")
+})
+
+# ten 0.01-degree cells in a row along 65 N, from 23.00 W; vessel A in all, B in the first four, C in the first two
+vessel_cells <- function() {
+  d <- expand.grid(ix = seq(-23000, -22910, by = 10), iy = 65000, vid = c("A", "B", "C"), stringsAsFactors = FALSE)
+  d <- d[d$vid == "A" | (d$vid == "B" & d$ix < -22960) | (d$vid == "C" & d$ix < -22980), ]
+  d$hours <- 1
+  d
+}
+
+test_that("the cells' size, live: about a pixel, or a size chosen (a c-square, an ICES rectangle) at every zoom", {
+  skip_if_no_spatial()
+  l <- og_cells(vessel_cells())$layers$cells
+  f <- stats::setNames(l$config$filters, vapply(l$config$filters, `[[`, "", "id"))
+  expect_identical(vapply(f$cells_px$options, `[[`, "", "value"),
+                   c("1", "0.5", "2", "s0.01", "s0.05", "s0.1", "s0.5", "r1x0.5"))
+  expect_match(f$cells_px$options[[5]]$label, "c-square")
+  expect_match(f$cells_px$options[[8]]$label, "ICES rectangle")
+  # at zoom 9 (a pixel 0.0014 degrees): the cells' own 0.01; c-squares, two of them (23.00-22.95, 22.95-22.90); 0.5
+  # and the ICES rectangle, one
+  expect_identical(tile_at(l, 9, lon = -22.96), 10)
+  expect_identical(tile_at(l, 9, list(cells_px = "s0.05"), lon = -22.96), 2)
+  expect_identical(tile_at(l, 9, list(cells_px = "s0.5"), lon = -22.96), 1)
+  expect_identical(tile_at(l, 9, list(cells_px = "r1x0.5"), lon = -22.96), 1)
+  # a size narrower than half a pixel is drawn at a whole number of it: 0.01 at zoom 5 (a pixel 0.022) as 0.02
+  expect_identical(.og_cell_size("s0.01", 5, 0.001, 10, .og_cell_k), c(20, 20))
+  expect_identical(.og_cell_size("r1x0.5", 2, 0.001, 10, .og_cell_k), c(1000, 500))
+  expect_identical(.og_cell_size("1", 9, 0.001, 10, .og_cell_k), c(10, 10))
+  # sizes not a whole number of the cells' own are not offered; the start chosen
+  l2 <- og_cells(vessel_cells(), sizes = c(0.005, 0.05), ices = FALSE, cell = 0.05)$layers$cells
+  expect_identical(vapply(l2$config$filters[[2]]$options, `[[`, "", "value"), c("1", "0.5", "2", "s0.05"))
+  expect_identical(l2$config$start$cells_px, "s0.05")
+  expect_identical(og_cells(vessel_cells(), cell = "ices")$layers$cells$config$start$cells_px, "r1x0.5")
+  expect_error(og_cells(vessel_cells(), cell = 0.005), "`cell` is one of `sizes`")
+  expect_error(og_cells(vessel_cells(), sizes = -1), "`sizes` are cell sizes")
+})
+
+test_that("at least N vessels: a control where the cells name their vessel, each cell's number of vessels on a click", {
+  skip_if_no_spatial()
+  m <- og_cells(vessel_cells(), min_vessels = 2)
+  l <- m$layers$cells
+  ids <- vapply(l$config$filters, `[[`, "", "id")
+  expect_true("cells_atleast" %in% ids)
+  expect_identical(l$config$start$cells_atleast, "2")
+  expect_identical(vapply(l$config$popup$fields, `[[`, "", "field"), c("hours_km2", "vessels"))
+  expect_identical(tile_at(l, 9, lon = -22.96), 10)
+  expect_identical(tile_at(l, 9, list(cells_atleast = "2"), lon = -22.96), 4)
+  expect_identical(tile_at(l, 9, list(cells_atleast = "3"), lon = -22.96), 2)
+  # counted after the choices: vessel A alone, one vessel a cell
+  expect_identical(tile_at(l, 9, list(cells_vid = "A", cells_atleast = "2"), lon = -22.96), 0)
+  # c-squares: the first holds all three vessels
+  expect_identical(tile_at(l, 9, list(cells_px = "s0.05", cells_atleast = "3"), lon = -22.96), 1)
+  # none named, or none wanted: no control
+  expect_false("cells_atleast" %in% vapply(og_cells(vessel_cells(), vessels = FALSE)$config$layers[[1]]$filters, `[[`, "", "id"))
+  expect_false("cells_atleast" %in% vapply(og_cells(cells_df())$config$layers[[1]]$filters, `[[`, "", "id"))
+  expect_error(og_cells(vessel_cells(), vessels = "boat"), "`vessels` names the column")
+  expect_error(og_cells(vessel_cells(), min_vessels = 4), "1, 2, 3, 5 or 10")
+})
+
+test_that("in the page (a bundle), the sizes and the fewest vessels as the server's", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  dir <- withr::local_tempdir()
+  og_bundle(og_map(view = list(center = c(-22.95, 65.005), zoom = 9)) |> og_cells(vessel_cells()), dir, overwrite = TRUE)
+  expect_true("50" %in% list.files(file.path(dir, "grids", "cells")))
+  b <- open_page(paste0(serve_dir(dir), "index.html"))
+  expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && !!map.getLayer('cells')")), 40))
+  cells_now <- function(id = NULL, v = NULL) {
+    if (!is.null(id)) {
+      page_eval(b, sprintf("(() => { const s = document.getElementById('%s'); s.value = '%s'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()", id, v))
+    }
+    Sys.sleep(0.5)
+    wait_until(function() isTRUE(page_eval(b, "map.loaded() && map.areTilesLoaded()")), 20)
+    unique(unlist(page_eval(b, "map.querySourceFeatures('cells', { sourceLayer: 'cells' }).map(f => [f.properties.vessels, f.properties.hours_km2.toFixed(4)].join('/'))")))
+  }
+  expect_true(wait_until(function() length(cells_now()) > 0, 20))
+  # the 0.01-degree cells: 3, 2 and 1 vessels
+  expect_setequal(sub("/.*", "", cells_now()), c("1", "2", "3"))
+  expect_setequal(sub("/.*", "", cells_now("cells_atleast", "3")), "3")
+  cells_now("cells_atleast", "1")
+  # c-squares: two, of 3 and 1 vessels
+  expect_setequal(sub("/.*", "", cells_now("cells_px", "s0.05")), c("1", "3"))
 })

@@ -426,7 +426,7 @@ og_bundle <- function(
 # and the cell scale) in `filters`
 .og_map_bundle_grid_spec <- function(g, lc) {
   bad <- function(what) stop(sprintf("`grids$%s`: %s", lc$id, what), call. = FALSE)
-  allowed <- c("rows", "unit", "levels", "columns", "sums", "fields", "x", "y", "px")
+  allowed <- c("rows", "unit", "levels", "columns", "sums", "fields", "x", "y", "px", "vessels")
   if (!is.list(g) || is.null(names(g)) || length(setdiff(names(g), allowed))) {
     bad(sprintf("a list of any of %s.", paste(allowed, collapse = ", ")))
   }
@@ -474,10 +474,15 @@ og_bundle <- function(
   if (!is.null(g$px) && !(is.character(g$px) && length(g$px) == 1 && g$px %in% fid)) {
     bad("`px` is the id of the layer's filter that scales its cells.")
   }
+  vs <- g$vessels
+  if (!is.null(vs) && !(is.list(vs) && is.character(vs$column) && vs$column %in% names(cl) &&
+                        is.character(vs$least) && vs$least %in% fid && (is.null(vs$follow) || vs$follow %in% fid))) {
+    bad("`vessels` is a list of `column` (the filter whose column names a vessel), `least` (the filter of the fewest) and optionally `follow`.")
+  }
   list(
     rows = g$rows, lazy = lazy, unit = g$unit, levels = as.integer(lv), columns = cl, sums = g$sums, fields = fl,
-    x = x, y = y, px = g$px, range = names(cl) %in% fid[ftype == "range"],
-    filters = c(names(cl), fid[ftype == "metric"], g$px)
+    x = x, y = y, px = g$px, vessels = vs, range = names(cl) %in% fid[ftype == "range"],
+    filters = c(names(cl), fid[ftype == "metric"], g$px, vs$least, vs$follow)
   )
 }
 
@@ -554,7 +559,8 @@ og_bundle <- function(
     blocks[[as.character(L)]] <- as.list(sprintf("%.0f_%.0f", bl$blx, bl$bly))
   }
   list(
-    unit = spec$unit, levels = as.list(spec$levels), block = B, px = spec$px, layer = .og_or(lc$source_layer, "cells"),
+    unit = spec$unit, levels = as.list(spec$levels), block = B, px = spec$px, vessels = spec$vessels,
+    layer = .og_or(lc$source_layer, "cells"),
     sums = as.list(spec$sums), fields = lapply(spec$fields, as.list),
     columns = lapply(seq_along(cols), function(j) {
       list(id = names(spec$columns)[j], range = spec$range[j], bytes = bytes[j],
