@@ -40,6 +40,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          # the branch made to hold this build alone: an article's maps are folders named by their content, so a
+          # deploy that kept the old files kept every map an article ever had
+          clean: true
           branch: gh-pages
           folder: docs
