@@ -5,7 +5,8 @@ articles:
   articles/labels: labels.html
   articles/ogis: ogis.html
   articles/own-page: own-page.html
-last_built: 2026-11-18T17:11Z
+  articles/tracks: tracks.html
+last_built: 2026-11-18T23:22Z
 urls:
   reference: https://einarhjorleifsson.github.io/ogis/reference
   article: https://einarhjorleifsson.github.io/ogis/articles

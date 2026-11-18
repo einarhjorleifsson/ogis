@@ -134,16 +134,20 @@ What a bundle carries:
   ([`og_time()`](https://einarhjorleifsson.github.io/ogis/reference/og_time.md)),
   each vessel's spans, the whole and each month, a file each (`time/`);
 
-- a grid layer named in `grids`, its rows: summed by cell at a few cell
-  sizes and written in blocks of cells (`grids/`), from which the page
-  makes each tile, its filters applied and its cells summed in the
-  browser, with the fields its server would send. Its cells hold one to
-  two screen pixels (the filter `px` times that), from the cell sizes
+- a grid layer named in `grids`, or made by
+  [`og_cells()`](https://einarhjorleifsson.github.io/ogis/reference/og_cells.md)
+  (which gives its own), its rows: summed by cell at a few cell sizes
+  and written in blocks of cells (`grids/`), from which the page makes
+  each tile, its filters applied and its cells summed in the browser,
+  with the fields its server would send. Its cells hold one to two
+  screen pixels (the filter `px` times that), from the cell sizes
   written. A filter the rows have no column for is left out, with a
   message.
 
-Another vector layer, or a grid layer not in `grids`, is left out, with
-a message: their tiles are made by a server.
+Another vector layer, or a grid layer of
+[`og_layer()`](https://einarhjorleifsson.github.io/ogis/reference/og_layer.md)'s
+not in `grids`, is left out, with a message: their tiles are made by a
+server.
 
 ## See also
 

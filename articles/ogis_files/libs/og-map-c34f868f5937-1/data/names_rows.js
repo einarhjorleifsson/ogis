@@ -1,0 +1,1 @@
+OG_BUNDLE("data/names_rows",{"cols":[{"name":"name","type":"text"},{"name":"kind","type":"text"}],"rows":[["Faxaflói","bay"],["Breiðafjörður","bay"],["Ísafjarðardjúp","fjord"],["Húnaflói","bay"],["Skagafjörður","fjord"],["Eyjafjörður","fjord"],["Skjálfandi","bay"],["Þistilfjörður","fjord"],["Vopnafjörður","fjord"],["Selvogsbanki","bank"]]});

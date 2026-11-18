@@ -1,0 +1,1 @@
+OG_BUNDLE("data/names_search",{"t":["Faxaflói","Breiðafjörður","Ísafjarðardjúp","Húnaflói","Skagafjörður","Eyjafjörður","Skjálfandi","Þistilfjörður","Vopnafjörður","Selvogsbanki"],"x":[-22.6,-23.1,-22.8,-20.6,-19.6,-18.3,-17.5,-15.4,-14.6,-21.6],"y":[64.4,65.25,66.12,65.8,65.95,65.95,66.12,66.2,65.8,63.6],"r":[1,2,3,4,5,6,7,8,9,10],"z":[5,5,6,5,6,6,6,6,7,6]});

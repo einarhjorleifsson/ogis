@@ -13,7 +13,7 @@ the internet only for the base maps: MapLibre, maplibre-contour, uPlot and pmtil
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.14</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.17</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -27,6 +27,7 @@ the internet only for the base maps: MapLibre, maplibre-contour, uPlot and pmtil
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/labels.html">Labels</a></li>
     <li><a class="dropdown-item" href="../articles/own-page.html">A page of your own</a></li>
+    <li><a class="dropdown-item" href="../articles/tracks.html">Vessel tracks</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -134,11 +135,13 @@ needs a server;</p></li>
 <li><p>a vector layer from <code><a href="og_tiles_table.html">og_tiles_table()</a></code> or a layer function (<code><a href="og_point.html">og_point()</a></code> and the others), the tiles that hold a
 feature, to the deepest zoom written, and the rows a click shows;</p></li>
 <li><p>a time panel (<code><a href="og_time.html">og_time()</a></code>), each vessel's spans, the whole and each month, a file each (<code>time/</code>);</p></li>
-<li><p>a grid layer named in <code>grids</code>, its rows: summed by cell at a few cell sizes and written in blocks of cells
-(<code>grids/</code>), from which the page makes each tile, its filters applied and its cells summed in the browser, with the
-fields its server would send. Its cells hold one to two screen pixels (the filter <code>px</code> times that), from the
-cell sizes written. A filter the rows have no column for is left out, with a message.</p></li>
-</ul><p>Another vector layer, or a grid layer not in <code>grids</code>, is left out, with a message: their tiles are made by a server.</p>
+<li><p>a grid layer named in <code>grids</code>, or made by <code><a href="og_cells.html">og_cells()</a></code> (which gives its own), its rows: summed by cell at a few
+cell sizes and written in blocks of cells (<code>grids/</code>), from which the page makes each tile, its filters applied and
+its cells summed in the browser, with the fields its server would send. Its cells hold one to two screen pixels
+(the filter <code>px</code> times that), from the cell sizes written. A filter the rows have no column for is left out, with
+a message.</p></li>
+</ul><p>Another vector layer, or a grid layer of <code><a href="og_layer.html">og_layer()</a></code>'s not in <code>grids</code>, is left out, with a message: their tiles are
+made by a server.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

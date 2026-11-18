@@ -31,6 +31,36 @@ OGIS_DEPTH.
   [`og_contour()`](https://einarhjorleifsson.github.io/ogis/reference/og_relief.md)
   : The sea floor: depth in colour, its relief, and depth contours
 
+## Place names
+
+A list of place names, each from its own zoom, found by the page’s Find
+box, what is known of each on a click; a table, a file, or one named
+once by OGIS_NAMES.
+
+- [`og_names()`](https://einarhjorleifsson.github.io/ogis/reference/og_names.md)
+  : Place names: labels, their areas, the Find box and what is known of
+  each
+
+## Values by cell
+
+A table of cells coloured by a value per square kilometre, such as
+fishing effort by gear and year, chosen in the page; a table, a Parquet
+file, or one named once by OGIS_CELLS.
+
+- [`og_cells()`](https://einarhjorleifsson.github.io/ogis/reference/og_cells.md)
+  : Values by cell: fishing effort and the like, chosen by gear, year or
+  any column
+
+## Vessel tracks
+
+Pings as a track, a time panel of speed (a vessel, then a trip), lanes
+of what the vessel did, and the effort following the vessel chosen: a
+quick look at each step of a track’s processing.
+
+- [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
+  : Vessel tracks: the track, a time panel of speed, trips, and the
+  effort by cell
+
 ## Time
 
 A panel under the map: a group’s rows over time, linked to the map.
