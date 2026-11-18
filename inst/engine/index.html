@@ -1223,33 +1223,15 @@ const map = new maplibregl.Map({
 if (!BASEMAPS[0].style) setBase(BASEMAPS[0].id);
 // a page laid out after the map was made (a tab opened in the background) left the canvas at 400 x 300
 new ResizeObserver(() => map.resize()).observe($("map"));
-// MapLibre 5.x lost a tile's index when the tile was loaded again while an earlier load of it was still being read
-// (fixed in 6.0 and 6.3, maplibre-gl-js 7765 and 8064; kept until a reproduction shows 6 has done with it, plan 077 in
-// fishycode): queryRenderedFeatures() then threw ("Out of bounds") on that layer until its source was loaded again.
-// Every query of the page goes through query(): a layer that throws is left out of the answer, its source loaded
-// again (a whole layer's own data sent again, which cured every such failure seen; a tiled layer's tiles fetched
-// again), and `again` called once the map is idle. `geom` is a point, a box, or null for the view
-const healing = new Set();
-function heal(src) {
-  if (healing.has(src)) return;
-  healing.add(src);
-  console.warn(`ogis: the index of ${src} was lost (a fault of MapLibre 5, fixed in 6), its data loaded again`);
-  try {
-    const s = map.getSource(src);
-    if (s?.type === "geojson") s.setData(s.serialize().data);
-    else if (typeof s?.setTiles === "function" && s.serialize().tiles) s.setTiles(s.serialize().tiles);
-  } catch (err) { console.warn(err); }
-  map.once("idle", () => healing.delete(src));
-}
-function query(geom, ids, again) {
+// Every query of the page goes through query(): the layers not on the map left out (one whose data have not come yet,
+// or a script's that is gone), `geom` a point, a box, or null for the view. Until MapLibre 6 it also guarded against
+// MapLibre 5's lost index (a tile loaded again while an earlier load of it was still being read, after which every query
+// of the layer threw "Out of bounds"), which 6.0 and 6.3 fixed: 9 failures in 200 trials on 5.24.1, none in 200 on
+// 6.19.0 (plan 077 in fishycode)
+function query(geom, ids) {
   ids = ids.filter(id => map.getLayer(id));
   if (!ids.length) return [];
-  const q = list => geom == null ? map.queryRenderedFeatures({ layers: list }) : map.queryRenderedFeatures(geom, { layers: list });
-  try { return q(ids); } catch (err) {
-    const ok = ids.filter(id => { try { q([id]); return true; } catch (e) { heal(map.getLayer(id).source); return false; } });
-    if (again) map.once("idle", again);
-    try { return ok.length ? q(ok) : []; } catch (e) { return []; }
-  }
+  return geom == null ? map.queryRenderedFeatures({ layers: ids }) : map.queryRenderedFeatures(geom, { layers: ids });
 }
 // A trackpad's two-finger swipe pans the map, as it scrolls a page; a pinch (a wheel event with ctrlKey, as browsers
 // send it) and a mouse's wheel zoom, as before. A burst of events (none 300 ms apart) takes the kind of its first: a
@@ -2006,8 +1988,7 @@ function verdictsSetup() {
 }
 // The notes' clicks first (og_serve(notes = )): a click that places a note, or on a note's pin, opens no feature
 if (NOTES) map.on("click", noteClick);
-// One click for every layer that answers one (popup `click`): the topmost feature under it speaks. Its query is guarded
-// (query()), and tried once more when the map is idle if a layer's index was lost and its source loaded again
+// One click for every layer that answers one (popup `click`): the topmost feature under it speaks
 const CLICK = new Map(OTHER.flatMap(l => (l.popup?.click ?? []).map(id => [id, l])));
 // a layer whose clicks a page's own script takes (og.on("click", id, fn)), and the clicks counted, so a row read for
 // a click that a newer one has followed is answered null
@@ -2015,9 +1996,9 @@ const scriptClicks = new Map();
 let clickSeq = 0;
 const styleLayer = sid => OTHER.find(l => l.style.some(s => s.id === sid));
 const scriptStyles = () => [...scriptClicks.keys()].flatMap(id => OTHER.find(l => l.id === id)?.style.map(s => s.id) ?? []);
-function clickAt(e, again) {
-  if (e.originalEvent.featureShown) return;                    // a note, or the second try after another took it
-  const f = query(e.point, [...new Set([...CLICK.keys(), ...scriptStyles()])], again ? null : () => clickAt(e, true))[0];
+function clickAt(e) {
+  if (e.originalEvent.featureShown) return;                    // a note's click took it
+  const f = query(e.point, [...new Set([...CLICK.keys(), ...scriptStyles()])])[0];
   if (!f) return;
   e.originalEvent.featureShown = true;
   const seq = ++clickSeq, l = styleLayer(f.layer.id), own = scriptClicks.get(l?.id);
@@ -2102,8 +2083,8 @@ if (FIND.length) {
   $("find-q").addEventListener("keydown", e => { if (e.key === "Enter") $("find-hits").querySelector("li:not(.muted)")?.click(); });
   $("find-q").addEventListener("focus", () => findLoad().catch(() => null));   // read while the reader types
 }
-// The pointer a hand over what a click answers (the layers', the notes', the grid's, the time panel's): one guarded
-// query a frame, where MapLibre's own mouseenter and mouseleave query unguarded
+// The pointer a hand over what a click answers (the layers', the notes', the grid's, the time panel's): one query a
+// frame for all of them, where MapLibre's own mouseenter and mouseleave would query each layer at every move
 let pointerFrame = 0, pointerEvent = null;
 map.on("mousemove", e => {
   pointerEvent = e;
