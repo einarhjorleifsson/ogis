@@ -3,7 +3,7 @@
 
 #' A table of geometries as vector tiles
 #'
-#' Makes a tile function for a `"vector"` [rr_layer()] from a table of points, lines or areas: the table is copied
+#' Makes a tile function for a `"vector"` [og_layer()] from a table of points, lines or areas: the table is copied
 #' once into a temporary DuckDB table in web mercator, with each feature's bounds, and each tile is cut from it by
 #' DuckDB (`ST_AsMVT()`). Every feature carries `kind` (`"point"`, `"line"` or `"area"`) and the `properties`.
 #'
@@ -24,16 +24,16 @@
 #'   time. Lines and areas are kept whole.
 #' @return A function of `z`, `x`, `y` returning a tile (raw bytes), with the number of features as its `count`
 #'   attribute, the temporary table's name as its `table` attribute, and as `tiles_at` a function of a zoom giving the
-#'   tiles that hold a feature (`x`, `y`), by which [rr_bundle()] writes only those.
+#'   tiles that hold a feature (`x`, `y`), by which [og_bundle()] writes only those.
 #' @export
 #' @examples
 #' \donttest{
-#' tiles <- rr_tiles_table(rr_example("dansk_harbours"),
+#' tiles <- og_tiles_table(og_example("dansk_harbours"),
 #'   properties = "SI_HARB", points = "harbour_points")
 #' attr(tiles, "count")
 #' length(tiles(7, 68, 39))
 #' }
-rr_tiles_table <- function(
+og_tiles_table <- function(
   x,
   geometry = "geometry",
   lon = NULL,
@@ -50,22 +50,22 @@ rr_tiles_table <- function(
       stop("`thin` is a list of `px` (pixels), `until` (a zoom) and `by` (columns), or NULL.", call. = FALSE)
     }
   }
-  con <- .rr_con_for(x)
+  con <- .og_con_for(x)
   # a data frame registered here is the tile function's for the session (it remakes its table from it)
-  .rr_scope()
-  .rr_extension(con, "spatial")
-  src <- .rr_sql(.rr_as_lazy(x, con))
+  .og_scope()
+  .og_extension(con, "spatial")
+  src <- .og_sql(.og_as_lazy(x, con))
   q <- function(s) DBI::dbQuoteIdentifier(con, s)
   g <- if (!is.null(lon)) {
     sprintf("ST_Point(%s, %s)", q(lon), q(lat))
   } else {
-    .rr_geom_sql(con, src, geometry)
+    .og_geom_sql(con, src, geometry)
   }
   props <- vapply(properties, function(p) as.character(q(p)), "")
   # the columns a thinning keeps apart, kept in the table beside the properties; and the table's order, for the point
   # each cell keeps
   kept <- vapply(unique(c(properties, thin$by)), function(p) as.character(q(p)), "")
-  nm <- .rr_name(con, "rb_tiles_")
+  nm <- .og_name(con, "og_tiles_")
   make <- function() {
     DBI::dbExecute(con, create)
   }
@@ -83,7 +83,7 @@ rr_tiles_table <- function(
     nm,
     if (length(kept)) paste0(paste(kept, collapse = ", "), ",") else "",
     g,
-    if (is.null(thin)) "" else ", row_number() OVER () AS rr_n",
+    if (is.null(thin)) "" else ", row_number() OVER () AS og_n",
     src
   )
   make()
@@ -97,7 +97,7 @@ rr_tiles_table <- function(
       "%s: %s",
       DBI::dbQuoteString(con, c(properties, "kind")),
       c(
-        .rr_mvt_cast(
+        .og_mvt_cast(
           props,
           types$column_type[match(properties, types$column_name)]
         ),
@@ -116,7 +116,7 @@ rr_tiles_table <- function(
         geom,
         fields,
         DBI::dbQuoteString(con, name),
-        if (is.null(thin)) "" else " ORDER BY rr_n",
+        if (is.null(thin)) "" else " ORDER BY og_n",
         where
       )
     }
@@ -132,7 +132,7 @@ rr_tiles_table <- function(
              UNION ALL
              SELECT f0.* FROM f0, e WHERE kind = 'point'
              QUALIFY row_number() OVER (PARTITION BY floor((xmin - ST_XMin(e.env)) / %1$s), floor((ymin - ST_YMin(e.env)) / %1$s)%2$s
-                                        ORDER BY rr_n) = 1)",
+                                        ORDER BY og_n) = 1)",
         cell,
         if (length(thin$by)) paste0(", ", vapply(thin$by, function(p) as.character(q(p)), ""), collapse = "") else ""
       )
@@ -148,7 +148,7 @@ rr_tiles_table <- function(
       as.integer(z), as.integer(x), as.integer(y), as.integer(z), as.integer(x), as.integer(y),
       if (is.null(cells)) "f" else "f0",
       nm,
-      .rr_or(cells, ""),
+      .og_or(cells, ""),
       one("g3857", layer, if (is.null(points)) "" else "WHERE kind <> 'point'"),
       if (is.null(points)) {
         ""
@@ -156,7 +156,7 @@ rr_tiles_table <- function(
         paste0(", ", one("p3857", points, ""), " AS b")
       }
     )
-    # a table dropped when its map was replaced on its port (rr_serve()) is made again
+    # a table dropped when its map was replaced on its port (og_serve()) is made again
     r <- tryCatch(DBI::dbGetQuery(con, sql), error = function(e) {
       if (DBI::dbExistsTable(con, nm)) {
         stop(e)
@@ -167,7 +167,7 @@ rr_tiles_table <- function(
     out <- c(r$a[[1]], if (!is.null(points)) r$b[[1]])
     if (is.null(out)) raw(0) else out
   }
-  # the tiles at zoom z that hold a feature, x and y (y from the north), for a bundle (rr_bundle())
+  # the tiles at zoom z that hold a feature, x and y (y from the north), for a bundle (og_bundle())
   attr(tile, "tiles_at") <- function(z) {
     if (!DBI::dbExistsTable(con, nm)) {
       make()
@@ -189,21 +189,21 @@ rr_tiles_table <- function(
   }
   attr(tile, "count") <- n
   attr(tile, "table") <- nm
-  .rr_hold(tile)
+  .og_hold(tile)
 }
 
 #' Tiles from an MBTiles file
 #'
-#' A tile function for an [rr_layer()] that reads its tiles from an MBTiles file (SQLite), such as the image tiles
+#' A tile function for an [og_layer()] that reads its tiles from an MBTiles file (SQLite), such as the image tiles
 #' of elevations a dem layer draws. The file is opened once, read-only, and stays open while the function lives.
 #'
 #' @param file An MBTiles file: a `tiles` table (`zoom_level`, `tile_column`, `tile_row` in the TMS order, from the
 #'   south, and `tile_data`) and a `metadata` table of `name` and `value`.
 #' @return A function `function(z, x, y)` (`y` from the north, as the page asks) returning a tile's bytes, or `NULL`
 #'   where the file has none; with the file's `format`, `bounds`, `minzoom`, `maxzoom`, `encoding` and `tile_size` as
-#'   attributes where its metadata give them, which [rr_layer()] takes for a dem layer, and `source`, the file's
-#'   path, by which [rr_bundle()] writes the tiles of layers on one file once.
-#' @seealso [rr_layer()]
+#'   attributes where its metadata give them, which [og_layer()] takes for a dem layer, and `source`, the file's
+#'   path, by which [og_bundle()] writes the tiles of layers on one file once.
+#' @seealso [og_layer()]
 #' @export
 #' @examples
 #' if (requireNamespace("RSQLite", quietly = TRUE)) {
@@ -217,13 +217,13 @@ rr_tiles_table <- function(
 #'                             "tile_row INTEGER, tile_data BLOB)"))
 #'   DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
 #'   DBI::dbDisconnect(con)
-#'   tiles <- rr_tiles_mbtiles(f)
+#'   tiles <- og_tiles_mbtiles(f)
 #'   tiles(1, 0, 0) # the north-west tile at zoom 1, row 1 counted from the south
 #'   attributes(tiles)[c("format", "encoding", "bounds")]
 #' }
-rr_tiles_mbtiles <- function(file) {
+og_tiles_mbtiles <- function(file) {
   if (!requireNamespace("RSQLite", quietly = TRUE)) {
-    stop("rr_tiles_mbtiles() needs the RSQLite package.", call. = FALSE)
+    stop("og_tiles_mbtiles() needs the RSQLite package.", call. = FALSE)
   }
   if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
     stop("`file` is the path of an MBTiles file.", call. = FALSE)
@@ -254,7 +254,7 @@ rr_tiles_mbtiles <- function(file) {
 
 #' Tiles of elevations from a grid
 #'
-#' A tile function for a dem or contour [rr_layer()] made from a grid of elevations: a GeoTIFF (a Cloud Optimized
+#' A tile function for a dem or contour [og_layer()] made from a grid of elevations: a GeoTIFF (a Cloud Optimized
 #' GeoTIFF when it is large) or any grid GDAL reads, such as GEBCO's netCDF, in any projection; a terra `SpatRaster`;
 #' or a data frame of a grid's cells. Each tile the page asks for is warped from the grid by GDAL (through terra), the
 #' grid resampled once: averaged where a pixel is wider than a cell (the map zoomed out), interpolated (bilinear) where
@@ -280,21 +280,21 @@ rr_tiles_mbtiles <- function(file) {
 #'   is missing. By default 0, sea level, which the colours of a depth leave clear.
 #' @return A function `function(z, x, y)` (`y` from the north, as the page asks) returning a tile's bytes, a PNG; a
 #'   tile wholly outside the grid is level at `nodata`, for maplibre-contour draws no lines in a tile one of whose eight
-#'   neighbours is missing. With the attributes [rr_layer()] takes for a dem or contour layer (`format`, `encoding`,
-#'   `tile_size`, `bounds`, `minzoom` and `maxzoom`); `source`, by which [rr_bundle()] writes the tiles of layers on
+#'   neighbours is missing. With the attributes [og_layer()] takes for a dem or contour layer (`format`, `encoding`,
+#'   `tile_size`, `bounds`, `minzoom` and `maxzoom`); `source`, by which [og_bundle()] writes the tiles of layers on
 #'   one grid once; `count`, the grid's number of cells, missing ones included; and `fit`, `"page"`: a layer on these
 #'   tiles fits its colours, contours and shading to the view in the page, from the tiles in view, with no call to R
-#'   (the rules of [rr_bundle()]'s `fit`, by default the floor and the cap at the 2nd and 98th percentiles of the values
+#'   (the rules of [og_bundle()]'s `fit`, by default the floor and the cap at the 2nd and 98th percentiles of the values
 #'   in view, 25 quantiles between them, and the shading's intensity 2 over the 90th percentile of the slope in
 #'   degrees, between 0.3 and 1).
-#' @seealso [rr_tiles_mbtiles()], for tiles already made; [rr_layer()]
+#' @seealso [og_tiles_mbtiles()], for tiles already made; [og_layer()]
 #' @export
 #' @examples
 #' # a small hill, 21 by 21 cells of 0.01 degrees
 #' g <- expand.grid(lon = seq(10, 10.2, by = 0.01), lat = seq(56, 56.2, by = 0.01))
 #' g$elevation <- 100 - 5000 * ((g$lon - 10.1)^2 + (g$lat - 56.1)^2)
 #' if (requireNamespace("png", quietly = TRUE) && requireNamespace("terra", quietly = TRUE)) {
-#'   tiles <- rr_tiles_dem(g)
+#'   tiles <- og_tiles_dem(g)
 #'   attributes(tiles)[c("bounds", "minzoom", "maxzoom", "count")]
 #'   png_bytes <- tiles(10, 540, 318) # the tile over the hill at zoom 10
 #'   rgb <- png::readPNG(png_bytes) * 255
@@ -304,9 +304,9 @@ rr_tiles_mbtiles <- function(file) {
 #'   # the same grid as a GeoTIFF, as most grids come
 #'   f <- tempfile(fileext = ".tif")
 #'   terra::writeRaster(terra::rast(g, type = "xyz", crs = "EPSG:4326"), f)
-#'   attributes(rr_tiles_dem(f))[c("bounds", "maxzoom")]
+#'   attributes(og_tiles_dem(f))[c("bounds", "maxzoom")]
 #' }
-rr_tiles_dem <- function(
+og_tiles_dem <- function(
   x,
   lon = "lon",
   lat = "lat",
@@ -318,7 +318,7 @@ rr_tiles_dem <- function(
 ) {
   for (p in c("png", "terra")) {
     if (!requireNamespace(p, quietly = TRUE)) {
-      stop(sprintf("rr_tiles_dem() needs the %1$s package: install.packages(\"%1$s\").", p), call. = FALSE)
+      stop(sprintf("og_tiles_dem() needs the %1$s package: install.packages(\"%1$s\").", p), call. = FALSE)
     }
   }
   is_name <- function(v) {
@@ -339,12 +339,12 @@ rr_tiles_dem <- function(
   if (!(is.numeric(nodata) && length(nodata) == 1 && is.finite(nodata))) {
     stop("`nodata` is a number.", call. = FALSE)
   }
-  src <- .rr_dem_raster(x, lon, lat, elevation)
+  src <- .og_dem_raster(x, lon, lat, elevation)
   # the same file opened with no overviews, for the tiles where a pixel spans fewer than eight cells: GDAL's warp takes
   # a file's overviews wherever they are near the tile's resolution, and they average twice (on a Cloud Optimized
   # GeoTIFF of a 50 m grid, 0.25 m from the grid on average at zoom 8, against 0.07 m from its full resolution). The
   # open option, as terra hands the warp utility's own flags (-ovr) no further
-  full <- .rr_dem_full(src)
+  full <- .og_dem_full(src)
   S <- as.integer(tile_size)
   lonlat <- terra::is.lonlat(src)
   # the grid's box in degrees, its edges followed (a projected grid's edges curve in longitude and latitude)
@@ -375,7 +375,7 @@ rr_tiles_dem <- function(
     maxzoom <- max(as.integer(minzoom), min(8L, as.integer(own)))
   }
   half <- pi * 6378137
-  flat <- .rr_terrarium_png(rep(nodata, S * S), S)
+  flat <- .og_terrarium_png(rep(nodata, S * S), S)
   tile <- function(z, x, y) {
     n <- 2^z
     lat_at <- function(t) atan(sinh(pi * (1 - 2 * t / n))) * 180 / pi
@@ -401,7 +401,7 @@ rr_tiles_dem <- function(
     )
     E <- terra::values(r, mat = FALSE) # by rows, north to south, each west to east
     E[!is.finite(E)] <- nodata
-    .rr_terrarium_png(matrix(E, S, S, byrow = TRUE), S)
+    .og_terrarium_png(matrix(E, S, S, byrow = TRUE), S)
   }
   attr(tile, "format") <- "png"
   attr(tile, "encoding") <- "terrarium"
@@ -412,7 +412,7 @@ rr_tiles_dem <- function(
   files <- terra::sources(src)
   attr(tile, "source") <- paste0(
     "dem:",
-    if (length(files) == 1 && nzchar(files)) normalizePath(files) else paste0("grid_", .rr_names$n <- .rr_names$n + 1L),
+    if (length(files) == 1 && nzchar(files)) normalizePath(files) else paste0("grid_", .og_names$n <- .og_names$n + 1L),
     sprintf(":%d:%g:%d:%d", S, nodata, as.integer(minzoom), as.integer(maxzoom))
   )
   attr(tile, "count") <- terra::ncell(src)
@@ -423,7 +423,7 @@ rr_tiles_dem <- function(
 # A grid as a one-layer SpatRaster with a coordinate reference system: a raster file read where it is, a SpatRaster as
 # it is, a data frame's cells (or a small lazy table's, read into R) checked as a regular grid in longitude and
 # latitude and put on it, each cell at its place, none resampled
-.rr_dem_raster <- function(x, lon, lat, elevation) {
+.og_dem_raster <- function(x, lon, lat, elevation) {
   if (inherits(x, "tbl_lazy")) {
     n <- dplyr::pull(dplyr::count(x), 1)
     if (n > 1e7) {
@@ -445,7 +445,7 @@ rr_tiles_dem <- function(
   } else if (inherits(x, "SpatRaster")) {
     r <- x
   } else if (is.data.frame(x)) {
-    r <- .rr_dem_grid(as.data.frame(x), lon, lat, elevation)
+    r <- .og_dem_grid(as.data.frame(x), lon, lat, elevation)
   } else {
     stop("`x` is a raster file's path, a terra SpatRaster, or a data frame of a grid's cells.", call. = FALSE)
   }
@@ -467,7 +467,7 @@ rr_tiles_dem <- function(
 # A grid read from one file opened again with GDAL's open option OVERVIEW_LEVEL=NONE, so a warp reads its full
 # resolution only; its layer by name where the file has several. A grid in memory, or one whose layer cannot be found
 # again, is its own: it has no overviews, or keeps them
-.rr_dem_full <- function(src) {
+.og_dem_full <- function(src) {
   files <- terra::sources(src)
   if (length(files) != 1 || !nzchar(files)) {
     return(src)
@@ -484,7 +484,7 @@ rr_tiles_dem <- function(
 
 # A data frame's cells as a raster in longitude and latitude: the columns there, at least two cells each way, one row a
 # cell, each on the lattice its least steps make (a cell may be missing); put on it exactly, so terra reads it as a grid
-.rr_dem_grid <- function(d, lon, lat, elevation) {
+.og_dem_grid <- function(d, lon, lat, elevation) {
   gone <- setdiff(c(lon, lat, elevation), names(d))
   if (length(gone)) {
     stop(sprintf("`x` has no column %s.", paste0("`", gone, "`", collapse = ", ")), call. = FALSE)
@@ -524,7 +524,7 @@ rr_tiles_dem <- function(
 
 # Elevations, a pixel each (a matrix by rows north to south, or a vector of them column by column), as a Terrarium PNG:
 # (red * 256 + green + blue / 256) - 32768
-.rr_terrarium_png <- function(E, S) {
+.og_terrarium_png <- function(E, S) {
   v <- pmin(pmax(E + 32768, 0), 65535.996)
   red <- floor(v / 256)
   green <- floor(v) %% 256
@@ -534,7 +534,7 @@ rr_tiles_dem <- function(
 
 # ST_AsMVT() takes VARCHAR, FLOAT, DOUBLE, INTEGER, BIGINT and BOOLEAN properties and refuses every other type: an R
 # factor reaches DuckDB as an ENUM, a date as a DATE
-.rr_mvt_cast <- function(expr, type) {
+.og_mvt_cast <- function(expr, type) {
   to <- ifelse(
     type %in% c("VARCHAR", "FLOAT", "DOUBLE", "INTEGER", "BIGINT", "BOOLEAN"),
     NA,
@@ -554,17 +554,17 @@ rr_tiles_dem <- function(
 
 # The rows of a table as one GeoJSON FeatureCollection, for a layer sent to the page whole: a function giving the
 # text, made once; coordinates to six decimals (a tenth of a metre), the properties as the tiles carry them
-# (.rr_mvt_cast), the features in `order`. Its `count` attribute is the number of features
-.rr_geojson_table <- function(x, geometry = "geometry", lon = NULL, lat = NULL, properties = NULL, order = NULL) {
-  con <- .rr_con_for(x)
-  .rr_scope()
-  .rr_extension(con, "spatial")
-  src <- .rr_sql(.rr_as_lazy(x, con))
+# (.og_mvt_cast), the features in `order`. Its `count` attribute is the number of features
+.og_geojson_table <- function(x, geometry = "geometry", lon = NULL, lat = NULL, properties = NULL, order = NULL) {
+  con <- .og_con_for(x)
+  .og_scope()
+  .og_extension(con, "spatial")
+  src <- .og_sql(.og_as_lazy(x, con))
   q <- function(s) as.character(DBI::dbQuoteIdentifier(con, s))
   g <- if (!is.null(lon)) {
     sprintf("ST_Point(round(%s, 6), round(%s, 6))", q(lon), q(lat))
   } else {
-    sprintf("ST_ReducePrecision(%s, 0.000001)", .rr_geom_sql(con, src, geometry))
+    sprintf("ST_ReducePrecision(%s, 0.000001)", .og_geom_sql(con, src, geometry))
   }
   has <- if (!is.null(lon)) sprintf("%s IS NOT NULL AND %s IS NOT NULL", q(lon), q(lat)) else sprintf("%s IS NOT NULL", q(geometry))
   types <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM (%s)", src))
@@ -572,7 +572,7 @@ rr_tiles_dem <- function(
     sprintf("to_json({%s})", paste(sprintf(
       "%s: %s",
       DBI::dbQuoteString(con, properties),
-      .rr_mvt_cast(vapply(properties, q, ""), types$column_type[match(properties, types$column_name)])
+      .og_mvt_cast(vapply(properties, q, ""), types$column_type[match(properties, types$column_name)])
     ), collapse = ", "))
   } else {
     "'{}'::JSON"

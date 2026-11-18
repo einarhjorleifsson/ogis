@@ -19,13 +19,13 @@ maintainer, \url{https://www.hafogvatn.is}.
 Licence: MFRI data, shipped by its maintainer at MFRI; the terms are not stated here.
 }
 \description{
-Each row is a tow of the same survey, as a line from its start to its end; 581 tows. Read it with \code{rr_example("trawlsurveytows")}.
+Each row is a tow of the same survey, as a line from its start to its end; 581 tows. Read it with \code{og_example("trawlsurveytows")}.
 }
 \details{
 extracted from MFRI's database (\code{data-raw/DATASET.R}).
 }
 \seealso{
-\code{\link[=rr_example]{rr_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
+\code{\link[=og_example]{og_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
 
 Other example data:
 \code{\link{dansk}},

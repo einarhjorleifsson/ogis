@@ -3,7 +3,7 @@
 # vector tiles, so colours, filters and the legend work in the page. Moved from ramb's R/map.R on 2026-11-10
 #: the names changed, the behaviour not.
 #
-# Routes of rr_serve():
+# Routes of og_serve():
 #   /                                the page, with the map's config written in
 #   /config.json                     the config
 #   /vendor/<file>                   MapLibre, maplibre-contour and uPlot, as the package holds them (inst/engine/vendor)
@@ -14,45 +14,45 @@
 #   /tiles/<id>/{z}/{x}/{y}.png      a dem or contour layer's tile, an image of elevations (.webp for a WebP one)
 #   /data/<id>.geojson               a geojson layer's data
 #   /fit/<id>?bbox=w,s,e,n           a dem layer's floor and cap for the values in a box, from its colour's `fit`
-#   /time?v=<vessel>&span=<span>     the time panel's series of one vessel's span (rr_time()), as JSON; the vessel
+#   /time?v=<vessel>&span=<span>     the time panel's series of one vessel's span (og_time()), as JSON; the vessel
 #                                    and the span are checked against the panel's before R sees them
-#   /notes                           with rr_serve(notes = ): the notes (GET), a note or a reply added (POST),
+#   /notes                           with og_serve(notes = ): the notes (GET), a note or a reply added (POST),
 #   /notes/<id>                      a note deleted (DELETE), each answered with the notes; only for a page opened
 #                                    from this computer, a write only from the page itself
-#   /verdicts                        with rr_serve(verdicts = ): the features' current verdicts (GET), a verdict
+#   /verdicts                        with og_serve(verdicts = ): the features' current verdicts (GET), a verdict
 #                                    given or withdrawn (POST), answered with them; as the notes, from this computer
 #                                    and the page only
-#   /x/<name>, /x/<name>/...         with rr_serve(routes = ): a page's own route (rr_script()), its function's
+#   /x/<name>, /x/<name>/...         with og_serve(routes = ): a page's own route (og_script()), its function's
 #                                    value; as the notes, from this computer, a write from the page only
 
 
-.rr_map_engine <- 7L # the page's ENGINE: changed together
+.og_map_engine <- 7L # the page's ENGINE: changed together
 
-.rr_maps <- new.env(parent = emptyenv()) # the servers rr_serve() started, by port
+.og_maps <- new.env(parent = emptyenv()) # the servers og_serve() started, by port
 
-.rr_tiles <- new.env(parent = emptyenv())
+.og_tiles <- new.env(parent = emptyenv())
 
-.rr_tiles$served <- list() # by port, the temporary tables (connection and name) of the map served there
+.og_tiles$served <- list() # by port, the temporary tables (connection and name) of the map served there
 
 #' A layer of a map
 #'
-#' One layer of an [rr_map()]: what it shows, how it is drawn, and where its data come from. Five kinds:
+#' One layer of an [og_map()]: what it shows, how it is drawn, and where its data come from. Five kinds:
 #'
 #' * `"grid"`: vector tiles of cells, coloured in the page by a numeric field on a log scale, with the palette,
 #'   stretch, floor, cap and histogram there too. Its `filters` become controls whose values go into the tile address
 #'   (one grid per map).
 #' * `"vector"`: vector tiles of features, drawn by `style`, such as a table of geometries served by
-#'   [rr_tiles_table()].
+#'   [og_tiles_table()].
 #' * `"geojson"`: features sent whole as GeoJSON, drawn by `style`.
 #' * `"dem"`: image tiles of elevations (Terrarium or Mapbox Terrain-RGB), such as an MBTiles file read by
-#'   [rr_tiles_mbtiles()], drawn by `style` in the page under the base map's labels: MapLibre's `hillshade` and
+#'   [og_tiles_mbtiles()], drawn by `style` in the page under the base map's labels: MapLibre's `hillshade` and
 #'   `color-relief` layers, so the shading and the colours are made in the browser.
 #' * `"contour"`: contour lines made in the browser from the same image tiles of elevations, by `maplibre-contour`
 #'   (loaded by the page only for a map that has one), at the intervals of `contours`, drawn by `style` (a `line`, and
 #'   a `symbol` for the labels, from the source layer `"contours"`, its features' `ele` and `level`) under the base
 #'   map's labels.
 #'
-#' Texts (`label`, `info`, a filter's `label`, a legend's `label`, ...) are keys of the map's `texts` ([rr_map()]), or
+#' Texts (`label`, `info`, a filter's `label`, a legend's `label`, ...) are keys of the map's `texts` ([og_map()]), or
 #' the text itself where no key matches. MapLibre styles and expressions are lists, so that a one-element array stays
 #' an array in JSON: `list("get", "kind")`, `list("zoom")`; read from JSON with `jsonlite::fromJSON(simplifyVector =
 #' FALSE)` they already are.
@@ -79,7 +79,7 @@
 #'   a label on hover: `hover`, the style ids whose features show their `title` in a light label beside the pointer
 #'   while it is over them (`TRUE` for those of `click`), and `hover_fields`, `TRUE` to show the `fields` there too.
 #'   Over features of several layers, the topmost speaks, as for a click; a click hides the label until the pointer is
-#'   over another feature. Opt-in, a verdict on each feature, kept by a server started with `rr_serve(verdicts = )`:
+#'   over another feature. Opt-in, a verdict on each feature, kept by a server started with `og_serve(verdicts = )`:
 #'   `verdict`, a list of `field` (the field naming a feature: a verdict belongs to its value), `questions` (one to
 #'   four, each an `id`, a `label`, two to six `options` and optionally `skip`), and `text` (`TRUE` for a note on the
 #'   feature, in the reader's words). An option is a `value` (letters, digits, `_` or `-`), a `label` (a text or a key
@@ -90,7 +90,7 @@
 #'   (two layers of one kind of feature: a feature's answer the same whichever it is clicked on); the two must ask the
 #'   same questions. The click's popup then holds the questions, a button for each answer; each answer is
 #'   written to the server's file with the feature's place, and a mark drawn on the feature (the first question's
-#'   colour its fill, the second's its ring). A later answer replaces the earlier; [rr_verdicts()] reads them.
+#'   colour its fill, the second's its ring). A later answer replaces the earlier; [og_verdicts()] reads them.
 #' @param legend A list of swatches, each `swatch` (`fill` and `stroke`, or `dot`) and `label`.
 #' @param variants For a vector, geojson or dem layer, styles to choose between in the page, such as the column the
 #'   points are coloured by: `label` (the control's text) and `options`, each a `value`, a `label`, `paint` (by the
@@ -110,7 +110,7 @@
 #' @param opacity For a grid, its opacity when the page opens, 0-100.
 #' @param encoding,tile_size,bounds For a dem or contour layer: how its images hold the elevation (`"terrarium"` or `"mapbox"`),
 #'   their side in pixels, and the extent that has tiles (west, south, east, north), so the page asks for no other.
-#'   Taken, with `minzoom` and `maxzoom`, from the attributes of `tiles` where not given ([rr_tiles_mbtiles()]
+#'   Taken, with `minzoom` and `maxzoom`, from the attributes of `tiles` where not given ([og_tiles_mbtiles()]
 #'   sets them); else `"terrarium"` and 512. The image format (`"png"` or `"webp"`) is the `format` attribute's.
 #' @param shade For a dem layer with a `hillshade` style: the relief's controls in the page, and their values when it
 #'   opens, a list of any of `method` (`"standard"`, `"basic"`, `"combined"`, `"igor"` or `"multidirectional"`, three
@@ -122,7 +122,7 @@
 #'   `<id>_alt`, `<id>_ex`, `<id>_op`, `<id>_shadow` and `<id>_light`. With `fit`, `TRUE` or a function of the view's
 #'   box as a colour's `fit` returning a list with `exaggeration` (0-1), the intensity can follow the view (`auto`,
 #'   `TRUE` by default; `<id>_auto` in the address, which leaves out `<id>_ex` while it follows), until it is set by
-#'   hand. Tiles from [rr_tiles_dem()] are fitted in the page when no fit is given.
+#'   hand. Tiles from [og_tiles_dem()] are fitted in the page when no fit is given.
 #' @param colour For a dem layer with a `color-relief` style: its values in colour, with their controls in the page, a
 #'   list of any of `of` (`"depth"`, the elevation's negative, or `"elevation"`; what is 0 or less is clear),
 #'   `palettes` (the ids of the palettes its control offers, of the map's palettes) and `palette` (the one it opens
@@ -130,22 +130,22 @@
 #'   `scale` (`"log"`, `"linear"` or, with a fit, `"equal"`), `mode` (`"ramp"` or `"bands"`), `bands` (the bands'
 #'   breaks, rising), `cuts` (the cuts offered, 0 for none) and `cut` (one of them: values under it are drawn as
 #'   `cut_as`, `"clear"` or `"grey"`), `opacity` (0-100). Defaults: depth; for a depth the seven looks of
-#'   [rr_palettes()] (quiet, seabed, deep, chart, grey, drained and haxby), for an elevation every palette of the
+#'   [og_palettes()] (quiet, seabed, deep, chart, grey, drained and haxby), for an elevation every palette of the
 #'   map; the first of them; floor 10, cap 2,000; in equal shares with a fit, else log; a ramp; bands at 10, 20, 50,
 #'   100, 200, 500, 1,000 and 2,000; cuts 0, 10, 20 and 50, no cut, clear; 100. `TRUE` takes them all. Another
 #'   palette, such as `"magma"`, is offered by naming it, `colour = list(palettes = c("quiet", "magma"))` (a `palette`
 #'   not among `palettes` is put first in them), and one of your own by adding it to the map's,
-#'   `rr_map(palettes = c(rr_palettes(), list(list(id = "mine", label = "mine", colors = <colours>))))`. Each control
+#'   `og_map(palettes = c(og_palettes(), list(list(id = "mine", label = "mine", colors = <colours>))))`. Each control
 #'   applies as it moves, and goes into the page's address as `<id>_pal`, `<id>_lo`, `<id>_hi`, `<id>_scale`,
 #'   `<id>_mode`, `<id>_cut`, `<id>_cutas` and `<id>_cop`. With `fit`, the page has a "Fit to view" button and follows
 #'   the view: it fits again each time the map settles, until a floor or cap is set by hand (`auto`, `TRUE` by default;
 #'   `<id>_auto` in the address, where the floor and cap are left out while it follows). `fit = TRUE` makes the fit in
-#'   the page from the layer's tiles in view, with no call to R (by the rules of [rr_bundle()]'s `fit`): the floor
+#'   the page from the layer's tiles in view, with no call to R (by the rules of [og_bundle()]'s `fit`): the floor
 #'   and the cap and the values' quantiles, which also offer `scale` `"equal"`, each colour an equal share of the values
 #'   in view between the floor and the cap. Or `fit` is a function of the view's `west`, `south`, `east` and `north`,
 #'   answered by the server at `/fit/<id>?bbox=w,s,e,n`, returning the floor and the cap for the values there (or
 #'   `NULL` where there are none; or a list of `floor`, `cap` and `quantiles`, the values' quantiles rising); a bundle
-#'   fits in the page all the same. Tiles from [rr_tiles_dem()] are fitted in the page when no fit is given.
+#'   fits in the page all the same. Tiles from [og_tiles_dem()] are fitted in the page when no fit is given.
 #' @param contours For a contour layer: `thresholds`, a named list by zoom of the minor and the major interval from that
 #'   zoom on (`list("6" = c(500, 1000), "9" = c(50, 200))`; a major line has `level` 1), and `multiplier`, by which the
 #'   elevations are multiplied before the lines are drawn (-1 for depths, 1 by default). With `fit`, `TRUE` or a
@@ -153,7 +153,7 @@
 #'   view (`auto`,
 #'   `TRUE` by default; `<id>_auto` in the address): about a dozen levels at round values near the view's quantiles,
 #'   so the lines fall where the area is, drawn at a step of 1, 2 or 5 times a power of ten that makes some 40 of the
-#'   view's range; unticked, the `thresholds` and the style's filters. Tiles from [rr_tiles_dem()] are fitted in the
+#'   view's range; unticked, the `thresholds` and the style's filters. Tiles from [og_tiles_dem()] are fitted in the
 #'   page when no fit is given (by depth with a negative `multiplier`, else by elevation).
 #' @param state For a vector, geojson, dem or contour layer: values in the reader's hands that its `style` reads, in
 #'   a filter, a paint or a layout property, as `list("global-state", "<id>_<name>")` (MapLibre's global state), such
@@ -164,17 +164,17 @@
 #'   fetched again, and goes into the page's address as `<id>_<name>`. Every one must be read by the style.
 #' @param key For a vector or geojson layer, the property each feature is known by, a number or text unique in the
 #'   layer (MapLibre's `promoteId`): the feature's id in the page, by which a style reads its state
-#'   (`list("feature-state", "selected")`) and a page's script sets it ([rr_script()]'s `rr.state()`). The layer
-#'   functions' is `rr_row`, the row's number.
-#' @return An `rr_layer`, for [rr_section()]; or for [rr_add_layer()], which puts it into a map the pipe makes.
-#' @seealso [rr_map()], [rr_add_layer()], [rr_tiles_table()]
+#'   (`list("feature-state", "selected")`) and a page's script sets it ([og_script()]'s `og.state()`). The layer
+#'   functions' is `og_row`, the row's number.
+#' @return An `og_layer`, for [og_section()]; or for [og_add_layer()], which puts it into a map the pipe makes.
+#' @seealso [og_map()], [og_add_layer()], [og_tiles_table()]
 #' @export
 #' @examples
 #' # A vector layer: the harbours as areas, a click shows the harbour's id
 #' \donttest{
-#' harbours <- rr_layer(
+#' harbours <- og_layer(
 #'   "harbours", "vector", label = "Harbours",
-#'   tiles = rr_tiles_table(rr_example("dansk_harbours"), properties = "SI_HARB"),
+#'   tiles = og_tiles_table(og_example("dansk_harbours"), properties = "SI_HARB"),
 #'   style = list(list(id = "harbours-fill", type = "fill", "source-layer" = "features",
 #'                     paint = list("fill-color" = "#d9822b"))),
 #'   popup = list(click = "harbours-fill", title = "SI_HARB")
@@ -184,7 +184,7 @@
 #' # A grid: its tile function is given the filters' values in `params`. This one returns an
 #' # empty tile; a real one returns DuckDB's ST_AsMVT() of the cells (see the "Maps in RStudio"
 #' # article).
-#' cells <- rr_layer(
+#' cells <- og_layer(
 #'   "cells", "grid", label = "Pings by cell",
 #'   tiles = function(z, x, y, params) raw(0),
 #'   filters = list(
@@ -197,14 +197,14 @@
 #' )
 #'
 #' # A geojson layer: features sent whole, here one point
-#' point <- rr_layer(
+#' point <- og_layer(
 #'   "point", "geojson", label = "A point",
 #'   data = '{"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {},
 #'            "geometry": {"type": "Point", "coordinates": [12.6, 56.0]}}]}',
 #'   style = list(list(id = "point-dot", type = "circle", paint = list("circle-color" = "#c0392b")))
 #' )
 #' names(cells$config)
-rr_layer <- function(
+og_layer <- function(
   id,
   kind = c("grid", "vector", "geojson", "dem", "contour"),
   label = id,
@@ -320,10 +320,10 @@ rr_layer <- function(
     })
   }
   if (!is.null(popup[["hover"]]) || !is.null(popup[["hover_fields"]])) {
-    popup <- .rr_map_hover(popup, kind, style)
+    popup <- .og_map_hover(popup, kind, style)
   }
   if (!is.null(popup[["verdict"]])) {
-    popup <- .rr_map_verdict_spec(popup, kind)
+    popup <- .og_map_verdict_spec(popup, kind)
   }
   # one-element arrays stay arrays in the config's JSON
   if (!is.null(popup$click)) {
@@ -370,7 +370,7 @@ rr_layer <- function(
   # a colour's, the shading's or the contours' fit: "page", made in the page from the tiles in view, or a function kept
   # on the server, the page told only that there is one
   fit <- NULL
-  # the tiles' own fit (rr_tiles_dem()'s "page", or a function), taken where the layer gives none, by a depth's values or
+  # the tiles' own fit (og_tiles_dem()'s "page", or a function), taken where the layer gives none, by a depth's values or
   # an elevation's
   tiles_fit <- if (kind %in% c("dem", "contour")) {
     af <- attr(tiles, "fit")
@@ -401,7 +401,7 @@ rr_layer <- function(
       fit <- given_fit(contours$fit, "contours")
       contours$fit <- NULL
     }
-    contours <- .rr_map_contours(contours)
+    contours <- .og_map_contours(contours)
     if (is.null(fit) && !is.null(tiles_fit)) {
       fit <- from_tiles(if (contours$multiplier < 0) "depth" else "elevation")
     }
@@ -426,13 +426,13 @@ rr_layer <- function(
     fit <- from_tiles(if (is.list(colour) && identical(colour$of, "elevation")) "elevation" else "depth")
   }
   if (!is.null(shade)) {
-    shade <- .rr_map_shade(shade, kind, style)
+    shade <- .og_map_shade(shade, kind, style)
     if (!is.null(fit)) {
       shade$fit <- TRUE
     }
   }
   if (!is.null(colour)) {
-    colour <- .rr_map_colour(colour, kind, style, fitted = !is.null(fit))
+    colour <- .og_map_colour(colour, kind, style, fitted = !is.null(fit))
     if (!is.null(fit)) {
       colour$fit <- TRUE
     } else if (identical(colour$scale, "equal")) {
@@ -440,7 +440,7 @@ rr_layer <- function(
     }
   }
   if (!is.null(state)) {
-    state <- .rr_map_state(state, id, kind, style)
+    state <- .og_map_state(state, id, kind, style)
   }
   if (!is.null(key)) {
     if (!kind %in% c("vector", "geojson")) {
@@ -487,7 +487,7 @@ rr_layer <- function(
       data = data,
       fit = fit
     ),
-    class = "rr_layer"
+    class = "og_layer"
   )
 }
 
@@ -495,7 +495,7 @@ rr_layer <- function(
 # options (a value, a label, a colour, and `other` for an answer that names another feature) and the answers of
 # earlier questions that skip it; and whether a note goes with the feature. The single question of 2026.11.09
 # (`options` with no `questions`) is the question "verdict". Lists stay arrays in the config's JSON
-.rr_map_verdict_spec <- function(popup, kind) {
+.og_map_verdict_spec <- function(popup, kind) {
   if (!kind %in% c("vector", "geojson")) {
     stop("`popup$verdict` is for a vector or geojson layer.", call. = FALSE)
   }
@@ -579,7 +579,7 @@ rr_layer <- function(
 }
 
 # A popup's hover, checked: style ids of the layer's own (TRUE for the click's), a title to show, hover_fields a flag
-.rr_map_hover <- function(popup, kind, style) {
+.og_map_hover <- function(popup, kind, style) {
   if (!kind %in% c("vector", "geojson")) {
     stop("`popup$hover` is for a vector or geojson layer.", call. = FALSE)
   }
@@ -615,28 +615,28 @@ rr_layer <- function(
 #'
 #' @param id The group's name.
 #' @param title Its title in the sidebar: a key of the map's `texts`, or the text itself.
-#' @param layers A list of [rr_layer()]s, in the order they are listed and drawn (the later over the earlier).
+#' @param layers A list of [og_layer()]s, in the order they are listed and drawn (the later over the earlier).
 #' @param open Whether the group is unfolded when the page opens.
-#' @return An `rr_section`, for [rr_map()].
+#' @return An `og_section`, for [og_map()].
 #' @export
 #' @examples
-#' point <- rr_layer(
+#' point <- og_layer(
 #'   "point", "geojson", label = "A point",
 #'   data = '{"type": "Point", "coordinates": [12.6, 56.0]}',
 #'   style = list(list(id = "point-dot", type = "circle"))
 #' )
-#' ref <- rr_section("ref", "Reference", list(point), open = FALSE)
+#' ref <- og_section("ref", "Reference", list(point), open = FALSE)
 #' ref$title
-rr_section <- function(id, title = id, layers, open = TRUE) {
-  if (inherits(layers, "rr_layer")) {
+og_section <- function(id, title = id, layers, open = TRUE) {
+  if (inherits(layers, "og_layer")) {
     layers <- list(layers)
   }
-  if (!all(vapply(layers, inherits, logical(1), "rr_layer"))) {
-    stop("`layers` is a list of rr_layer()s.", call. = FALSE)
+  if (!all(vapply(layers, inherits, logical(1), "og_layer"))) {
+    stop("`layers` is a list of og_layer()s.", call. = FALSE)
   }
   structure(
     list(id = id, title = title, open = isTRUE(open), layers = layers),
-    class = "rr_section"
+    class = "og_section"
   )
 }
 
@@ -644,14 +644,14 @@ rr_section <- function(id, title = id, layers, open = TRUE) {
 #'
 #' The map is a page with a sidebar of groups that fold, each layer with its info and, when ticked, its controls and
 #' legend under it; base maps to choose from; the whole view in the page's address, so a link gives the same view;
-#' and on a phone the sidebar behind a menu button. [rr_serve()] serves it.
+#' and on a phone the sidebar behind a menu button. [og_serve()] serves it.
 #'
-#' Given data first, `rr_map(data)` starts a map that the layer functions add to ([rr_point()] and the others), the
-#' data the layers' unless a layer brings its own; [rr_add_layer()] adds an [rr_layer()] of your own to it.
+#' Given data first, `og_map(data)` starts a map that the layer functions add to ([og_point()] and the others), the
+#' data the layers' unless a layer brings its own; [og_add_layer()] adds an [og_layer()] of your own to it.
 #'
-#' @param ... [rr_section()]s; or, alone, the data a map starts from (a parquet file, folder or glob, a lazy DuckDB
-#'   table, a data frame or an sf object), which the layer functions ([rr_point()] and the others) draw; or nothing,
-#'   a map whose layer functions each bring their own data (`rr_map() |> rr_line(tows) |> rr_point(stations)`).
+#' @param ... [og_section()]s; or, alone, the data a map starts from (a parquet file, folder or glob, a lazy DuckDB
+#'   table, a data frame or an sf object), which the layer functions ([og_point()] and the others) draw; or nothing,
+#'   a map whose layer functions each bring their own data (`og_map() |> og_line(tows) |> og_point(stations)`).
 #' @param title The page's title: a key of `texts`, or the text itself.
 #' @param view The first view: `center` (longitude, latitude) and `zoom`; or `bounds` (west, south, east, north), an
 #'   extent fitted to the frame the page has (a window, an article's iframe). A view in the page's address wins.
@@ -672,7 +672,7 @@ rr_section <- function(id, title = id, layers, open = TRUE) {
 #'   `layers` (the ids it filters); or, for a range, `range` (`"number"`, `"date"` or `"time"`), `closed` and its `bins`
 #'   (each a `lo` and a `hi` as the features carry them, `from` and `to` as written, `n` and optionally `bbox`); and
 #'   optionally `extents`, each a `key` (each field's value, or a range's bin from 0, joined by the character 31), `n`
-#'   and a `bbox`, by which the fields are linked and the view fitted. [rr_map()] makes it from the columns its
+#'   and a `bbox`, by which the fields are linked and the view fitted. [og_map()] makes it from the columns its
 #'   `choose` names. A choice goes into the address under the field's name, several values separated by commas, a
 #'   range as `from..to`, and nothing is fetched again.
 #'   For a map started from data, its columns written bare, `choose = c(id, year)`, made from the data and linked:
@@ -690,23 +690,23 @@ rr_section <- function(id, title = id, layers, open = TRUE) {
 #'   map's labels whatever their place, in this order among themselves. A map started from data names the layers its
 #'   layer functions are to add by their `id`; one it never adds is an error when the map is shown.
 #' @param palette The grid's palette when the page opens: an `id` of `palettes`.
-#' @param palettes,basemaps The palettes and base maps to choose from: [rr_palettes()], [rr_basemaps()]. The
+#' @param palettes,basemaps The palettes and base maps to choose from: [og_palettes()], [og_basemaps()]. The
 #'   grid offers the palettes for its use (`use` holding `"grid"`, or no `use`); a dem layer's colour offers its own
-#'   list (`colour$palettes` of [rr_layer()]), by default the seven looks for a depth. A palette given again under
-#'   an id replaces the earlier in its place, so `c(rr_palettes(), mine)` may redefine one.
-#' @return An `rr_map`: `config` (what the page is sent) and `layers`.
+#'   list (`colour$palettes` of [og_layer()]), by default the seven looks for a depth. A palette given again under
+#'   an id replaces the earlier in its place, so `c(og_palettes(), mine)` may redefine one.
+#' @return An `og_map`: `config` (what the page is sent) and `layers`.
 #' @export
 #' @examples
-#' harbours <- rr_layer(
+#' harbours <- og_layer(
 #'   "harbours", "vector", label = "Harbours",
 #'   tiles = function(z, x, y) raw(0),
 #'   style = list(list(id = "harbours-fill", type = "fill", "source-layer" = "features",
 #'                     paint = list("fill-color" = "#d9822b")))
 #' )
-#' m <- rr_map(rr_section("ref", "Reference", list(harbours)), title = "Example",
+#' m <- og_map(og_section("ref", "Reference", list(harbours)), title = "Example",
 #'             view = list(center = c(12.5, 56), zoom = 7))
 #' names(m$config)
-rr_map <- function(
+og_map <- function(
   ...,
   title = "Map",
   view = list(center = c(0, 0), zoom = 2),
@@ -719,26 +719,26 @@ rr_map <- function(
   sections = NULL,
   order = NULL,
   palette = NULL,
-  palettes = rr_palettes(),
-  basemaps = rr_basemaps()
+  palettes = og_palettes(),
+  basemaps = og_basemaps()
 ) {
-  # a map started from data (the pipe): it holds the data until a layer function (rr_point() and the others)
+  # a map started from data (the pipe): it holds the data until a layer function (og_point() and the others)
   # adds the first layer; `choose` then names the data's columns, bare
   choose_q <- rlang::enquo(choose)
   first <- if (...length()) ..1
   is_data <- is.data.frame(first) || inherits(first, "tbl_lazy") ||
     (is.character(first) && length(first) == 1 && grepl("parquet|[*?]", first))
-  # rr_map() alone starts a map with no data of its own: each layer function brings its own
+  # og_map() alone starts a map with no data of its own: each layer function brings its own
   if (is_data || !...length()) {
     if (...length() > 1) {
-      stop("rr_map(data) takes one table; its layers come from rr_point() and the other layer functions.", call. = FALSE)
+      stop("og_map(data) takes one table; its layers come from og_point() and the other layer functions.", call. = FALSE)
     }
     return(structure(
       list(config = list(title = title), layers = list()),
-      class = "rr_map",
+      class = "og_map",
       # the map's own settings kept for its layers: a view given, base maps given
       quick = list(pending = list(data = first, choose_q = choose_q, title = title, port = NULL, sections = sections,
-                                  order = .rr_order_checked(order),
+                                  order = .og_order_checked(order),
                                   view = if (!missing(view)) view, basemaps = if (!missing(basemaps)) basemaps))
     ))
   }
@@ -746,9 +746,9 @@ rr_map <- function(
   groups <- list(...)
   if (
     !length(groups) ||
-      !all(vapply(groups, inherits, logical(1), "rr_section"))
+      !all(vapply(groups, inherits, logical(1), "og_section"))
   ) {
-    stop("`...` is one or more rr_section()s.", call. = FALSE)
+    stop("`...` is one or more og_section()s.", call. = FALSE)
   }
   layers <- unlist(lapply(groups, `[[`, "layers"), recursive = FALSE)
   ids <- vapply(layers, function(l) l$config$id, "")
@@ -767,8 +767,8 @@ rr_map <- function(
     stop("A map has one grid layer at most.", call. = FALSE)
   }
   # the order the layers are drawn in: those `order` names first, the others after in theirs
-  order <- .rr_order_checked(order)
-  .rr_order_known(order, ids)
+  order <- .og_order_checked(order)
+  .og_order_known(order, ids)
   at <- c(match(order, ids), setdiff(seq_along(ids), match(order, ids)))
   layers <- layers[at]
   ids <- ids[at]
@@ -780,7 +780,7 @@ rr_map <- function(
     stop(sprintf("A layer is named as another layer's state, %s: rename one.", paste(clash, collapse = ", ")),
          call. = FALSE)
   }
-  # a palette given again under an id replaces the earlier, in its place: c(rr_palettes(), mine) redefines a look
+  # a palette given again under an id replaces the earlier, in its place: c(og_palettes(), mine) redefines a look
   palette_ids <- vapply(palettes, `[[`, "", "id")
   if (anyDuplicated(palette_ids)) {
     last <- !duplicated(palette_ids, fromLast = TRUE)
@@ -801,7 +801,7 @@ rr_map <- function(
     }
     offered <- unlist(co$palettes)
     if (is.null(offered)) {
-      offered <- if (identical(co$of, "elevation")) palette_ids else intersect(.rr_map_depth_looks, palette_ids)
+      offered <- if (identical(co$of, "elevation")) palette_ids else intersect(.og_map_depth_looks, palette_ids)
       if (!length(offered)) {
         offered <- palette_ids
       }
@@ -812,7 +812,7 @@ rr_map <- function(
     if (length(bad <- setdiff(offered, palette_ids))) {
       stop(
         sprintf(
-          "Layer %s: its colour's palette%s %s %s not among the map's `palettes`: add %s to rr_map(palettes = ).",
+          "Layer %s: its colour's palette%s %s %s not among the map's `palettes`: add %s to og_map(palettes = ).",
           layers[[i]]$config$id,
           if (length(bad) > 1) "s" else "",
           paste(bad, collapse = ", "),
@@ -863,12 +863,12 @@ rr_map <- function(
     )
   }
   if (!is.null(choose)) {
-    choose <- .rr_choose_checked(choose, taken, "`choose`")
+    choose <- .og_choose_checked(choose, taken, "`choose`")
     taken <- c(taken, vapply(choose$fields, `[[`, "", "field"))
   }
   for (l in owns) {
     i <- match(l$config$id, ids)
-    layers[[i]]$config$choose <- .rr_choose_checked(
+    layers[[i]]$config$choose <- .og_choose_checked(
       l$config$choose, taken, sprintf("Layer %s's `choose`", l$config$id), prefix = paste0(l$config$id, "_")
     )
   }
@@ -904,18 +904,18 @@ rr_map <- function(
       p
     }),
     texts = texts,
-    # the rules of a fit made in the page (rr_bundle()'s defaults), where a layer's is
-    fit = if (any(vapply(layers, function(l) identical(l$config$fit, "page"), NA))) .rr_map_bundle_fit(list())
+    # the rules of a fit made in the page (og_bundle()'s defaults), where a layer's is
+    fit = if (any(vapply(layers, function(l) identical(l$config$fit, "page"), NA))) .og_map_bundle_fit(list())
   )
   structure(
     list(config = Filter(Negate(is.null), config), layers = layers),
-    class = "rr_map"
+    class = "og_map"
   )
 }
 
 # A layer's state: controls whose values its style reads as MapLibre's global state, `<id>_<name>`; each checked, and
 # each read by the style, so a control that changes nothing is not offered
-.rr_map_state <- function(state, id, kind, style) {
+.og_map_state <- function(state, id, kind, style) {
   if (kind == "grid") {
     stop("`state` is for a vector, geojson, dem or contour layer: a grid is drawn by the page.", call. = FALSE)
   }
@@ -979,7 +979,7 @@ rr_map <- function(
 
 # A dem layer's relief controls: MapLibre's hillshade defaults for what is not given, but for the intensity and the
 # shadow's colour, as a bathymetry map in use settled on (0.6 and a dark blue-grey); each value checked
-.rr_map_shade <- function(shade, kind, style) {
+.og_map_shade <- function(shade, kind, style) {
   if (kind != "dem" || !any(vapply(style, function(s) identical(s$type, "hillshade"), logical(1)))) {
     stop("`shade` is for a dem layer with a `hillshade` style.", call. = FALSE)
   }
@@ -1021,7 +1021,7 @@ rr_map <- function(
 }
 
 # A contour layer's intervals by zoom, as an object of the zoom's name, and its multiplier, each checked
-.rr_map_contours <- function(contours) {
+.og_map_contours <- function(contours) {
   t <- contours$thresholds
   z <- suppressWarnings(as.numeric(names(t)))
   one <- function(x) is.numeric(x) && length(x) %in% 1:2 && !anyNA(x) && all(x > 0) && !is.unsorted(x)
@@ -1046,7 +1046,7 @@ rr_map <- function(
 }
 
 # A dem layer's colour controls: the defaults for what is not given, each value checked
-.rr_map_colour <- function(colour, kind, style, fitted = FALSE) {
+.og_map_colour <- function(colour, kind, style, fitted = FALSE) {
   if (kind != "dem" || !any(vapply(style, function(s) identical(s$type, "color-relief"), logical(1)))) {
     stop("`colour` is for a dem layer with a `color-relief` style.", call. = FALSE)
   }
@@ -1103,26 +1103,26 @@ rr_map <- function(
 
 #' Show a map
 #'
-#' At an interactive console a map is served when printed ([rr_serve()], on the port the call that started it gave,
+#' At an interactive console a map is served when printed ([og_serve()], on the port the call that started it gave,
 #' else on 8790 or the next free port) and opens in RStudio's Viewer or a browser; elsewhere, as when a document is
 #' knitted, its title and layers are printed.
 #'
-#' @param x An [rr_map()].
+#' @param x An [og_map()].
 #' @param ... Not used.
 #' @return `x`, invisibly.
 #' @export
-print.rr_map <- function(x, ...) {
+print.og_map <- function(x, ...) {
   if (rlang::is_interactive()) {
-    rr_serve(x, port = attr(x, "port"))
+    og_serve(x, port = attr(x, "port"))
   } else {
     cat(format(x), sep = "\n")
   }
   invisible(x)
 }
 
-#' @rdname print.rr_map
+#' @rdname print.og_map
 #' @export
-format.rr_map <- function(x, ...) {
+format.og_map <- function(x, ...) {
   layers <- vapply(
     x$config$layers,
     function(l) sprintf("%s (%s)", l$id, l$kind),
@@ -1130,10 +1130,10 @@ format.rr_map <- function(x, ...) {
   )
   tp <- x$config$time
   if (!length(layers) && !is.null(attr(x, "quick")$pending)) {
-    return(c(sprintf("<rr_map> %s", .rr_or(x$config$title, "")), "  no layers yet: add them with rr_point() and the other layer functions"))
+    return(c(sprintf("<og_map> %s", .og_or(x$config$title, "")), "  no layers yet: add them with og_point() and the other layer functions"))
   }
   c(
-    sprintf("<rr_map> %s", .rr_or(x$config$title, "")),
+    sprintf("<og_map> %s", .og_or(x$config$title, "")),
     sprintf("  layers: %s", paste(layers, collapse = ", ")),
     if (!is.null(tp)) {
       sprintf(
@@ -1163,13 +1163,13 @@ format.rr_map <- function(x, ...) {
   )
 }
 
-.rr_or <- function(a, b) if (is.null(a)) b else a
+.og_or <- function(a, b) if (is.null(a)) b else a
 
 
 # A `choose` checked and made ready for the config's JSON: each field a `field` and its `options`, its address key
 # (the field's name, after `prefix` for a layer's own) not one the page uses already, and one-element arrays kept as
 # arrays
-.rr_choose_checked <- function(choose, taken, what, prefix = "") {
+.og_choose_checked <- function(choose, taken, what, prefix = "") {
   one <- function(f) {
     is.character(f$field) && length(f$field) == 1 && (length(f$options) > 0 || length(f$bins) > 0)
   }
@@ -1221,8 +1221,8 @@ format.rr_map <- function(x, ...) {
   choose
 }
 
-# `order` (rr_map()): layer ids, each once
-.rr_order_checked <- function(order) {
+# `order` (og_map()): layer ids, each once
+.og_order_checked <- function(order) {
   if (is.null(order)) {
     return(NULL)
   }
@@ -1233,7 +1233,7 @@ format.rr_map <- function(x, ...) {
 }
 
 # Each id `order` names a layer of the map
-.rr_order_known <- function(order, ids) {
+.og_order_known <- function(order, ids) {
   if (length(miss <- setdiff(order, ids))) {
     stop(sprintf("`order` names no layer of the map: %s (a layer's id is its `id`; the map's are %s).",
                  paste(miss, collapse = ", "), paste(ids, collapse = ", ")), call. = FALSE)
@@ -1242,9 +1242,9 @@ format.rr_map <- function(x, ...) {
 }
 
 # A map started from data names in `order` the layers its layer functions are to add: checked once it is shown
-.rr_order_shown <- function(map) {
+.og_order_shown <- function(map) {
   q <- attr(map, "quick")
   want <- q$order %||% q$pending$order
-  if (length(want)) .rr_order_known(want, vapply(map$config$layers, function(l) l$id, ""))
+  if (length(want)) .og_order_known(want, vapply(map$config$layers, function(l) l$id, ""))
   invisible(map)
 }

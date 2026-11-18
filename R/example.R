@@ -1,9 +1,9 @@
 # example.R — the example data in inst/extdata, read lazily; their documentation from inst/extdata/data-dict.yaml.
 # Copied from ramb's R/example.R on 2026-11-10.
 
-#' Read an example dataset shipped with rebelrebel
+#' Read an example dataset shipped with ogis
 #'
-#' rebelrebel's example data are parquet files in its `extdata` folder, opened lazily as DuckDB tables; collect one
+#' ogis's example data are parquet files in its `extdata` folder, opened lazily as DuckDB tables; collect one
 #' with [dplyr::collect()]. Each dataset has its own help page (`?dansk`, `?dansk_relief`, ...): what a row is, its
 #' columns, its sources and its licence. The same is in the folder's data dictionary, `data-dict.yaml`
 #' (<https://data-dict.tidyverse.org/>), and in each file's own parquet metadata, so a file copied out of the package
@@ -12,25 +12,25 @@
 #'
 #' The two datasets with shapes (`dansk_harbours`, `trawlsurveytows`) hold them in `geometry` as DuckDB's GEOMETRY
 #' (GeoParquet, longitude and latitude on WGS 84), which DuckDB's `ST_` functions work on. Collected into R it is
-#' WKB; for sf: `x <- dplyr::collect(rr_example("dansk_harbours"))`, then
+#' WKB; for sf: `x <- dplyr::collect(og_example("dansk_harbours"))`, then
 #' `sf::st_sf(x[names(x) != "geometry"], geometry = sf::st_as_sfc(structure(x$geometry, class = "WKB"), crs = 4326))`.
 #'
 #' @param name The dataset's name; `NULL` for the catalogue of all of them.
-#' @param con A DuckDB connection to open the dataset on; rebelrebel's own by default. Lazy tables used together
+#' @param con A DuckDB connection to open the dataset on; ogis's own by default. Lazy tables used together
 #'   must share a connection, so give the one your other tables are on (`dbplyr::remote_con()` of one of them).
 #' @return A lazy DuckDB table; or, for `name = NULL`, a tibble with one row per dataset: `name`, `label`,
 #'   `description`, `rows`, `licence`, `cite` (its sources as text) and `bibtex` (the same as BibTeX), read from the
 #'   files' own metadata.
 #' @export
 #' @examples
-#' rr_example()
-#' rr_example("dansk_harbours")
-#' cat(rr_example()$bibtex[1])
-rr_example <- function(name = NULL, con = NULL) {
-  dir <- system.file("extdata", package = "rebelrebel")
+#' og_example()
+#' og_example("dansk_harbours")
+#' cat(og_example()$bibtex[1])
+og_example <- function(name = NULL, con = NULL) {
+  dir <- system.file("extdata", package = "ogis")
   have <- sub("\\.parquet$", "", list.files(dir, pattern = "\\.parquet$"))
   if (is.null(name)) {
-    return(.rr_catalogue(dir))
+    return(.og_catalogue(dir))
   }
   if (!is.character(name) || length(name) != 1 || !name %in% have) {
     stop(
@@ -41,7 +41,7 @@ rr_example <- function(name = NULL, con = NULL) {
       call. = FALSE
     )
   }
-  .rr_read_parquet(
+  .og_read_parquet(
     file.path(dir, paste0(name, ".parquet")),
     lazy = TRUE,
     con = con
@@ -49,12 +49,12 @@ rr_example <- function(name = NULL, con = NULL) {
 }
 
 # The catalogue: what data-raw/data_dict.R stamped into each file's parquet metadata, one row per file.
-.rr_catalogue <- function(dir) {
+.og_catalogue <- function(dir) {
   files <- list.files(dir, pattern = "\\.parquet$", full.names = TRUE)
   for (f in files) {
-    .rr_read_parquet(f, lazy = TRUE) # stops on a Git LFS pointer, with a message that says so
+    .og_read_parquet(f, lazy = TRUE) # stops on a Git LFS pointer, with a message that says so
   }
-  con <- .rr_connection()
+  con <- .og_connection()
   glob <- file.path(dir, "*.parquet")
   # the files' own stamps, written by ramb, which made them (keys 'ramb.*')
   kv <- DBI::dbGetQuery(
@@ -90,16 +90,16 @@ rr_example <- function(name = NULL, con = NULL) {
 # Roxygen lines for one dataset's help page (@eval in R/datasets.R), from its entry in inst/extdata/data-dict.yaml and
 # its sources in inst/REFERENCES.bib. It runs when the package is documented, never when it is used, so yaml and
 # rbibutils are in Suggests.
-.rr_dataset_rd <- function(name) {
+.og_dataset_rd <- function(name) {
   # read_yaml() re-encodes to the session's encoding and, outside a UTF-8 locale, stops at the first non-ASCII
   # character without an error, dropping the datasets after it
-  dd <- .rr_yaml(readLines(
-    system.file("extdata", "data-dict.yaml", package = "rebelrebel"),
+  dd <- .og_yaml(readLines(
+    system.file("extdata", "data-dict.yaml", package = "ogis"),
     encoding = "UTF-8"
   ))
   t <- Filter(function(x) identical(x$name, name), dd$tables)[[1]]
   bib <- rbibutils::readBib(
-    system.file("REFERENCES.bib", package = "rebelrebel"),
+    system.file("REFERENCES.bib", package = "ogis"),
     direct = TRUE
   )
   for (i in seq_along(bib)) {
@@ -119,10 +119,10 @@ rr_example <- function(name = NULL, con = NULL) {
   op <- options(useFancyQuotes = FALSE)
   on.exit(options(op))
   rows <- DBI::dbGetQuery(
-    .rr_connection(),
+    .og_connection(),
     sprintf(
       "SELECT num_rows FROM parquet_file_metadata('%s')",
-      system.file("extdata", t$source$parquet, package = "rebelrebel")
+      system.file("extdata", t$source$parquet, package = "ogis")
     )
   )$num_rows
   col <- function(c) {
@@ -157,7 +157,7 @@ rr_example <- function(name = NULL, con = NULL) {
     paste0(
       "@description ",
       esc(gsub("\n", " ", t$description)),
-      " Read it with `rr_example(\"",
+      " Read it with `og_example(\"",
       name,
       "\")`."
     ),
@@ -180,16 +180,16 @@ rr_example <- function(name = NULL, con = NULL) {
     ),
     "@family example data",
     "@keywords datasets",
-    "@seealso [rr_example()]; the data dictionary `data-dict.yaml` in the package's `extdata` folder."
+    "@seealso [og_example()]; the data dictionary `data-dict.yaml` in the package's `extdata` folder."
   )
 }
 
 # One of the package's parquet files, lazy or collected.
-.rr_read_parquet <- function(f, lazy = FALSE, con = NULL) {
-  if (.rr_is_lfs_pointer(f)) {
+.og_read_parquet <- function(f, lazy = FALSE, con = NULL) {
+  if (.og_is_lfs_pointer(f)) {
     stop(
       sprintf(
-        "%s is a Git LFS pointer, not the data: install rebelrebel from a clone with Git LFS, or from an archive that includes LFS objects.",
+        "%s is a Git LFS pointer, not the data: install ogis from a clone with Git LFS, or from an archive that includes LFS objects.",
         basename(f)
       ),
       call. = FALSE
@@ -198,7 +198,7 @@ rr_example <- function(name = NULL, con = NULL) {
   # a query, not a view: duckdbfs::open_dataset() named its view from R's random numbers, which moved the caller's
   # random stream, and left the view on the connection
   if (is.null(con)) {
-    con <- .rr_connection()
+    con <- .og_connection()
   }
   x <- dplyr::tbl(
     con,
@@ -211,7 +211,7 @@ rr_example <- function(name = NULL, con = NULL) {
 }
 
 # A Git LFS pointer instead of the data: what a package built from an archive without its LFS objects holds.
-.rr_is_lfs_pointer <- function(f) {
+.og_is_lfs_pointer <- function(f) {
   head <- readBin(f, "raw", 23)
   identical(head, charToRaw("version https://git-lfs"))
 }

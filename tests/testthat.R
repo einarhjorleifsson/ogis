@@ -1,4 +1,4 @@
 library(testthat)
-library(rebelrebel)
+library(ogis)
 
-test_check("rebelrebel")
+test_check("ogis")

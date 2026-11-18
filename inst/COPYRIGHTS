@@ -1,4 +1,4 @@
-rebelrebel is licensed GPL (>= 3). Its code was moved from the R package ramb (GPL (>= 3)) by its author.
+ogis is licensed GPL (>= 3). Its code was moved from the R package ramb (GPL (>= 3)) by its author.
 
 The page's libraries, in inst/engine/vendor, each unchanged as published on npm and with its licence beside it:
 

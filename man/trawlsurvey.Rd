@@ -24,13 +24,13 @@ maintainer, \url{https://www.hafogvatn.is}.
 Licence: MFRI data, shipped by its maintainer at MFRI; the terms are not stated here.
 }
 \description{
-Each row is a position of one of four vessels on the Icelandic groundfish survey in March (SMB), 27 February to 20 March 2019, with whether a survey tow was on. Read it with \code{rr_example("trawlsurvey")}.
+Each row is a position of one of four vessels on the Icelandic groundfish survey in March (SMB), 27 February to 20 March 2019, with whether a survey tow was on. Read it with \code{og_example("trawlsurvey")}.
 }
 \details{
 extracted from MFRI's database (\code{data-raw/DATASET.R}).
 }
 \seealso{
-\code{\link[=rr_example]{rr_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
+\code{\link[=og_example]{og_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
 
 Other example data:
 \code{\link{dansk}},

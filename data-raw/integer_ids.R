@@ -25,8 +25,8 @@ for (x in list(c("trawlsurvey", "vid"), c("trawlsurveytows", "id.lgs"))) {
   # the same rows in the same order, each column equal, the id now an integer; the same metadata
   new <- sprintf("read_parquet(%s)", s(tmp))
   same <- DBI::dbGetQuery(con, sprintf(
-    "SELECT count(*) AS n FROM (SELECT *, row_number() OVER () AS rr_i FROM %s) a
-     JOIN (SELECT *, row_number() OVER () AS rr_i FROM %s) b USING (rr_i)
+    "SELECT count(*) AS n FROM (SELECT *, row_number() OVER () AS og_i FROM %s) a
+     JOIN (SELECT *, row_number() OVER () AS og_i FROM %s) b USING (og_i)
      WHERE a.%3$s = b.%3$s AND %4$s",
     src, new, col,
     paste(sprintf("a.%1$s IS NOT DISTINCT FROM b.%1$s", setdiff(

@@ -1,4 +1,4 @@
-# rr_text(): labels with a start zoom by row, an angle, a priority, a face and an offset
+# og_text(): labels with a start zoom by row, an angle, a priority, a face and an offset
 
 names_data <- function() {
   data.frame(
@@ -9,10 +9,10 @@ names_data <- function() {
   )
 }
 
-test_that("rr_text() writes its aesthetics in MapLibre's terms", {
+test_that("og_text() writes its aesthetics in MapLibre's terms", {
   skip_if_no_spatial()
-  m <- rr_map() |>
-    rr_text(names_data(), label = name, minzoom = z, angle = rot, priority = imp, fontface = face, offset = c(0, dy),
+  m <- og_map() |>
+    og_text(names_data(), label = name, minzoom = z, angle = rot, priority = imp, fontface = face, offset = c(0, dy),
             size = 15, name = "Names")
   st <- m$config$layers[[1]]$style
   expect_length(st, 1)
@@ -22,32 +22,32 @@ test_that("rr_text() writes its aesthetics in MapLibre's terms", {
   expect_identical(lay[["symbol-sort-key"]], list("*", -1, list("to-number", list("get", "imp")))) # higher first
   expect_identical(lay[["text-rotation-alignment"]], "map")
   expect_identical(lay[["text-size"]], 15)
-  expect_identical(st[[1]]$rr_face, list("get", "face"))
+  expect_identical(st[[1]]$og_face, list("get", "face"))
   off <- lay[["text-offset"]]
   expect_identical(off[[1]], "match")
   expect_true("0.000|1.000" %in% unlist(off)) # a row a line up: y up, MapLibre's down
   i <- which(vapply(off, identical, logical(1), "0.000|1.000"))
   expect_equal(off[[i + 1]][[2]], c(0, -1))
   # the features carry what the style reads
-  feats <- jsonlite::fromJSON(.rr_map_geojson(m$layers[[1]]), simplifyVector = FALSE)$features
-  expect_true(all(c("z", "rot", "imp", "face", "rr_off", "name") %in% names(feats[[1]]$properties)))
+  feats <- jsonlite::fromJSON(.og_map_geojson(m$layers[[1]]), simplifyVector = FALSE)$features
+  expect_true(all(c("z", "rot", "imp", "face", "og_off", "name") %in% names(feats[[1]]$properties)))
   # values in place of columns
-  v <- (rr_map() |> rr_text(names_data(), label = name, angle = 20, fontface = "italic", offset = c(0.5, 1),
+  v <- (og_map() |> og_text(names_data(), label = name, angle = 20, fontface = "italic", offset = c(0.5, 1),
                             minzoom = 6, overlap = TRUE))$config$layers[[1]]
   expect_identical(v$style[[1]]$layout[["text-rotate"]], -20)
   expect_identical(v$style[[1]]$layout[["text-offset"]], c(0.5, -1))
   expect_true(v$style[[1]]$layout[["text-allow-overlap"]])
-  expect_identical(v$style[[1]]$rr_face, "italic")
+  expect_identical(v$style[[1]]$og_face, "italic")
   expect_identical(v$minzoom, 6)
-  expect_error(rr_map() |> rr_text(names_data(), label = name, fontface = "heavy"), "fontface")
-  expect_error(rr_map() |> rr_text(names_data(), label = name, offset = c(0, "up")), "offset")
-  expect_error(rr_map() |> rr_text(names_data(), label = name, overlap = NA), "overlap")
+  expect_error(og_map() |> og_text(names_data(), label = name, fontface = "heavy"), "fontface")
+  expect_error(og_map() |> og_text(names_data(), label = name, offset = c(0, "up")), "offset")
+  expect_error(og_map() |> og_text(names_data(), label = name, overlap = NA), "overlap")
 })
 
 test_that("text on lines is written along them, text at points as before", {
   skip_if_no_spatial()
-  tows <- rr_example("trawlsurveytows")
-  m <- rr_map() |> rr_text(tows, label = id.lgs, name = "Tow ids")
+  tows <- og_example("trawlsurveytows")
+  m <- og_map() |> og_text(tows, label = id.lgs, name = "Tow ids")
   st <- m$config$layers[[1]]$style
   expect_identical(vapply(st, `[[`, "", "id"), c("tow_ids-text", "tow_ids-text-line"))
   expect_identical(st[[2]]$layout[["symbol-placement"]], "line-center")
@@ -59,9 +59,9 @@ test_that("in the page, a row's text shows from the first whole zoom at or above
   skip_if_offline("tiles.basemaps.cartocdn.com") # the base map's fonts
   for (whole in c(TRUE, FALSE)) {
     dir <- withr::local_tempdir()
-    m <- rr_map() |>
-      rr_text(names_data(), label = name, minzoom = z, fontface = face, overlap = TRUE, whole = whole, name = "Names")
-    rr_bundle(m, dir, overwrite = TRUE)
+    m <- og_map() |>
+      og_text(names_data(), label = name, minzoom = z, fontface = face, overlap = TRUE, whole = whole, name = "Names")
+    og_bundle(m, dir, overwrite = TRUE)
     b <- open_page(paste0(serve_dir(dir), "index.html"))
     d <- names_data()
     # whether a name is drawn with the view on it at a zoom
@@ -90,18 +90,18 @@ test_that("in the page, a row's text shows from the first whole zoom at or above
   }
 })
 
-test_that("a view and base maps given to rr_map() hold for its layer functions' map", {
+test_that("a view and base maps given to og_map() hold for its layer functions' map", {
   skip_if_no_spatial()
-  bases <- rr_basemaps()[c(4, 1)]
-  m <- rr_map(view = list(bounds = c(8, 54.5, 13, 58)), basemaps = bases) |>
-    rr_polygon(rr_example("dansk_harbours"))
+  bases <- og_basemaps()[c(4, 1)]
+  m <- og_map(view = list(bounds = c(8, 54.5, 13, 58)), basemaps = bases) |>
+    og_polygon(og_example("dansk_harbours"))
   expect_equal(unlist(m$config$view$bounds), c(8, 54.5, 13, 58))
   expect_identical(vapply(m$config$basemaps, `[[`, "", "id"), vapply(bases, `[[`, "", "id"))
-  m <- rr_map(rr_example("trawlsurvey"), view = list(center = c(-20, 65), zoom = 6)) |> rr_point()
+  m <- og_map(og_example("trawlsurvey"), view = list(center = c(-20, 65), zoom = 6)) |> og_point()
   expect_equal(unlist(m$config$view$center), c(-20, 65))
   expect_null(m$config$view$bounds)
   # none given: the rows' extent and every base map, as before
-  m <- rr_map(rr_example("trawlsurvey")) |> rr_point()
+  m <- og_map(og_example("trawlsurvey")) |> og_point()
   expect_length(unlist(m$config$view$bounds), 4)
-  expect_identical(length(m$config$basemaps), length(rr_basemaps()))
+  expect_identical(length(m$config$basemaps), length(og_basemaps()))
 })

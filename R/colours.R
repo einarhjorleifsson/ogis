@@ -5,28 +5,28 @@
 # beyond, the rest grey as "other"; an ordered factor takes viridis, in the order of its levels. Numbers, dates and
 # times: viridis, over the 1st to 99th percentile by default. A call's `palette` overrides every default.
 
-.rr_okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
-.rr_paired <- c(
+.og_okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+.og_paired <- c(
   "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A",
   "#FFFF99", "#B15928"
 )
 # Glasbey et al. (2007), 32 colours each far from the others, as pals::glasbey(32) gives them
-.rr_glasbey <- c(
+.og_glasbey <- c(
   "#0000FF", "#FF0000", "#00FF00", "#000033", "#FF00B6", "#005300", "#FFD300", "#009FFF", "#9A4D42", "#00FFBE",
   "#783FC1", "#1F9698", "#FFACFD", "#B1CC71", "#F1085C", "#FE8F42", "#DD00FF", "#201A01", "#720055", "#766C95",
   "#02AD24", "#C8FF00", "#886C00", "#FFB79F", "#858567", "#A10300", "#14F9FF", "#00479E", "#DC5E93", "#93D4FF",
   "#004CFF", "#F2F318"
 )
-.rr_viridis <- c("#440154", "#472D7B", "#3B528B", "#2C728E", "#21908C", "#27AD81", "#5DC863", "#AADC32", "#FDE725")
-.rr_other <- "#999999" # Okabe-Ito's and Set 1's grey, for the values past a palette's colours
+.og_viridis <- c("#440154", "#472D7B", "#3B528B", "#2C728E", "#21908C", "#27AD81", "#5DC863", "#AADC32", "#FDE725")
+.og_other <- "#999999" # Okabe-Ito's and Set 1's grey, for the values past a palette's colours
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 # A palette's name as written loosely: "Set 1", "set1", "set_1" and "Set-1" are one
-.rr_pal_key <- function(x) gsub("[^a-z0-9]", "", tolower(x))
+.og_pal_key <- function(x) gsub("[^a-z0-9]", "", tolower(x))
 
 # `n` colours of a palette given as a name, colours, or a function of n; NULL when `palette` is NULL
-.rr_palette_colours <- function(palette, n, call = "palette") {
+.og_palette_colours <- function(palette, n, call = "palette") {
   if (is.null(palette)) {
     return(NULL)
   }
@@ -37,82 +37,82 @@
     stop(sprintf("`%s` is a palette's name, colours, or a function of n.", call), call. = FALSE)
   }
   if (length(palette) > 1) {
-    ok <- vapply(palette, .rr_is_colour, logical(1))
+    ok <- vapply(palette, .og_is_colour, logical(1))
     if (!all(ok)) {
       stop(sprintf("`%s` holds what is not a colour: %s.", call, paste(palette[!ok], collapse = ", ")), call. = FALSE)
     }
     return(palette)
   }
-  key <- .rr_pal_key(palette)
-  own <- list(okabeito = .rr_okabe_ito, paired = .rr_paired, glasbey = .rr_glasbey, viridis = .rr_viridis)
-  for (p in rr_palettes()) own[[.rr_pal_key(p$id)]] <- own[[.rr_pal_key(p$id)]] %||% rev(p$colors)
+  key <- .og_pal_key(palette)
+  own <- list(okabeito = .og_okabe_ito, paired = .og_paired, glasbey = .og_glasbey, viridis = .og_viridis)
+  for (p in og_palettes()) own[[.og_pal_key(p$id)]] <- own[[.og_pal_key(p$id)]] %||% rev(p$colors)
   if (!is.null(own[[key]])) {
     return(own[[key]])
   }
   pp <- grDevices::palette.pals()
-  hit <- pp[.rr_pal_key(pp) == key]
+  hit <- pp[.og_pal_key(pp) == key]
   if (length(hit)) {
     return(unname(grDevices::palette.colors(NULL, hit[1])))
   }
   hp <- grDevices::hcl.pals()
-  hit <- hp[.rr_pal_key(hp) == key]
+  hit <- hp[.og_pal_key(hp) == key]
   if (length(hit)) {
     return(grDevices::hcl.colors(max(n, 2), hit[1]))
   }
   stop(
     sprintf(
-      "No palette called \"%s\": give colours, a function of n, or a name among rr_palettes(), palette.pals() and hcl.pals().",
+      "No palette called \"%s\": give colours, a function of n, or a name among og_palettes(), palette.pals() and hcl.pals().",
       palette
     ),
     call. = FALSE
   )
 }
 
-.rr_is_colour <- function(x) {
+.og_is_colour <- function(x) {
   is.character(x) && length(x) == 1 && !is.na(x) &&
     !inherits(try(grDevices::col2rgb(x), silent = TRUE), "try-error")
 }
 
 # A colour as "#rrggbb" for the page
-.rr_hex <- function(x) {
+.og_hex <- function(x) {
   v <- grDevices::col2rgb(x)
   grDevices::rgb(v[1], v[2], v[3], maxColorValue = 255)
 }
 
 # The colours of a column with discrete values `vals` (by frequency, most first) and the palette for them: a call's
 # palette (named colours taken by value), else by the number of values. Returns colours for the values that get one.
-.rr_discrete_colours <- function(vals, palette = NULL, ordered = FALSE) {
+.og_discrete_colours <- function(vals, palette = NULL, ordered = FALSE) {
   n <- length(vals)
   if (!is.null(names(palette)) && all(nzchar(names(palette)))) {
     hit <- palette[match(vals, names(palette))]
     keep <- !is.na(hit)
-    return(list(values = vals[keep], colours = vapply(unname(hit[keep]), .rr_hex, "", USE.NAMES = FALSE)))
+    return(list(values = vals[keep], colours = vapply(unname(hit[keep]), .og_hex, "", USE.NAMES = FALSE)))
   }
   pal <- if (!is.null(palette)) {
-    .rr_palette_colours(palette, n)
+    .og_palette_colours(palette, n)
   } else if (ordered) {
-    grDevices::colorRampPalette(.rr_viridis)(max(n, 2))[seq_len(n)]
+    grDevices::colorRampPalette(.og_viridis)(max(n, 2))[seq_len(n)]
   } else if (n <= 8) {
-    .rr_okabe_ito
+    .og_okabe_ito
   } else if (n <= 12) {
-    .rr_paired
+    .og_paired
   } else {
-    .rr_glasbey
+    .og_glasbey
   }
   if (ordered && !is.null(palette) && length(pal) < n) {
     pal <- grDevices::colorRampPalette(pal)(n)
   }
   k <- min(n, length(pal))
-  list(values = vals[seq_len(k)], colours = vapply(pal[seq_len(k)], .rr_hex, "", USE.NAMES = FALSE))
+  list(values = vals[seq_len(k)], colours = vapply(pal[seq_len(k)], .og_hex, "", USE.NAMES = FALSE))
 }
 
 # A column's colours and legend, read from the data on `con`: list(colour = a MapLibre expression, legend, kind).
 # `src` holds `column` as the tiles carry it, the property `prop`: text for discrete values, a number for continuous
-# ones (a date or a time as its seconds); `type` is the original column's (.rr_column_type()).
-.rr_colour_by <- function(con, src, column, prop, palette = NULL, limits = NULL, stretch = NULL, type = NULL) {
+# ones (a date or a time as its seconds); `type` is the original column's (.og_column_type()).
+.og_colour_by <- function(con, src, column, prop, palette = NULL, limits = NULL, stretch = NULL, type = NULL) {
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
   if (is.null(type)) {
-    type <- .rr_column_type(con, src, column)
+    type <- .og_column_type(con, src, column)
   }
   if (type$kind == "discrete") {
     vals <- if (!is.null(type$levels)) {
@@ -123,16 +123,16 @@
         q(column), src
       ))$v
     }
-    dc <- .rr_discrete_colours(vals, palette, ordered = isTRUE(type$ordered))
+    dc <- .og_discrete_colours(vals, palette, ordered = isTRUE(type$ordered))
     rest <- length(vals) > length(dc$values)
     legend <- lapply(seq_along(dc$values), function(j) list(swatch = list(dot = dc$colours[j]), label = dc$values[j]))
     if (rest) {
-      legend <- c(legend, list(list(swatch = list(dot = .rr_other), label = "other")))
+      legend <- c(legend, list(list(swatch = list(dot = .og_other), label = "other")))
     }
     colour <- c(
       list("match", list("get", prop)),
       unlist(lapply(seq_along(dc$values), function(j) list(dc$values[j], dc$colours[j])), recursive = FALSE),
-      list(.rr_other)
+      list(.og_other)
     )
     return(list(colour = colour, legend = legend, kind = "discrete", n = length(vals), shown = length(dc$values)))
   }
@@ -157,8 +157,8 @@
   if (!(lim[2] > lim[1])) {
     lim[2] <- lim[1] + 1
   }
-  pal <- .rr_palette_colours(palette, 9) %||% .rr_viridis
-  pal <- vapply(grDevices::colorRampPalette(pal)(9), .rr_hex, "", USE.NAMES = FALSE)
+  pal <- .og_palette_colours(palette, 9) %||% .og_viridis
+  pal <- vapply(grDevices::colorRampPalette(pal)(9), .og_hex, "", USE.NAMES = FALSE)
   stops <- switch(
     stretch,
     linear = seq(lim[1], lim[2], length.out = 9),
@@ -177,7 +177,7 @@
     "case", list("has", prop),
     c(list("interpolate", list("linear"), list("get", prop)),
       unlist(lapply(1:9, function(j) list(stops[j], pal[j])), recursive = FALSE)),
-    .rr_other
+    .og_other
   )
   legend <- lapply(c(1, 3, 5, 7, 9), function(j) {
     list(swatch = list(dot = pal[j]),
@@ -192,7 +192,7 @@
 # What a data dictionary's type (data-dict.tidyverse.org's) says a column is for choosing and colouring: "list" for an
 # id, a code, text or a logical (`number(id)`, `enum`, `string`, `boolean`), "range" for a measure, a date or a time
 # (`number`, `number(quantity)`, `date`, `datetime`, `time`), "" where it says neither or there is none
-.rr_declared <- function(type) {
+.og_declared <- function(type) {
   if (!is.character(type) || length(type) != 1 || is.na(type)) {
     return("")
   }
@@ -206,7 +206,7 @@
 }
 
 # A category's text in SQL: a number written whole where it is whole (an id stored as a double, 1131 not 1131.0)
-.rr_category_sql <- function(col, type) {
+.og_category_sql <- function(col, type) {
   if (isTRUE(type$numeric)) {
     sprintf("CASE WHEN %1$s = round(%1$s) THEN CAST(CAST(%1$s AS BIGINT) AS VARCHAR) ELSE CAST(%1$s AS VARCHAR) END", col)
   } else {
@@ -214,11 +214,11 @@
   }
 }
 
-.rr_column_type <- function(con, src, column, ordered = FALSE, declared = NULL) {
+.og_column_type <- function(con, src, column, ordered = FALSE, declared = NULL) {
   q <- as.character(DBI::dbQuoteIdentifier(con, column))
   one <- DBI::dbGetQuery(con, sprintf("SELECT %s AS v FROM (%s) LIMIT 0", q, src))$v
   # a number the data's dictionary calls an id or a code (data-dict's `number(id)`, `enum`): a category
-  if (is.numeric(one) && .rr_declared(declared) == "list") {
+  if (is.numeric(one) && .og_declared(declared) == "list") {
     return(list(kind = "discrete", numeric = TRUE))
   }
   if (is.factor(one)) {

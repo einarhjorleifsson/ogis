@@ -3,7 +3,7 @@
 
 #' Write a map as a folder that opens with no R and no server
 #'
-#' `rr_bundle()` writes an [rr_map()] as a folder whose `index.html` opens in a browser with a double click, on any
+#' `og_bundle()` writes an [og_map()] as a folder whose `index.html` opens in a browser with a double click, on any
 #' system, with no R and no server: the page with the map's config, and beside it the layers' tiles and data as script
 #' files (`tiles/`, `data/`), which a page opened as a file (`file://`) may load where it may not fetch them. It needs
 #' the internet only for the base maps: MapLibre, maplibre-contour, uPlot and pmtiles are in its `vendor` folder.
@@ -18,13 +18,13 @@
 #' What a bundle carries:
 #' * a geojson layer, its data;
 #' * a dem or contour layer, its tiles from its `minzoom` to its `maxzoom` inside its `bounds`, written once for the
-#'   layers that read one file (the `source` of [rr_tiles_dem()] and [rr_tiles_mbtiles()]). Past the deepest zoom
+#'   layers that read one file (the `source` of [og_tiles_dem()] and [og_tiles_mbtiles()]). Past the deepest zoom
 #'   written, the map draws that zoom's tiles larger. A view's fit (a colour's, the contours' or a shading's `fit`) is
 #'   made in the browser from the layer's tiles in view, by the rules in `fit`, not by the layer's R function, which
 #'   needs a server;
-#' * a vector layer from [rr_tiles_table()] or a layer function ([rr_point()] and the others), the tiles that hold a
+#' * a vector layer from [og_tiles_table()] or a layer function ([og_point()] and the others), the tiles that hold a
 #'   feature, to the deepest zoom written, and the rows a click shows;
-#' * a time panel ([rr_time()]), each vessel's spans, the whole and each month, a file each (`time/`);
+#' * a time panel ([og_time()]), each vessel's spans, the whole and each month, a file each (`time/`);
 #' * a grid layer named in `grids`, its rows: summed by cell at a few cell sizes and written in blocks of cells
 #'   (`grids/`), from which the page makes each tile, its filters applied and its cells summed in the browser, with the
 #'   fields its server would send. Its cells hold one to two screen pixels (the filter `px` times that), from the
@@ -32,7 +32,7 @@
 #'
 #' Another vector layer, or a grid layer not in `grids`, is left out, with a message: their tiles are made by a server.
 #'
-#' @param map An [rr_map()].
+#' @param map An [og_map()].
 #' @param dir The folder to write. If it already holds a bundle (`index.html`, `tiles/`, `data/`, `grids/`, `time/` or
 #'   `vendor/`),
 #'   `overwrite` replaces those and leaves the rest of the folder as it is.
@@ -59,24 +59,24 @@
 #' @param overwrite Whether to replace a bundle already in `dir`.
 #' @return `dir`, invisibly, with the number of tiles written (`tiles`) and the bundle's size in bytes (`bytes`) as
 #'   attributes.
-#' @seealso [rr_serve()], which serves the map from this R session instead.
+#' @seealso [og_serve()], which serves the map from this R session instead.
 #' @export
 #' @examples
 #' places <- sf::st_as_sf(
 #'   data.frame(name = c("Skagen", "Hirtshals"), lon = c(10.59, 9.96), lat = c(57.72, 57.59)),
 #'   coords = c("lon", "lat"), crs = 4326
 #' )
-#' layer <- rr_layer(
+#' layer <- og_layer(
 #'   "places", "geojson", label = "Places", data = places,
 #'   style = list(list(id = "places-dot", type = "circle", paint = list("circle-color" = "#d9822b"))),
 #'   popup = list(click = "places-dot", title = "name")
 #' )
-#' m <- rr_map(rr_section("ref", "Reference", list(layer)),
+#' m <- og_map(og_section("ref", "Reference", list(layer)),
 #'             title = "Two harbours", view = list(center = c(10.3, 57.6), zoom = 8))
-#' d <- rr_bundle(m, file.path(tempdir(), "two_harbours"), overwrite = TRUE)
+#' d <- og_bundle(m, file.path(tempdir(), "two_harbours"), overwrite = TRUE)
 #' list.files(d, recursive = TRUE)
 #' # utils::browseURL(file.path(d, "index.html"))  # opens it in a browser
-rr_bundle <- function(
+og_bundle <- function(
   map,
   dir,
   maxzoom = NULL,
@@ -84,18 +84,18 @@ rr_bundle <- function(
   grids = list(),
   overwrite = FALSE
 ) {
-  .rr_bundle(map, dir, maxzoom = maxzoom, fit = fit, grids = grids, overwrite = overwrite)
+  .og_bundle(map, dir, maxzoom = maxzoom, fit = fit, grids = grids, overwrite = overwrite)
 }
 
-# rr_bundle()'s work. `vendor`: NULL copies the page's libraries into the bundle's own `vendor` folder; a path
+# og_bundle()'s work. `vendor`: NULL copies the page's libraries into the bundle's own `vendor` folder; a path
 # (relative to the page, ending in "/") leaves them out and points the page there, for maps that share one copy
 # (knit_print(): an article's maps)
-.rr_bundle <- function(map, dir, maxzoom = NULL, fit = eval(formals(rr_bundle)$fit), grids = list(),
+.og_bundle <- function(map, dir, maxzoom = NULL, fit = eval(formals(og_bundle)$fit), grids = list(),
                        overwrite = FALSE, vendor = NULL) {
-  if (!inherits(map, "rr_map")) {
-    stop("`map` is an rr_map().", call. = FALSE)
+  if (!inherits(map, "og_map")) {
+    stop("`map` is an og_map().", call. = FALSE)
   }
-  .rr_order_shown(map)
+  .og_order_shown(map)
   if (!is.character(dir) || length(dir) != 1 || is.na(dir) || !nzchar(dir)) {
     stop("`dir` is the path of a folder.", call. = FALSE)
   }
@@ -109,7 +109,7 @@ rr_bundle <- function(
   if (!isTRUE(overwrite) && !isFALSE(overwrite)) {
     stop("`overwrite` is TRUE or FALSE.", call. = FALSE)
   }
-  fit <- .rr_map_bundle_fit(fit)
+  fit <- .og_map_bundle_fit(fit)
   if (!is.list(grids) || (length(grids) && (is.null(names(grids)) || any(!nzchar(names(grids)))))) {
     stop("`grids` is a list of a grid layer's rows, by the layer's id.", call. = FALSE)
   }
@@ -167,14 +167,14 @@ rr_bundle <- function(
   grid_specs <- list()
   for (id in names(grids)) {
     i <- which(vapply(config$layers, `[[`, "", "id") == id)
-    spec <- .rr_map_bundle_grid_spec(grids[[id]], config$layers[[i]])
+    spec <- .og_map_bundle_grid_spec(grids[[id]], config$layers[[i]])
     dropped <- setdiff(vapply(config$layers[[i]]$filters, `[[`, "", "id"), spec$filters)
     if (length(dropped)) {
       message(sprintf("Layer %s: left out of the bundle, as its rows have no column for them: %s.", id,
                       paste(dropped, collapse = ", ")))
     }
     config$layers[[i]]$filters <- Filter(function(f) f$id %in% spec$filters, config$layers[[i]]$filters)
-    grid_specs[[id]] <- .rr_map_bundle_grid(spec, config$layers[[i]], dir, id)
+    grid_specs[[id]] <- .og_map_bundle_grid(spec, config$layers[[i]], dir, id)
   }
 
   # the tiles: once for the layers on one source, from the least of their zooms to the most; a dem or contour layer's
@@ -194,7 +194,7 @@ rr_bundle <- function(
     }
     config$layers[[i]]$maxzoom <- as.integer(z1)
   }
-  source <- vapply(ids[dem], function(id) .rr_or(attr(layers[[id]]$tiles, "source"), paste0("layer:", id)), "")
+  source <- vapply(ids[dem], function(id) .og_or(attr(layers[[id]]$tiles, "source"), paste0("layer:", id)), "")
   folder <- stats::setNames(list(), character())
   n_tiles <- 0L
   for (s in unique(source)) {
@@ -202,21 +202,21 @@ rr_bundle <- function(
     lcs <- config$layers[on]
     b <- if (lcs[[1]]$kind != "vector") vapply(lcs, function(lc) as.numeric(unlist(lc$bounds)), numeric(4))
     tiles <- layers[[ids[on[1]]]]$tiles
-    n_tiles <- n_tiles + .rr_map_bundle_tiles(
+    n_tiles <- n_tiles + .og_map_bundle_tiles(
       tiles,
       dir,
       ids[on[1]],
-      min(vapply(lcs, function(lc) as.integer(.rr_or(lc$minzoom, 0L)), integer(1))),
+      min(vapply(lcs, function(lc) as.integer(.og_or(lc$minzoom, 0L)), integer(1))),
       max(vapply(lcs, function(lc) lc$maxzoom, integer(1))),
       if (!is.null(b)) c(min(b[1, ]), min(b[2, ]), max(b[3, ]), max(b[4, ])),
-      type = if (lcs[[1]]$kind == "vector") "mvt" else .rr_or(attr(tiles, "format"), "png")
+      type = if (lcs[[1]]$kind == "vector") "mvt" else .og_or(attr(tiles, "format"), "png")
     )
     for (i in on) {
       folder[[ids[i]]] <- ids[on[1]]
     }
   }
 
-  # the time panel's series (rr_time()): each vessel's spans, the whole and each month, a file each, named by the
+  # the time panel's series (og_time()): each vessel's spans, the whole and each month, a file each, named by the
   # vessel's place in the panel's list
   if (!is.null(map$time)) {
     dir.create(file.path(dir, "time"), showWarnings = FALSE)
@@ -226,9 +226,9 @@ rr_bundle <- function(
         key <- sprintf("time/%d_%s", i - 1L, sp$value)
         writeLines(
           enc2utf8(sprintf(
-            'RB_BUNDLE("%s",%s);',
+            'OG_BUNDLE("%s",%s);',
             key,
-            .rr_map_json(map$time$series(v$value, sp$value))
+            .og_map_json(map$time$series(v$value, sp$value))
           )),
           file.path(dir, paste0(key, ".js")),
           useBytes = TRUE
@@ -242,13 +242,13 @@ rr_bundle <- function(
     if (lc$kind != "geojson") {
       next
     }
-    d <- .rr_map_geojson(layers[[lc$id]])
+    d <- .og_map_geojson(layers[[lc$id]])
     if (is.null(d)) {
       next
     }
     dir.create(file.path(dir, "data"), showWarnings = FALSE)
     writeLines(
-      enc2utf8(sprintf('RB_BUNDLE("data/%s",%s);', lc$id, paste(d, collapse = "\n"))),
+      enc2utf8(sprintf('OG_BUNDLE("data/%s",%s);', lc$id, paste(d, collapse = "\n"))),
       file.path(dir, "data", paste0(lc$id, ".js")),
       useBytes = TRUE
     )
@@ -273,13 +273,13 @@ rr_bundle <- function(
     # an array, row n at n - 1: a browser reads an object literal keyed by number slowly (395,558 rows of four columns
     # took 65-71 s in Chrome, as an array 0.1 s), and the keys were written as R prints them ("1e+05")
     vals <- lapply(r$cols, function(cc) r$rows[[cc$name]])
-    rows <- vector("list", max(c(0, r$rows$rr_row)))
-    rows[as.integer(r$rows$rr_row)] <- lapply(seq_len(nrow(r$rows)), function(i) {
+    rows <- vector("list", max(c(0, r$rows$og_row)))
+    rows[as.integer(r$rows$og_row)] <- lapply(seq_len(nrow(r$rows)), function(i) {
       lapply(vals, function(v) if (is.na(v[i])) NULL else v[i])
     })
     dir.create(file.path(dir, "data"), showWarnings = FALSE)
     writeLines(
-      enc2utf8(sprintf('RB_BUNDLE("data/%s_rows",%s);', lc$id, .rr_map_json(list(cols = r$cols, rows = rows)))),
+      enc2utf8(sprintf('OG_BUNDLE("data/%s_rows",%s);', lc$id, .og_map_json(list(cols = r$cols, rows = rows)))),
       file.path(dir, "data", paste0(lc$id, "_rows.js")),
       useBytes = TRUE
     )
@@ -294,14 +294,14 @@ rr_bundle <- function(
     }
     dir.create(file.path(dir, "data"), showWarnings = FALSE)
     writeLines(
-      enc2utf8(sprintf('RB_BUNDLE("data/%s_search",%s);', lc$id, .rr_search_json(find))),
+      enc2utf8(sprintf('OG_BUNDLE("data/%s_search",%s);', lc$id, .og_search_json(find))),
       file.path(dir, "data", paste0(lc$id, "_search.js")),
       useBytes = TRUE
     )
   }
 
   bundle <- list(
-    meta = list(engine = .rr_map_engine, layers = Filter(Negate(is.null), .rr_map_metas(layers[keep]))),
+    meta = list(engine = .og_map_engine, layers = Filter(Negate(is.null), .og_map_metas(layers[keep]))),
     tiles = folder,
     fit = fit,
     grids = if (length(grid_specs)) grid_specs else stats::setNames(list(), character())
@@ -309,13 +309,13 @@ rr_bundle <- function(
   # the page's libraries, so the folder draws with no network but the base map's (or a copy shared, `vendor`)
   if (is.null(vendor)) {
     dir.create(file.path(dir, "vendor"), showWarnings = FALSE)
-    lib <- list.files(system.file("engine", "vendor", package = "rebelrebel"), full.names = TRUE)
+    lib <- list.files(system.file("engine", "vendor", package = "ogis"), full.names = TRUE)
     if (!length(lib) || !all(file.copy(lib, file.path(dir, "vendor"), overwrite = TRUE))) {
       stop("Could not copy the page's libraries into the bundle.", call. = FALSE)
     }
   }
   writeLines(
-    enc2utf8(.rr_map_page(.rr_map_json(config), .rr_map_json(bundle), vendor = vendor %||% "vendor/")),
+    enc2utf8(.og_map_page(.og_map_json(config), .og_map_json(bundle), vendor = vendor %||% "vendor/")),
     file.path(dir, "index.html"),
     useBytes = TRUE
   )
@@ -324,7 +324,7 @@ rr_bundle <- function(
 }
 
 # A bundle's rules of fit: the defaults where `fit` leaves one out, each checked
-.rr_map_bundle_fit <- function(fit) {
+.og_map_bundle_fit <- function(fit) {
   d <- list(probs = c(0.02, 0.98), n = 25, nodata = 0, slope = list(k = 2, p = 0.9, min = 0.3, max = 1))
   if (!is.list(fit) || (length(fit) && is.null(names(fit))) || length(setdiff(names(fit), names(d))) ||
         (!is.null(fit$slope) && (!is.list(fit$slope) || length(setdiff(names(fit$slope), names(d$slope)))))) {
@@ -358,10 +358,10 @@ rr_bundle <- function(
 }
 
 # A source's tiles from zoom z0 to z1, inside `bounds` (west, south, east, north), or with no bounds those its
-# `tiles_at` lists, as one PMTiles archive of `type` ("mvt", "png" or "webp") handed in base64 to RB_BUNDLE() by one
+# `tiles_at` lists, as one PMTiles archive of `type` ("mvt", "png" or "webp") handed in base64 to OG_BUNDLE() by one
 # script, tiles/<key>.pmtiles.js: one file however many tiles (a file a tile was up to 163,322 files), read whole by
 # the page on the source's first need. Its count of tiles, none written where there are none
-.rr_map_bundle_tiles <- function(tiles, dir, key, z0, z1, bounds = NULL, type = "mvt") {
+.og_map_bundle_tiles <- function(tiles, dir, key, z0, z1, bounds = NULL, type = "mvt") {
   col <- function(lon, z) min(2^z - 1, max(0, floor((lon + 180) / 360 * 2^z)))
   row <- function(lat, z) {
     r <- max(-85.0511, min(85.0511, lat)) * pi / 180
@@ -397,14 +397,14 @@ rr_bundle <- function(
   a <- tempfile(fileext = ".pmtiles")
   on.exit(unlink(a), add = TRUE)
   data <- unlist(lapply(kept, `[[`, "data"), recursive = FALSE)
-  .rr_pmtiles_write(
+  .og_pmtiles_write(
     unlist(lapply(kept, `[[`, "z")), unlist(lapply(kept, `[[`, "x")), unlist(lapply(kept, `[[`, "y")), data, a,
-    .rr_or(bounds, c(-180, -85.0511, 180, 85.0511)), type = type, name = key
+    .og_or(bounds, c(-180, -85.0511, 180, 85.0511)), type = type, name = key
   )
   dir.create(file.path(dir, "tiles"), showWarnings = FALSE)
   f <- file.path(dir, "tiles", paste0(key, ".pmtiles.js"))
   writeLines(
-    sprintf('RB_BUNDLE("tiles/%s.pmtiles","%s");', key,
+    sprintf('OG_BUNDLE("tiles/%s.pmtiles","%s");', key,
             gsub("\n", "", jsonlite::base64_enc(readBin(a, "raw", file.size(a))), fixed = TRUE)),
     f
   )
@@ -419,7 +419,7 @@ rr_bundle <- function(
 
 # A grid's rows for a bundle, checked against its layer: the filters it can apply (those with a column, the metric
 # and the cell scale) in `filters`
-.rr_map_bundle_grid_spec <- function(g, lc) {
+.og_map_bundle_grid_spec <- function(g, lc) {
   bad <- function(what) stop(sprintf("`grids$%s`: %s", lc$id, what), call. = FALSE)
   allowed <- c("rows", "unit", "levels", "columns", "sums", "fields", "x", "y", "px")
   if (!is.list(g) || is.null(names(g)) || length(setdiff(names(g), allowed))) {
@@ -430,8 +430,8 @@ rr_bundle <- function(
     bad("`rows` is a data frame or a lazy table.")
   }
   have <- colnames(g$rows)
-  x <- .rr_or(g$x, "x")
-  y <- .rr_or(g$y, "y")
+  x <- .og_or(g$x, "x")
+  y <- .og_or(g$y, "y")
   if (!all(c(x, y) %in% have)) {
     bad(sprintf("`rows` has no column %s.", paste(setdiff(c(x, y), have), collapse = " or ")))
   }
@@ -444,7 +444,7 @@ rr_bundle <- function(
   }
   filters <- lc$filters
   fid <- vapply(filters, `[[`, "", "id")
-  ftype <- vapply(filters, function(f) .rr_or(f$type, "options"), "")
+  ftype <- vapply(filters, function(f) .og_or(f$type, "options"), "")
   cl <- g$columns
   if (length(cl) && (!is.character(cl) || is.null(names(cl)) || !all(names(cl) %in% fid[ftype %in% c("options", "range")]))) {
     bad("`columns` names the layer's filters (not its metric), each its column.")
@@ -477,10 +477,10 @@ rr_bundle <- function(
 }
 
 # A grid's rows summed by cell at each level, from the finest level that divides it, written in blocks of 128 x 128
-# cells: grids/<id>/<level>/<bx>_<by>.js, each handing RB_BUNDLE() its rows compressed (zlib) and in base64: their
+# cells: grids/<id>/<level>/<bx>_<by>.js, each handing OG_BUNDLE() its rows compressed (zlib) and in base64: their
 # number (uint32), each sum (float32), the cell within the block (uint16, row by row from the south-west), and each
 # filter's column as codes into its values (uint16, then uint8), all little-endian. The page's account of them
-.rr_map_bundle_grid <- function(spec, lc, dir, id) {
+.og_map_bundle_grid <- function(spec, lc, dir, id) {
   B <- 128L
   if (spec$lazy) {
     con <- dbplyr::remote_con(spec$rows)
@@ -488,8 +488,8 @@ rr_bundle <- function(
   } else {
     con <- DBI::dbConnect(duckdb::duckdb())
     on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-    duckdb::duckdb_register(con, "rb_grid_rows", spec$rows)
-    src <- "SELECT * FROM rb_grid_rows"
+    duckdb::duckdb_register(con, "og_grid_rows", spec$rows)
+    src <- "SELECT * FROM og_grid_rows"
   }
   qi <- function(x) as.character(DBI::dbQuoteIdentifier(con, x))
   get <- function(...) DBI::dbGetQuery(con, sprintf(...))
@@ -503,7 +503,7 @@ rr_bundle <- function(
   keys <- paste(c(vapply(cols, qi, ""), vapply(spec$sums, qi, "")), collapse = ", ")
   dims <- paste(vapply(cols, qi, ""), collapse = ", ")
   sums <- paste(sprintf("sum(%1$s) AS %1$s", vapply(spec$sums, qi, "")), collapse = ", ")
-  stem <- sprintf("rb_grid_%s_%d", gsub("[^A-Za-z0-9]", "_", id), as.integer(stats::runif(1, 1, 1e9)))
+  stem <- sprintf("og_grid_%s_%d", gsub("[^A-Za-z0-9]", "_", id), as.integer(stats::runif(1, 1, 1e9)))
   made <- integer()
   on.exit(for (L in made) DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s_%d", stem, L)), add = TRUE, after = FALSE)
   blocks <- list()
@@ -542,14 +542,14 @@ rr_bundle <- function(
       )
       key <- sprintf("grids/%s/%d/%.0f_%.0f", id, L, bl$blx[k], bl$bly[k])
       writeLines(
-        sprintf('RB_BUNDLE("%s","%s");', key, gsub("\n", "", jsonlite::base64_enc(memCompress(payload, "gzip")), fixed = TRUE)),
+        sprintf('OG_BUNDLE("%s","%s");', key, gsub("\n", "", jsonlite::base64_enc(memCompress(payload, "gzip")), fixed = TRUE)),
         file.path(dir, paste0(key, ".js"))
       )
     }
     blocks[[as.character(L)]] <- as.list(sprintf("%.0f_%.0f", bl$blx, bl$bly))
   }
   list(
-    unit = spec$unit, levels = as.list(spec$levels), block = B, px = spec$px, layer = .rr_or(lc$source_layer, "cells"),
+    unit = spec$unit, levels = as.list(spec$levels), block = B, px = spec$px, layer = .og_or(lc$source_layer, "cells"),
     sums = as.list(spec$sums), fields = lapply(spec$fields, as.list),
     columns = lapply(seq_along(cols), function(j) {
       list(id = names(spec$columns)[j], range = spec$range[j], bytes = bytes[j],

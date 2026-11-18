@@ -1,7 +1,7 @@
-Package: rebelrebel
+Package: ogis
 Type: Package
 Title: Fast Maps on 'MapLibre' for Marine Data
-Version: 2026.11.18.9
+Version: 2026.11.18.10
 Authors@R: c(
   person("Einar", "Hjörleifsson", role = c("aut", "cre"), email = "einar.hjorleifsson@gmail.com")
   )
@@ -15,9 +15,9 @@ Description: Interactive maps of parquet files and 'DuckDB' tables, drawn in the
     with no R and no network but the base map's. Moved from the R package
     'ramb', whose map viewer it was.
 License: GPL (>= 3)
-URL: https://einarhjorleifsson.github.io/rebelrebel/,
-    https://github.com/einarhjorleifsson/rebelrebel
-BugReports: https://github.com/einarhjorleifsson/rebelrebel/issues
+URL: https://einarhjorleifsson.github.io/ogis/,
+    https://github.com/einarhjorleifsson/ogis
+BugReports: https://github.com/einarhjorleifsson/ogis/issues
 Encoding: UTF-8
 Depends:
     R (>= 4.1.0)

@@ -3,7 +3,7 @@
 
 #' The palettes and base maps of a map
 #'
-#' `rr_palettes()`: eighteen palettes, each marked by `use` for the grid's colours, a depth's or both.
+#' `og_palettes()`: eighteen palettes, each marked by `use` for the grid's colours, a depth's or both.
 #'
 #' * For the grid, twelve of nine colours, light (low) to dark (high). The first ten change in lightness steadily
 #'   (OKLab), from viridisLite (magma, viridis, plasma) and tidyterra (deep, scotland, population_dens, etopo1_bathy,
@@ -19,7 +19,7 @@
 #'   bathymetry map of Icelandic waters (2026-11-09): quiet, seabed, chart and grey designed in OKLCh, drained and haxby resampled from
 #'   tidyterra to 17 stops at even steps in OKLab, their whitest stops dropped.
 #'
-#' `rr_basemaps()`: base maps that show the sea floor, and none: EMODnet's sea floor (its 2020 base layer, the first
+#' `og_basemaps()`: base maps that show the sea floor, and none: EMODnet's sea floor (its 2020 base layer, the first
 #' and the one a map opens on), the same darkened, EMODnet's lighter atlas (v12), and Esri's ocean, which reaches beyond
 #' Europe's seas. Each is a picture with the place and sea names of a Carto style over it, Positron's on the light ones
 #' and Dark Matter's on the dark. A base map that shows a flat sea is left out: the depth is the subject.
@@ -34,15 +34,15 @@
 #'   GetMap in `EPSG:3857` whose box is `BBOX={bbox-epsg-3857}`; MapLibre fills them in for each tile, and the server
 #'   must allow the page to read its pictures (CORS). Any base map may be the first, the one a map opens on. One with
 #'   neither `style` nor `labels` has no fonts of its own: the layers' texts are drawn in the browser's. A style served
-#'   by the map's own server (a route of [rr_serve()]'s `routes`) is given by a relative address, `"/x/style"`: the
+#'   by the map's own server (a route of [og_serve()]'s `routes`) is given by a relative address, `"/x/style"`: the
 #'   page may be opened as `localhost` or as `127.0.0.1`, two origins to a browser, which refuses the other's address.
-#'   A palette of your own, given to [rr_map()]'s `palettes`, needs `id`, `label` and `colors`; with no `use` it is
+#'   A palette of your own, given to [og_map()]'s `palettes`, needs `id`, `label` and `colors`; with no `use` it is
 #'   offered to the grid.
 #' @export
 #' @examples
-#' vapply(rr_palettes(), `[[`, "", "id")
-#' vapply(rr_basemaps(), `[[`, "", "id")
-rr_palettes <- function() {
+#' vapply(og_palettes(), `[[`, "", "id")
+#' vapply(og_basemaps(), `[[`, "", "id")
+og_palettes <- function() {
   p <- function(id, source, colors, label = id, use = "grid") {
     list(id = id, label = label, source = source, colors = colors, use = use)
   }
@@ -281,12 +281,12 @@ rr_palettes <- function() {
   )
 }
 
-# The looks a dem layer's colour offers by default, in this order, the first opening (rr_palettes())
-.rr_map_depth_looks <- c("quiet", "seabed", "deep", "chart", "grey", "drained", "haxby")
+# The looks a dem layer's colour offers by default, in this order, the first opening (og_palettes())
+.og_map_depth_looks <- c("quiet", "seabed", "deep", "chart", "grey", "drained", "haxby")
 
-#' @rdname rr_palettes
+#' @rdname og_palettes
 #' @export
-rr_basemaps <- function() {
+og_basemaps <- function() {
   emodnet <- "Sea floor \u00a9 EMODnet Bathymetry Consortium (CC BY 4.0)"
   esri <- "Tiles \u00a9 Esri and its sources"
   light <- "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"

@@ -5,20 +5,20 @@
 # its zooms (minzoom, maxzoom). A bare name is a column; a string is a value.
 
 # A short id from a name: lower-case letters, digits and _
-.rr_slug <- function(x) {
+.og_slug <- function(x) {
   s <- gsub("_+", "_", gsub("[^a-z0-9]+", "_", tolower(iconv(x, to = "ASCII//TRANSLIT", sub = ""))))
   s <- gsub("^_|_$", "", s)
   if (!nzchar(s) || grepl("^[0-9]", s)) paste0("l_", s) else s
 }
 
 # A parquet file, folder or glob as a lazy DuckDB table; anything else as given
-.rr_data <- function(x) {
+.og_data <- function(x) {
   if (is.character(x) && length(x) == 1 && !grepl("\n", x)) {
     path <- if (dir.exists(x)) file.path(x, "**", "*.parquet") else x
     if (!grepl("\\.parquet$", path) && !grepl("[*?]", path)) {
       stop(sprintf("\"%s\" is not a parquet file, folder or glob.", x), call. = FALSE)
     }
-    con <- .rr_connection()
+    con <- .og_connection()
     return(dplyr::tbl(con, dplyr::sql(sprintf("SELECT * FROM read_parquet(%s)", DBI::dbQuoteString(con, path)))))
   }
   x
@@ -26,7 +26,7 @@
 
 # What an aesthetic was given: NULL, a value (a string or a number), or columns (bare names, one or c() of them).
 # A string that names a column and is not a colour stops: columns are written bare.
-.rr_aes <- function(q, cols, what, colour = FALSE) {
+.og_aes <- function(q, cols, what, colour = FALSE) {
   if (is.null(q) || rlang::quo_is_null(q) || rlang::quo_is_missing(q)) {
     return(NULL)
   }
@@ -36,19 +36,19 @@
     e <- rlang::eval_tidy(q)
   }
   if (is.character(e) || is.numeric(e) || is.logical(e)) {
-    if (is.character(e) && length(e) == 1 && e %in% cols && !.rr_is_colour(e)) {
+    if (is.character(e) && length(e) == 1 && e %in% cols && !.og_is_colour(e)) {
       stop(sprintf("`%1$s = \"%2$s\"` is a value; to use the column, write it bare: `%1$s = %2$s`.", what, e), call. = FALSE)
     }
-    if (colour && !.rr_is_colour(e)) {
+    if (colour && !.og_is_colour(e)) {
       stop(sprintf("`%s = \"%s\"` is not a colour, nor a column of the data.", what, e), call. = FALSE)
     }
     return(list(value = e))
   }
-  list(columns = .rr_select(q, cols, what))
+  list(columns = .og_select(q, cols, what))
 }
 
 # Columns named bare, one or c() of them, or with tidyselect's helpers
-.rr_select <- function(q, cols, what) {
+.og_select <- function(q, cols, what) {
   if (is.null(q) || rlang::quo_is_null(q) || rlang::quo_is_missing(q)) {
     return(character())
   }
@@ -78,8 +78,8 @@
 }
 
 # The id and the name of a new layer: the name the call gives, else the mark's, numbered where taken
-.rr_layer_names <- function(state, name, kind, id = NULL) {
-  label <- .rr_quick_label(state, .rr_or(name, kind))
+.og_layer_names <- function(state, name, kind, id = NULL) {
+  label <- .og_quick_label(state, .og_or(name, kind))
   taken <- vapply(state$layers, function(l) l$config$id, "")
   if (!is.null(id)) {
     if (!is.character(id) || length(id) != 1 || is.na(id) || !grepl("^[a-z][a-z0-9_]*$", id)) {
@@ -88,13 +88,13 @@
     if (id %in% taken) stop(sprintf("Layer id \"%s\" is taken by another layer of the map.", id), call. = FALSE)
     return(list(id = id, label = label))
   }
-  id <- .rr_slug(label)
+  id <- .og_slug(label)
   while (id %in% taken) id <- paste0(id, "_2")
   list(id = id, label = label)
 }
 
 # The marks' MapLibre layer types, the paint property each is coloured through, and its legend swatch
-.rr_marks <- list(
+.og_marks <- list(
   point = list(type = "circle", paint = "circle-color", suffix = "dot", kind = "Points", count = "points"),
   line = list(type = "line", paint = "line-color", suffix = "line", kind = "Lines", count = "lines"),
   segment = list(type = "line", paint = "line-color", suffix = "line", kind = "Segments", count = "segments"),
@@ -103,12 +103,12 @@
 )
 
 # A legend's swatches as the mark draws: dots for points, strokes for lines, filled boxes for areas, dots for text
-.rr_swatches <- function(legend, mark, outline = NULL) {
+.og_swatches <- function(legend, mark, outline = NULL) {
   lapply(legend, function(e) {
-    col <- .rr_or(e$swatch$dot, .rr_or(e$swatch$fill, e$swatch$stroke))
+    col <- .og_or(e$swatch$dot, .og_or(e$swatch$fill, e$swatch$stroke))
     e$swatch <- switch(mark,
       line = , segment = list(fill = col, stroke = col),
-      polygon = list(fill = col, stroke = .rr_or(outline, col)),
+      polygon = list(fill = col, stroke = .og_or(outline, col)),
       outline = list(fill = "transparent", stroke = outline),
       ring = list(ring = col),
       list(dot = col)
@@ -119,104 +119,104 @@
 
 # One layer of a mark, from the map (or data starting one) and the call's arguments as the exported functions take
 # them; `a` holds the call's quosures and values. What differs between marks is their style; the rest is shared.
-.rr_mark <- function(mark, map, data, a) {
-  mk <- .rr_marks[[mark]]
-  if (!inherits(map, "rr_map")) {
+.og_mark <- function(mark, map, data, a) {
+  mk <- .og_marks[[mark]]
+  if (!inherits(map, "og_map")) {
     if (!is.null(data)) {
-      stop(sprintf("rr_%s(): give the data once, as the first argument or as `data`.", mark), call. = FALSE)
+      stop(sprintf("og_%s(): give the data once, as the first argument or as `data`.", mark), call. = FALSE)
     }
     data <- map
   }
-  s <- .rr_quick(
-    map, if (!is.null(data)) .rr_data(data), a$lon, a$lat, NULL, rlang::quo(NULL), "Map", NULL,
+  s <- .og_quick(
+    map, if (!is.null(data)) .og_data(data), a$lon, a$lat, NULL, rlang::quo(NULL), "Map", NULL,
     groups = FALSE
   )
   ctx <- s$ctx_layer
-  own <- .rr_own_choose(a$choose, ctx)
+  own <- .og_own_choose(a$choose, ctx)
   con <- ctx$con
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
-  nm <- .rr_layer_names(s$state, a$name, mk$kind, a$id)
+  nm <- .og_layer_names(s$state, a$name, mk$kind, a$id)
   id <- nm$id
   data_cols <- setdiff(ctx$cols, c(ctx$lon, ctx$lat, ctx$geometry, a$lon_end, a$lat_end))
 
   # where: points from lon and lat (or a shape), lines and areas from a shape, a segment from two positions
   if (mark %in% c("line", "polygon") && is.null(ctx$geometry)) {
-    stop(sprintf("rr_%s() draws shapes: the data need a geometry column (DuckDB's GEOMETRY or WKB) or an sf object.",
+    stop(sprintf("og_%s() draws shapes: the data need a geometry column (DuckDB's GEOMETRY or WKB) or an sf object.",
                  mark), call. = FALSE)
   }
   if (mark == "segment") {
     ends <- c(a$lon_end, a$lat_end)
-    .rr_quick_need(ctx, ends)
+    .og_quick_need(ctx, ends)
   }
 
   # an area's outline alone (`fill = NA`), a point drawn as a ring (`stroke`)
-  hollow <- mark == "polygon" && .rr_is_na_arg(a$fill)
+  hollow <- mark == "polygon" && .og_is_na_arg(a$fill)
   if (hollow) a$fill <- rlang::quo(NULL)
-  ring <- if (mark == "point") .rr_ring_arg(a$stroke)
-  # the coloured aesthetic: colour (fill for areas), a value or columns carried as properties rr_c<i>
+  ring <- if (mark == "point") .og_ring_arg(a$stroke)
+  # the coloured aesthetic: colour (fill for areas), a value or columns carried as properties og_c<i>
   main <- if (mark == "polygon") "fill" else "colour"
-  col <- .rr_aes(a[[main]], ctx$cols, main, colour = TRUE)
+  col <- .og_aes(a[[main]], ctx$cols, main, colour = TRUE)
   cols <- col$columns
   types <- lapply(cols, function(cc) {
-    .rr_column_type(con, ctx$src, cc, ordered = cc %in% ctx$ordered, declared = ctx$dict[[cc]]$type)
+    .og_column_type(con, ctx$src, cc, ordered = cc %in% ctx$ordered, declared = ctx$dict[[cc]]$type)
   })
   props_sql <- vapply(seq_along(cols), function(i) {
     t <- types[[i]]
     sprintf(
-      ", %s AS rr_c%d",
-      if (t$kind == "discrete") .rr_category_sql(q(cols[i]), t)
+      ", %s AS og_c%d",
+      if (t$kind == "discrete") .og_category_sql(q(cols[i]), t)
       else if (!is.null(t$time)) sprintf("epoch(%s)", q(cols[i]))
       else sprintf("CAST(%s AS DOUBLE)", q(cols[i])),
       i
     )
   }, "")
   geo_sql <- if (mark == "segment") {
-    sprintf(", ST_MakeLine(ST_Point(%s, %s), ST_Point(%s, %s)) AS rr_geometry",
+    sprintf(", ST_MakeLine(ST_Point(%s, %s), ST_Point(%s, %s)) AS og_geometry",
             q(ctx$lon), q(ctx$lat), q(a$lon_end), q(a$lat_end))
   } else ""
-  # a point's time in seconds on the time panel's clock, where the map has a time, so a panel (rr_time()) shows only
+  # a point's time in seconds on the time panel's clock, where the map has a time, so a panel (og_time()) shows only
   # its group's span
-  t_s <- if (mark == "point" && !is.null(ctx$time)) .rr_time_s_sql(con, ctx$src, ctx$time)
+  t_s <- if (mark == "point" && !is.null(ctx$time)) .og_time_s_sql(con, ctx$src, ctx$time)
   src <- sprintf("SELECT *%s%s%s FROM (%s)", paste(props_sql, collapse = ""), geo_sql,
-                 if (is.null(t_s)) "" else sprintf(", %s AS rr_t", t_s), ctx$src)
+                 if (is.null(t_s)) "" else sprintf(", %s AS og_t", t_s), ctx$src)
   colours <- lapply(seq_along(cols), function(i) {
-    .rr_colour_by(con, src, paste0("rr_c", i), paste0("rr_c", i), a$palette, a$limits, a$stretch, types[[i]])
+    .og_colour_by(con, src, paste0("og_c", i), paste0("og_c", i), a$palette, a$limits, a$stretch, types[[i]])
   })
-  default <- if (mark == "text") "#1b2a3a" else .rr_okabe_ito[1]
-  fixed <- if (is.null(col)) default else if (!is.null(col$value)) .rr_hex(col$value)
+  default <- if (mark == "text") "#1b2a3a" else .og_okabe_ito[1]
+  fixed <- if (is.null(col)) default else if (!is.null(col$value)) .og_hex(col$value)
   outline <- if (mark == "polygon") {
-    oc <- .rr_aes(a$colour, ctx$cols, "colour", colour = TRUE)
-    if (!is.null(oc$columns)) stop("rr_polygon(): `colour` is the outline's, one colour; colour areas by a column with `fill`.", call. = FALSE)
-    if (is.null(oc)) "#4d4d4d" else .rr_hex(oc$value)
+    oc <- .og_aes(a$colour, ctx$cols, "colour", colour = TRUE)
+    if (!is.null(oc$columns)) stop("og_polygon(): `colour` is the outline's, one colour; colour areas by a column with `fill`.", call. = FALSE)
+    if (is.null(oc)) "#4d4d4d" else .og_hex(oc$value)
   }
 
   # sizes, as values: a point's diameter, a line's width, a text's size, in pixels
   num <- function(qq, what) {
-    v <- .rr_aes(qq, ctx$cols, what)
+    v <- .og_aes(qq, ctx$cols, what)
     if (!is.null(v$columns)) stop(sprintf("`%s` by a column comes in a later version; give a number of pixels.", what), call. = FALSE)
     if (!is.null(v$value) && (!is.numeric(v$value) || v$value <= 0)) stop(sprintf("`%s` is a number of pixels.", what), call. = FALSE)
     v$value
   }
-  size <- if (mark == "point") .rr_point_size(.rr_aes(a$size, ctx$cols, "size")) else if (mark != "text") num(a$size, "size")
+  size <- if (mark == "point") .og_point_size(.og_aes(a$size, ctx$cols, "size")) else if (mark != "text") num(a$size, "size")
   linewidth <- num(a$linewidth, "linewidth")
-  thin_px <- if (mark == "point") .rr_thin_px(a$thin)
+  thin_px <- if (mark == "point") .og_thin_px(a$thin)
 
   # text: the label's column
   lab <- if (mark == "text") {
-    l <- .rr_select(a$label, ctx$cols, "label")
-    if (length(l) != 1) stop("rr_text(): `label` is the one column whose values are written, bare.", call. = FALSE)
+    l <- .og_select(a$label, ctx$cols, "label")
+    if (length(l) != 1) stop("og_text(): `label` is the one column whose values are written, bare.", call. = FALSE)
     l
   }
   # and its angle, priority, start zoom by row, size, face and offset, each a value or a column
-  tx <- if (mark == "text") .rr_text_aes(a, ctx, con, q)
+  tx <- if (mark == "text") .og_text_aes(a, ctx, con, q)
 
   # what the reader can do
-  pop <- .rr_select(a$popup, data_cols, "popup")
-  hov <- .rr_select(a$hover, ctx$cols, "hover")
+  pop <- .og_select(a$popup, data_cols, "popup")
+  hov <- .og_select(a$hover, ctx$cols, "hover")
   if (length(hov) > 1) stop("`hover` is one column.", call. = FALSE)
   title <- if (length(hov)) hov else if (length(pop)) pop[1]
   fields <- lapply(setdiff(pop, title), function(f) {
-    t <- .rr_column_type(con, ctx$src, f, declared = ctx$dict[[f]]$type)
+    t <- .og_column_type(con, ctx$src, f, declared = ctx$dict[[f]]$type)
     Filter(Negate(is.null), list(field = f, label = f, format = if (t$kind == "continuous" && is.null(t$time)) "value"))
   })
   # what a thinning keeps apart in a pixel, so that nothing the page draws or filters is lost: each colour (a number's
@@ -225,19 +225,19 @@
     bins <- unlist(lapply(seq_along(cols), function(i) {
       cl <- colours[[i]]
       if (cl$kind != "continuous") return(NULL)
-      v <- if (identical(cl$stretch, "log")) c(sprintf("ln(greatest(rr_c%d, %.17g))", i, cl$limits[1]), log(cl$limits))
-           else c(sprintf("rr_c%d", i), cl$limits)
-      sprintf(", least(7, greatest(0, floor((%s - %.17g) / %.17g * 8))) AS rr_k%d", v[1], as.numeric(v[2]),
+      v <- if (identical(cl$stretch, "log")) c(sprintf("ln(greatest(og_c%d, %.17g))", i, cl$limits[1]), log(cl$limits))
+           else c(sprintf("og_c%d", i), cl$limits)
+      sprintf(", least(7, greatest(0, floor((%s - %.17g) / %.17g * 8))) AS og_k%d", v[1], as.numeric(v[2]),
               max(as.numeric(v[3]) - as.numeric(v[2]), 1e-12), i)
     }))
     src <- sprintf("SELECT *%s%s FROM (%s)", paste(bins, collapse = ""),
-                   if (is.null(t_s)) "" else ", floor(rr_t / 3600) AS rr_tb", src)
+                   if (is.null(t_s)) "" else ", floor(og_t / 3600) AS og_tb", src)
     thin <- list(
       px = thin_px,
       by = unique(c(
-        vapply(seq_along(cols), function(i) if (colours[[i]]$kind == "continuous") paste0("rr_k", i) else paste0("rr_c", i), ""),
-        intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
-        if (!is.null(t_s)) c(ctx$by, "rr_tb")
+        vapply(seq_along(cols), function(i) if (colours[[i]]$kind == "continuous") paste0("og_k", i) else paste0("og_c", i), ""),
+        intersect(.og_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
+        if (!is.null(t_s)) c(ctx$by, "og_tb")
       )),
       until = a$maxzoom %||% 14
     )
@@ -249,29 +249,29 @@
   if (length(tx$sql)) {
     src <- sprintf("SELECT *, %s FROM (%s)", tx$sql, src)
   }
-  rows_nm <- .rr_name(con, "rr_rows_")
-  DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT row_number() OVER () AS rr_row, * FROM (%s)", rows_nm, src))
+  rows_nm <- .og_name(con, "og_rows_")
+  DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT row_number() OVER () AS og_row, * FROM (%s)", rows_nm, src))
   # a search over a text column: each row's text and place, which the page reads on its first search
-  find <- .rr_search_index(con, rows_nm, a$search, ctx, mark, a, tx$zcol)
+  find <- .og_search_index(con, rows_nm, a$search, ctx, mark, a, tx$zcol)
   # every feature carries its row's number, its id in the page (MapLibre's promoteId): a click's row, a search's hit,
   # a script's feature state
   props <- unique(c(
-    if (length(cols)) paste0("rr_c", seq_along(cols)), "rr_row", title, hov, lab,
+    if (length(cols)) paste0("og_c", seq_along(cols)), "og_row", title, hov, lab,
     tx$props,
-    intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
-    if (!is.null(t_s)) c("rr_t", ctx$by)
+    intersect(.og_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
+    if (!is.null(t_s)) c("og_t", ctx$by)
   ))
   if (!is.null(t_s)) {
-    s$state$panel_fields[[id]] <- Filter(Negate(is.null), list(by = ctx$by, t = "rr_t"))
+    s$state$panel_fields[[id]] <- Filter(Negate(is.null), list(by = ctx$by, t = "og_t"))
   }
   tbl <- dplyr::tbl(con, dplyr::sql(sprintf("SELECT * FROM %s", rows_nm)))
-  whole <- .rr_whole_arg(a$whole)
+  whole <- .og_whole_arg(a$whole)
   sent <- if (mark == "segment") {
-    .rr_send(tbl, geometry = "rr_geometry", properties = props, whole = whole, order = "rr_row")
+    .og_send(tbl, geometry = "og_geometry", properties = props, whole = whole, order = "og_row")
   } else if (!is.null(ctx$geometry)) {
-    .rr_send(tbl, geometry = ctx$geometry, properties = props, thin = thin, whole = whole, order = "rr_row")
+    .og_send(tbl, geometry = ctx$geometry, properties = props, thin = thin, whole = whole, order = "og_row")
   } else {
-    .rr_send(tbl, lon = ctx$lon, lat = ctx$lat, properties = props, thin = thin, whole = whole, order = "rr_row")
+    .og_send(tbl, lon = ctx$lon, lat = ctx$lat, properties = props, thin = thin, whole = whole, order = "og_row")
   }
   # a point's size: one that stays, or between two bounds from the zoom at which the points stop lying on one another
   radius <- if (mark == "point") {
@@ -279,7 +279,7 @@
       size / 2
     } else {
       # at the zoom found, the points lie about a pixel apart; the least size starts where they lie that far apart
-      z0 <- .rr_spread_zoom(con, sprintf("SELECT * FROM %s", rows_nm), ctx$lon, ctx$lat, ctx$geometry) + log2(size[1])
+      z0 <- .og_spread_zoom(con, sprintf("SELECT * FROM %s", rows_nm), ctx$lon, ctx$lat, ctx$geometry) + log2(size[1])
       list("interpolate", list("exponential", 2), list("zoom"), z0, size[1] / 2, z0 + log2(size[2] / size[1]), size[2] / 2)
     }
   }
@@ -293,7 +293,7 @@
       paint = if (is.null(ring)) {
         list("circle-color" = colour_expr, "circle-radius" = radius,
              "circle-opacity" = a$opacity %||% 0.85,
-             "circle-stroke-color" = "rgba(255,255,255,0.7)", "circle-stroke-width" = .rr_point_stroke(radius))
+             "circle-stroke-color" = "rgba(255,255,255,0.7)", "circle-stroke-width" = .og_point_stroke(radius))
       } else {
         # a ring: the stroke in the point's colour, the inside drawn clear (and still hit by a click)
         list("circle-color" = colour_expr, "circle-radius" = radius, "circle-opacity" = 0,
@@ -311,7 +311,7 @@
       list(id = paste0(id, "-outline"), type = "line", "source-layer" = "features",
            paint = c(list("line-color" = outline, "line-width" = linewidth %||% if (hollow) 2 else 1),
                      if (hollow) list("line-opacity" = a$opacity %||% 0.9)))),
-    text = .rr_text_styles(id, sid, lab, tx, !is.null(ctx$geometry), isTRUE(a$overlap),
+    text = .og_text_styles(id, sid, lab, tx, !is.null(ctx$geometry), isTRUE(a$overlap),
       paint = list("text-color" = colour_expr, "text-opacity" = a$opacity %||% 1,
                    "text-halo-color" = "rgba(255,255,255,0.9)", "text-halo-width" = 1.5))
   )
@@ -324,18 +324,18 @@
     list(label = "Colour by", options = lapply(seq_along(cols), function(i) {
       list(value = cols[i], label = cols[i],
            paint = stats::setNames(rep(list(stats::setNames(list(colours[[i]]$colour), paint_key)), length(sids)), sids),
-           legend = if (isTRUE(a$legend)) .rr_swatches(colours[[i]]$legend, look, outline))
+           legend = if (isTRUE(a$legend)) .og_swatches(colours[[i]]$legend, look, outline))
     }))
   }
-  leg <- if (!isTRUE(a$legend)) NULL else if (length(cols)) .rr_swatches(colours[[1]]$legend, look, outline) else
-    .rr_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), look, outline)
+  leg <- if (!isTRUE(a$legend)) NULL else if (length(cols)) .og_swatches(colours[[1]]$legend, look, outline) else
+    .og_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), look, outline)
   what <- switch(mark, point = "point", line = "line", segment = "line from its start to its end",
                  polygon = "area", text = "label")
-  style <- .rr_styles_for(.rr_style_props(style, a$props, paste0("rr_", mark)), sent$kind)
-  layer <- rr_layer(
+  style <- .og_styles_for(.og_style_props(style, a$props, paste0("og_", mark)), sent$kind)
+  layer <- og_layer(
     id, sent$kind,
     label = nm$label,
-    info = .rr_or(a$info, if (length(cols) == 1) sprintf("Each row a %s, coloured by %s.", what, cols) else
+    info = .og_or(a$info, if (length(cols) == 1) sprintf("Each row a %s, coloured by %s.", what, cols) else
       if (length(cols) > 1) sprintf("Each row a %s, coloured by the column chosen below.", what) else
       sprintf("Each row a %s.", what)),
     visible = a$visible,
@@ -351,53 +351,53 @@
       Filter(Negate(is.null), list(click = sids, title = title, row = if (length(pop)) TRUE,
                                    hover = if (length(hov)) TRUE))
     },
-    key = "rr_row"
+    key = "og_row"
   )
   layer$config$choose <- own$config
   layer$config$features <- attr(sent$data, "count") # sent whole, its count, so the page need not read the file
-  meta <- .rr_popup_meta(pop, ctx$dict, a$labels, a$codes) # checked now, not on the first click
+  meta <- .og_popup_meta(pop, ctx$dict, a$labels, a$codes) # checked now, not on the first click
   if (length(pop)) {
-    layer$row <- .rr_row_reader(con, rows_nm, pop, meta)
+    layer$row <- .og_row_reader(con, rows_nm, pop, meta)
   }
   if (!is.null(find)) {
     layer$config$search <- TRUE
     layer$search <- find
   }
   s$state$layer_section[[id]] <- a$section
-  .rr_hold(.rr_quick_map(s, layer, sent$table))
+  .og_hold(.og_quick_map(s, layer, sent$table))
 }
 
-# How a layer's rows reach the page: as tiles cut by DuckDB when the page asks (rr_tiles_table()), or whole, as one
-# GeoJSON file the page reads once (`whole`). By default (NULL) whole when its GeoJSON is at most .rr_whole_bytes,
+# How a layer's rows reach the page: as tiles cut by DuckDB when the page asks (og_tiles_table()), or whole, as one
+# GeoJSON file the page reads once (`whole`). By default (NULL) whole when its GeoJSON is at most .og_whole_bytes,
 # measured equal to tiles in a browser up to there (fishycode's whole-or-tiles study, 2026-11-11), and needs nothing
-# more of R once read; a table of more rows than .rr_whole_rows is not tried, as its GeoJSON would be larger. The
+# more of R once read; a table of more rows than .og_whole_rows is not tried, as its GeoJSON would be larger. The
 # layer's kind, its tiles or data, and the table a served map drops
-.rr_whole_rows <- 50000
-.rr_whole_bytes <- 5e6
-.rr_send <- function(x, geometry = "geometry", lon = NULL, lat = NULL, properties = NULL, thin = NULL, whole = NULL,
+.og_whole_rows <- 50000
+.og_whole_bytes <- 5e6
+.og_send <- function(x, geometry = "geometry", lon = NULL, lat = NULL, properties = NULL, thin = NULL, whole = NULL,
                      order = NULL) {
   if (!isFALSE(whole)) {
     n <- if (is.null(whole)) {
-      con <- .rr_con_for(x)
-      DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM (%s)", .rr_sql(.rr_as_lazy(x, con))))$n
+      con <- .og_con_for(x)
+      DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM (%s)", .og_sql(.og_as_lazy(x, con))))$n
     }
-    if (isTRUE(whole) || n <= .rr_whole_rows) {
-      data <- .rr_geojson_table(x, geometry, lon, lat, properties, order)
-      if (isTRUE(whole) || attr(data, "bytes") <= .rr_whole_bytes) {
+    if (isTRUE(whole) || n <= .og_whole_rows) {
+      data <- .og_geojson_table(x, geometry, lon, lat, properties, order)
+      if (isTRUE(whole) || attr(data, "bytes") <= .og_whole_bytes) {
         return(list(kind = "geojson", tiles = NULL, data = data, table = NULL))
       }
     }
   }
-  tiles <- rr_tiles_table(x, geometry = geometry, lon = lon, lat = lat, properties = properties, thin = thin)
-  list(kind = "vector", tiles = tiles, data = NULL, table = list(con = .rr_con_for(x), name = attr(tiles, "table")))
+  tiles <- og_tiles_table(x, geometry = geometry, lon = lon, lat = lat, properties = properties, thin = thin)
+  list(kind = "vector", tiles = tiles, data = NULL, table = list(con = .og_con_for(x), name = attr(tiles, "table")))
 }
 
 # A layer's search (`search = name`): each row's text, its place (a point's own, a point on a shape, a segment's
 # middle), its number and, for a text with a start zoom of its own, that zoom. Read by the page on its first search,
 # so it is kept to a size a page reads at once
-.rr_search_rows <- 500000
-.rr_search_index <- function(con, rows_nm, q, ctx, mark, a, zcol = NULL) {
-  col <- .rr_select(q, ctx$cols, "search")
+.og_search_rows <- 500000
+.og_search_index <- function(con, rows_nm, q, ctx, mark, a, zcol = NULL) {
+  col <- .og_select(q, ctx$cols, "search")
   if (!length(col)) {
     return(NULL)
   }
@@ -408,31 +408,31 @@
   xy <- if (mark == "segment") {
     c(sprintf("(%s + %s) / 2", qi(ctx$lon), qi(a$lon_end)), sprintf("(%s + %s) / 2", qi(ctx$lat), qi(a$lat_end)))
   } else if (!is.null(ctx$geometry)) {
-    p <- sprintf("ST_PointOnSurface(%s)", .rr_geom_sql(con, sprintf("SELECT * FROM %s", rows_nm), ctx$geometry))
+    p <- sprintf("ST_PointOnSurface(%s)", .og_geom_sql(con, sprintf("SELECT * FROM %s", rows_nm), ctx$geometry))
     c(sprintf("ST_X(%s)", p), sprintf("ST_Y(%s)", p))
   } else {
     c(qi(ctx$lon), qi(ctx$lat))
   }
   from <- sprintf("FROM %s WHERE %s IS NOT NULL AND %s IS NOT NULL", rows_nm, qi(col), xy[1])
   n <- DBI::dbGetQuery(con, paste("SELECT count(*) AS n", from))$n
-  if (n > .rr_search_rows) {
+  if (n > .og_search_rows) {
     stop(sprintf("`search`: %s rows, more than the %s a page searches at once; search a smaller table, or a column of fewer rows.",
-                 format(n, big.mark = ","), format(.rr_search_rows, big.mark = ",")), call. = FALSE)
+                 format(n, big.mark = ","), format(.og_search_rows, big.mark = ",")), call. = FALSE)
   }
   d <- DBI::dbGetQuery(con, sprintf(
-    "SELECT CAST(%s AS VARCHAR) AS t, round(%s, 5) AS x, round(%s, 5) AS y, rr_row AS r%s %s ORDER BY rr_row",
+    "SELECT CAST(%s AS VARCHAR) AS t, round(%s, 5) AS x, round(%s, 5) AS y, og_row AS r%s %s ORDER BY og_row",
     qi(col), xy[1], xy[2], if (is.null(zcol)) "" else sprintf(", CAST(%s AS DOUBLE) AS z", qi(zcol)), from
   ))
   Filter(Negate(is.null), list(column = col, t = d$t, x = d$x, y = d$y, r = as.integer(d$r), z = d$z))
 }
 
 # A search's index as the page reads it: arrays, one a row
-.rr_search_json <- function(find) {
-  .rr_map_json(lapply(find[c("t", "x", "y", "r", "z")[c("t", "x", "y", "r", "z") %in% names(find)]], I))
+.og_search_json <- function(find) {
+  .og_map_json(lapply(find[c("t", "x", "y", "r", "z")[c("t", "x", "y", "r", "z") %in% names(find)]], I))
 }
 
 # `fill = NA`: an argument written as NA
-.rr_is_na_arg <- function(q) {
+.og_is_na_arg <- function(q) {
   if (is.null(q) || rlang::quo_is_null(q) || rlang::quo_is_missing(q)) {
     return(FALSE)
   }
@@ -440,8 +440,8 @@
   is.atomic(e) && length(e) == 1 && is.na(e)
 }
 
-# `stroke` (rr_point()): a ring's width in pixels, or NULL for a filled point
-.rr_ring_arg <- function(stroke) {
+# `stroke` (og_point()): a ring's width in pixels, or NULL for a filled point
+.og_ring_arg <- function(stroke) {
   if (is.null(stroke)) {
     return(NULL)
   }
@@ -452,7 +452,7 @@
 }
 
 # `whole` as given: NULL (by size), TRUE or FALSE
-.rr_whole_arg <- function(whole) {
+.og_whole_arg <- function(whole) {
   if (!is.null(whole) && !isTRUE(whole) && !isFALSE(whole)) {
     stop("`whole` is TRUE, FALSE or NULL (whole when small, else as tiles).", call. = FALSE)
   }
@@ -460,7 +460,7 @@
 }
 
 # A layer's styles for its kind: a GeoJSON source has no source layer
-.rr_styles_for <- function(style, kind) {
+.og_styles_for <- function(style, kind) {
   if (kind != "geojson") {
     return(style)
   }
@@ -472,11 +472,11 @@
 
 # A point's size from `size`: one number, a diameter that stays; two, the least and the most of one that follows the
 # zoom; none, 2 and 8 pixels
-.rr_point_size <- function(v) {
+.og_point_size <- function(v) {
   if (!is.null(v$columns)) {
     stop("`size` by a column comes in a later version; give a number of pixels, or two, the least and the most.", call. = FALSE)
   }
-  s <- .rr_or(v$value, c(2, 8))
+  s <- .og_or(v$value, c(2, 8))
   if (!is.numeric(s) || !length(s) %in% 1:2 || anyNA(s) || any(s <= 0) || (length(s) == 2 && s[1] >= s[2])) {
     stop("`size` is a number of pixels, or two, the least and the most, the least first.", call. = FALSE)
   }
@@ -484,7 +484,7 @@
 }
 
 # The outline of points: none while a point is under 3 pixels across, where it would be all outline
-.rr_point_stroke <- function(radius) {
+.og_point_stroke <- function(radius) {
   if (!is.list(radius)) {
     return(if (radius < 1.5) 0 else 0.5)
   }
@@ -493,7 +493,7 @@
 }
 
 # `thin` as pixels a cell, or NULL for none
-.rr_thin_px <- function(thin) {
+.og_thin_px <- function(thin) {
   if (isTRUE(thin)) {
     return(1)
   }
@@ -509,12 +509,12 @@
 # The zoom from which a layer's points stop lying on one another: the first at which their screen pixels (a tile
 # drawn 512 wide) are at least half their spots (pixels at zoom 20), by approximate counts in one pass, so that points
 # on one spot (a ship in port) count once. A point's size grows from there as a size on the ground would
-.rr_spread_zoom <- function(con, src, lon, lat, geometry) {
+.og_spread_zoom <- function(con, src, lon, lat, geometry) {
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
   xy <- if (is.null(geometry)) {
     c(q(lon), q(lat))
   } else {
-    g <- .rr_geom_sql(con, src, geometry)
+    g <- .og_geom_sql(con, src, geometry)
     c(sprintf("ST_X(%s)", g), sprintf("ST_Y(%s)", g))
   }
   zs <- 0:20
@@ -538,7 +538,7 @@
 
 # A range's bin start for each row, in SQL: the value itself where each value is a bin, else the start of the bin it
 # falls in (a number as a number, a date or a time as the text the tiles carry, compared as text as the page does)
-.rr_range_start_sql <- function(con, f) {
+.og_range_start_sql <- function(con, f) {
   col <- as.character(DBI::dbQuoteIdentifier(con, f$field))
   if (isTRUE(f$closed)) {
     return(col)
@@ -556,28 +556,28 @@
 
 # A layer's own `choose`: the columns it names, and their lists for the page (each value with its rows and extent,
 # and each combination's), over this layer alone
-.rr_own_choose <- function(q, ctx) {
+.og_own_choose <- function(q, ctx) {
   if (rlang::quo_is_null(q)) {
     return(list(fields = character(), config = NULL))
   }
-  fields <- unique(.rr_track_cols(q, ctx$cols))
-  .rr_quick_need(ctx, fields)
-  list(fields = fields, config = .rr_quick_choose(ctx, fields))
+  fields <- unique(.og_track_cols(q, ctx$cols))
+  .og_quick_need(ctx, fields)
+  list(fields = fields, config = .og_quick_choose(ctx, fields))
 }
 
-# The call's arguments for .rr_mark(): quosures for what may name columns, values for the rest; `color` for `colour`
-.rr_mark_args <- function(env, dq, fname) {
+# The call's arguments for .og_mark(): quosures for what may name columns, values for the rest; `color` for `colour`
+.og_mark_args <- function(env, dq, fname) {
   if ("color" %in% names(dq)) {
     env$colour <- dq[["color"]]
     dq[["color"]] <- NULL
   }
-  env$props <- .rr_maplibre_props(dq, fname)
+  env$props <- .og_maplibre_props(dq, fname)
   env
 }
 
 # A layer function's `...`: MapLibre's paint and layout properties by their own names ("circle-stroke-width" = 2), each
 # a value or an expression as a list; any other name is an argument the function has not
-.rr_maplibre_props <- function(dq, fname) {
+.og_maplibre_props <- function(dq, fname) {
   nms <- names(dq) %||% rep("", length(dq))
   bad <- nms[!grepl("^(circle|line|fill|text|icon|symbol)(-[a-z]+)+$", nms)]
   if (length(bad) || any(!nzchar(nms))) {
@@ -589,16 +589,16 @@
 
 # MapLibre's properties put on a layer's styles: each on the styles of its kind (circle, line, fill, and text, icon and
 # symbol on symbols), as layout or paint as MapLibre has it
-.rr_layout_props <- c("line-cap", "line-join", "line-miter-limit", "line-round-limit", "line-sort-key", "fill-sort-key",
+.og_layout_props <- c("line-cap", "line-join", "line-miter-limit", "line-round-limit", "line-sort-key", "fill-sort-key",
                       "circle-sort-key")
-.rr_symbol_paint <- c(outer(c("text", "icon"), c("color", "halo-color", "halo-width", "halo-blur", "opacity", "translate",
+.og_symbol_paint <- c(outer(c("text", "icon"), c("color", "halo-color", "halo-width", "halo-blur", "opacity", "translate",
                                                    "translate-anchor"), paste, sep = "-"))
-.rr_style_props <- function(style, props, fname) {
+.og_style_props <- function(style, props, fname) {
   if (!length(props)) return(style)
   kind <- function(p) switch(sub("-.*", "", p), circle = "circle", line = "line", fill = "fill", "symbol")
   for (p in names(props)) {
     k <- kind(p)
-    where <- if (p %in% .rr_layout_props || (k == "symbol" && !p %in% .rr_symbol_paint)) "layout" else "paint"
+    where <- if (p %in% .og_layout_props || (k == "symbol" && !p %in% .og_symbol_paint)) "layout" else "paint"
     hit <- FALSE
     for (i in seq_along(style)) {
       if (identical(style[[i]]$type, k)) {
@@ -616,26 +616,26 @@
 
 #' Points, lines, areas, segments and text
 #'
-#' A layer of a map, one mark for each row of the data. `rr_point()` draws a circle at each row's position (pings,
-#' stations, catches); `rr_line()` draws rows that are lines (tows, transects, cables); `rr_segment()` draws a line
-#' from each row's start to its end (a tow from shooting to hauling); `rr_polygon()` draws areas, filled and outlined;
-#' `rr_text()` writes a column's values at the rows' positions (place names, station ids). Each is piped onto a map,
-#' `rr_map(data) |> rr_point(colour = speed)`, or given the data first, `data |> rr_point()`, which starts a map. The
+#' A layer of a map, one mark for each row of the data. `og_point()` draws a circle at each row's position (pings,
+#' stations, catches); `og_line()` draws rows that are lines (tows, transects, cables); `og_segment()` draws a line
+#' from each row's start to its end (a tow from shooting to hauling); `og_polygon()` draws areas, filled and outlined;
+#' `og_text()` writes a column's values at the rows' positions (place names, station ids). Each is piped onto a map,
+#' `og_map(data) |> og_point(colour = speed)`, or given the data first, `data |> og_point()`, which starts a map. The
 #' data stay in DuckDB and reach the page as vector tiles, so a map of millions of rows stays fast and its colours
 #' change in the page.
 #'
-#' @param map An [rr_map()], or the data, which start a map.
+#' @param map An [og_map()], or the data, which start a map.
 #' @param data The rows, if not the map's: a parquet file, folder or glob, a lazy DuckDB table, a data frame or an sf
-#'   object (points, or lines and areas for `rr_line()` and `rr_polygon()`; a table's shapes in a column `geometry`
+#'   object (points, or lines and areas for `og_line()` and `og_polygon()`; a table's shapes in a column `geometry`
 #'   as DuckDB's GEOMETRY or WKB).
-#' @param lon,lat The position's columns, by default `lon` and `lat`; for `rr_segment()` its start.
-#' @param lon_end,lat_end For `rr_segment()`, the columns of its end.
+#' @param lon,lat The position's columns, by default `lon` and `lat`; for `og_segment()` its start.
+#' @param lon_end,lat_end For `og_segment()`, the columns of its end.
 #' @param colour The marks' colour (an area's outline): a colour (`"#c0392b"`), or a column written bare (`colour =
 #'   speed`), coloured by `palette`; several columns, `c(behaviour, speed)`, are a choice in the page, the first
 #'   shown. A column's colours by default: Okabe-Ito for up to eight values, Paired for up to twelve, Glasbey's 32
 #'   beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. `color` is the
 #'   same.
-#' @param fill For `rr_polygon()`, the areas' colour, as `colour` is for the other marks; `NA`, none: the outline
+#' @param fill For `og_polygon()`, the areas' colour, as `colour` is for the other marks; `NA`, none: the outline
 #'   alone, in `colour`, 2 pixels wide unless `linewidth` says otherwise, a click inside an area still showing its row.
 #' @param size A point's diameter, a text's size (a number, or for text a column written bare), in pixels. For points, by default, a size that follows the zoom:
 #'   the least, 2 pixels, until the zoom at which most points lie that far apart, then doubling with each zoom in, as
@@ -646,7 +646,7 @@
 #'   centre first, with their count; a click on one takes the map there, at zoom 10 or nearer (a text's own start zoom
 #'   where it has one), turns its layer on and shows its row. The column's texts and places go to the page on its first
 #'   search (a bundle carries them); a layer of more than 500,000 rows takes none.
-#' @param stroke For `rr_point()`, a ring: its width in pixels. Each point is drawn as a ring of its colour, hollow,
+#' @param stroke For `og_point()`, a ring: its width in pixels. Each point is drawn as a ring of its colour, hollow,
 #'   `size` the diameter inside it; a click on it or inside it shows the row.
 #' @param linewidth A line's width (an area's outline), in pixels.
 #' @param opacity The marks' opacity, 0-1.
@@ -661,15 +661,15 @@
 #'   list picks and each group of a time panel keeping its own), so a tile of millions of rows reaches the page as
 #'   what can be seen of them; a number of pixels for coarser cells; `FALSE` keeps every point. At the layer's
 #'   deepest zoom (`maxzoom`, 14 by default) and beyond, only points that would be drawn on one spot are dropped.
-#' @param label For `rr_text()`, the column whose values are written, bare. On a line (data whose shapes are lines), the
+#' @param label For `og_text()`, the column whose values are written, bare. On a line (data whose shapes are lines), the
 #'   text is written along it, at its middle.
-#' @param angle,priority,fontface,offset,overlap For `rr_text()`, each a value or a column written bare: `angle`, the
+#' @param angle,priority,fontface,offset,overlap For `og_text()`, each a value or a column written bare: `angle`, the
 #'   text turned that many degrees counter-clockwise, as ggplot2's; `priority`, which text is placed first where two
 #'   would meet, the higher (within a tile, as MapLibre places); `fontface`, `"plain"`, `"italic"`, `"bold"` or
 #'   `"bold.italic"`, in the base map's own fonts for that face; `offset`, `c(x, y)` in text heights, x to the right and y
 #'   up (a column takes at most 256 pairs of values); `overlap`, `TRUE` to draw every text where others meet (MapLibre
 #'   leaves out the later). A turned text keeps the upright box round it clear of others.
-#' @param palette The colours for a column, in place of the default: a palette's name (from [rr_palettes()],
+#' @param palette The colours for a column, in place of the default: a palette's name (from [og_palettes()],
 #'   `palette.pals()` or `hcl.pals()`, written loosely: `"set1"` is Set 1), colours, colours named by value
 #'   (`c(Fishing = "#c0392b")`), or a function of n (`viridisLite::mako`).
 #' @param limits,stretch For a numeric column: the values the palette's ends stand at (by default its 1st and 99th
@@ -681,24 +681,24 @@
 #'   name, its unit beside it and its description behind it, where the data's dictionary or `labels` give them.
 #' @param labels The columns' names as the popup shows them, in place of the data's: `c(speed = "Speed (knots)")`. By
 #'   default a data frame's column attributes (`label`, `units`) or a parquet file's own dictionary (an entry of
-#'   data-dict.tidyverse.org's format in its metadata, as [rr_example()]'s files hold), else the column's name.
+#'   data-dict.tidyverse.org's format in its metadata, as [og_example()]'s files hold), else the column's name.
 #' @param codes The labels of a coded column's values, shown beside each code: a named list by column, each a named
 #'   vector (`c("6" = "bottom trawl")`) or a table of code and label; by default the dictionary's, where it has them.
 #' @param hover A column whose value is shown beside the pointer.
 #' @param choose The columns, written bare, whose values the reader picks to show of this layer alone, each under
 #'   the layer's name: text, a factor, a logical or a whole number (an id, a code) as a list (chips for up to 12
 #'   values, else a list to show one at a time), a fraction, a date or a time as a range with two handles, unless the
-#'   data's dictionary declares otherwise (as for [rr_map()]); ‹ and › step through either. Several are linked:
+#'   data's dictionary declares otherwise (as for [og_map()]); ‹ and › step through either. Several are linked:
 #'   each offers only the values the others leave. For choices that drive every layer with the column, give `choose`
-#'   to [rr_map()].
+#'   to [og_map()].
 #' @param name,id,info The layer's name in the sidebar, its id, and the text behind its ⓘ. The id (lower-case letters,
 #'   digits and _) is the key the page's address and a page's own script know the layer by, its styles `<id>-dot`,
 #'   `<id>-line`, `<id>-fill` and `<id>-text`; by default made from the name.
 #' @param section The sidebar's box the layer sits in, by its title. The layer is drawn over those added before it,
-#'   whatever their boxes, unless [rr_map()]'s `order` says otherwise.
+#'   whatever their boxes, unless [og_map()]'s `order` says otherwise.
 #' @param visible Whether the layer is on when the page opens.
 #' @param minzoom,maxzoom The zoom the layer is drawn from, and its tiles' deepest (14 by default), past which the map
-#'   draws that zoom's tiles larger. For `rr_text()`, `minzoom` may be a column written bare: each row from its own
+#'   draws that zoom's tiles larger. For `og_text()`, `minzoom` may be a column written bare: each row from its own
 #'   zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
 #'   at 7.4 shows from 8.
 #' @param ... MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
@@ -706,19 +706,19 @@
 #'   `"text-halo-width" = 0`. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
 #'   as paint or layout as MapLibre has it; an expression is a list, `list("get", "size")`. `color` is taken for
 #'   `colour`.
-#' @return An [rr_map()] with the layer added.
-#' @seealso [rr_map()]; [rr_layer()] for a layer in MapLibre's own terms.
-#' @name rr_point
+#' @return An [og_map()] with the layer added.
+#' @seealso [og_map()]; [og_layer()] for a layer in MapLibre's own terms.
+#' @name og_point
 #' @export
 #' @examples
 #' \donttest{
-#' m <- rr_example("dansk") |>
-#'   rr_point(colour = c(behaviour, speed), popup = c(vessel_id, time_stamp, speed))
+#' m <- og_example("dansk") |>
+#'   og_point(colour = c(behaviour, speed), popup = c(vessel_id, time_stamp, speed))
 #' format(m)
-#' rr_map(rr_example("trawlsurveytows")) |> rr_line(name = "Tows") |> format()
-#' rr_example("dansk_harbours") |> rr_polygon(fill = "#d9822b", popup = SI_HARB) |> format()
+#' og_map(og_example("trawlsurveytows")) |> og_line(name = "Tows") |> format()
+#' og_example("dansk_harbours") |> og_polygon(fill = "#d9822b", popup = SI_HARB) |> format()
 #' }
-rr_point <- function(
+og_point <- function(
   map, data = NULL, lon = NULL, lat = NULL,
   colour = NULL, size = NULL, stroke = NULL, opacity = NULL, whole = NULL, thin = TRUE,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
@@ -726,20 +726,20 @@ rr_point <- function(
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
-  a <- .rr_mark_args(list(
+  a <- .og_mark_args(list(
     lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), stroke = stroke, opacity = opacity,
     whole = whole, thin = thin,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
     labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
-  ), rlang::enquos(...), "rr_point")
-  .rr_scope()
-  .rr_mark("point", map, data, a)
+  ), rlang::enquos(...), "og_point")
+  .og_scope()
+  .og_mark("point", map, data, a)
 }
 
-#' @rdname rr_point
+#' @rdname og_point
 #' @export
-rr_line <- function(
+og_line <- function(
   map, data = NULL,
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
@@ -747,19 +747,19 @@ rr_line <- function(
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
-  a <- .rr_mark_args(list(
+  a <- .og_mark_args(list(
     colour = rlang::enquo(colour), linewidth = rlang::enquo(linewidth), opacity = opacity, whole = whole,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
     labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
-  ), rlang::enquos(...), "rr_line")
-  .rr_scope()
-  .rr_mark("line", map, data, a)
+  ), rlang::enquos(...), "og_line")
+  .og_scope()
+  .og_mark("line", map, data, a)
 }
 
-#' @rdname rr_point
+#' @rdname og_point
 #' @export
-rr_segment <- function(
+og_segment <- function(
   map, data = NULL, lon = NULL, lat = NULL, lon_end, lat_end,
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
@@ -767,21 +767,21 @@ rr_segment <- function(
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
-  a <- .rr_mark_args(list(
-    lon = lon, lat = lat, lon_end = .rr_one_col(rlang::enquo(lon_end), "lon_end"),
-    lat_end = .rr_one_col(rlang::enquo(lat_end), "lat_end"),
+  a <- .og_mark_args(list(
+    lon = lon, lat = lat, lon_end = .og_one_col(rlang::enquo(lon_end), "lon_end"),
+    lat_end = .og_one_col(rlang::enquo(lat_end), "lat_end"),
     colour = rlang::enquo(colour), linewidth = rlang::enquo(linewidth), opacity = opacity, whole = whole,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
     labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom
-  ), rlang::enquos(...), "rr_segment")
-  .rr_scope()
-  .rr_mark("segment", map, data, a)
+  ), rlang::enquos(...), "og_segment")
+  .og_scope()
+  .og_mark("segment", map, data, a)
 }
 
-#' @rdname rr_point
+#' @rdname og_point
 #' @export
-rr_polygon <- function(
+og_polygon <- function(
   map, data = NULL,
   colour = NULL, fill = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
@@ -789,20 +789,20 @@ rr_polygon <- function(
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
-  a <- .rr_mark_args(list(
+  a <- .og_mark_args(list(
     colour = rlang::enquo(colour), fill = rlang::enquo(fill), linewidth = rlang::enquo(linewidth),
     opacity = opacity, whole = whole, palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
     choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id,
     info = info, section = section, visible = visible, minzoom = minzoom, maxzoom = maxzoom
-  ), rlang::enquos(...), "rr_polygon")
-  .rr_scope()
-  .rr_mark("polygon", map, data, a)
+  ), rlang::enquos(...), "og_polygon")
+  .og_scope()
+  .og_mark("polygon", map, data, a)
 }
 
-#' @rdname rr_point
+#' @rdname og_point
 #' @export
-rr_text <- function(
+og_text <- function(
   map, data = NULL, lon = NULL, lat = NULL,
   colour = NULL, size = NULL, opacity = NULL, whole = NULL, label,
   angle = NULL, priority = NULL, fontface = NULL, offset = NULL, overlap = FALSE,
@@ -811,8 +811,8 @@ rr_text <- function(
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
-  if (!isTRUE(overlap) && !isFALSE(overlap)) stop("rr_text(): `overlap` is TRUE or FALSE.", call. = FALSE)
-  a <- .rr_mark_args(list(
+  if (!isTRUE(overlap) && !isFALSE(overlap)) stop("og_text(): `overlap` is TRUE or FALSE.", call. = FALSE)
+  a <- .og_mark_args(list(
     lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), opacity = opacity, whole = whole,
     label = rlang::enquo(label), angle = rlang::enquo(angle), priority = rlang::enquo(priority),
     fontface = rlang::enquo(fontface), offset = rlang::enquo(offset), overlap = overlap,
@@ -820,26 +820,26 @@ rr_text <- function(
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
     choose = rlang::enquo(choose), search = rlang::enquo(search), name = name, id = id,
     info = info, section = section, visible = visible, minzoom = rlang::enquo(minzoom), maxzoom = maxzoom
-  ), rlang::enquos(...), "rr_text")
-  .rr_scope()
-  .rr_mark("text", map, data, a)
+  ), rlang::enquos(...), "og_text")
+  .og_scope()
+  .og_mark("text", map, data, a)
 }
 
-# rr_text()'s faces, ggplot2's words
-.rr_faces <- c("plain", "italic", "bold", "bold.italic")
+# og_text()'s faces, ggplot2's words
+.og_faces <- c("plain", "italic", "bold", "bold.italic")
 
-# rr_text()'s own aesthetics, each a value or one column written bare: the start zoom by row (`minzoom`), `angle`,
+# og_text()'s own aesthetics, each a value or one column written bare: the start zoom by row (`minzoom`), `angle`,
 # `priority`, `size`, `fontface` and `offset`. Returns the columns the features carry (`props`), the SQL of the offset's
 # key (`sql`), the layout (`layout`), the styles' filter (`filter`), the face (`face`) and the layer's own minzoom
-.rr_text_aes <- function(a, ctx, con, q) {
+.og_text_aes <- function(a, ctx, con, q) {
   cols <- ctx$cols
   one <- function(qq, what, ok, why) {
-    v <- .rr_aes(qq, cols, what)
+    v <- .og_aes(qq, cols, what)
     if (is.null(v)) return(NULL)
-    if (length(v$columns) > 1) stop(sprintf("rr_text(): `%s` is one column or one value.", what), call. = FALSE)
+    if (length(v$columns) > 1) stop(sprintf("og_text(): `%s` is one column or one value.", what), call. = FALSE)
     if (length(v$columns) == 1) return(list(column = v$columns))
     if (length(v$value) != 1 || !ok(v$value)) {
-      stop(sprintf("rr_text(): `%s` is %s, or a column written bare.", what, why), call. = FALSE)
+      stop(sprintf("og_text(): `%s` is %s, or a column written bare.", what, why), call. = FALSE)
     }
     list(value = v$value)
   }
@@ -849,9 +849,9 @@ rr_text <- function(
   angle <- one(a$angle, "angle", num, "an angle in degrees, counter-clockwise")
   prio <- one(a$priority, "priority", num, "a number (higher placed first)")
   size <- one(a$size, "size", function(x) num(x) && x > 0, "a size in pixels")
-  face <- one(a$fontface, "fontface", function(x) is.character(x) && x %in% .rr_faces,
-              paste0("one of ", paste0('"', .rr_faces, '"', collapse = ", ")))
-  off <- .rr_offset(a$offset, cols, con, ctx$src, q)
+  face <- one(a$fontface, "fontface", function(x) is.character(x) && x %in% .og_faces,
+              paste0("one of ", paste0('"', .og_faces, '"', collapse = ", ")))
+  off <- .og_offset(a$offset, cols, con, ctx$src, q)
   layout <- list("text-size" = if (!is.null(size$column)) get(size$column) else size$value %||% 13)
   if (!is.null(angle)) {
     # MapLibre turns text clockwise; ggplot2's angle, and this one, counter-clockwise
@@ -864,7 +864,7 @@ rr_text <- function(
   }
   if (!is.null(off$layout)) layout[["text-offset"]] <- off$layout
   list(
-    props = unique(c(z0$column, angle$column, prio$column, size$column, face$column, if (!is.null(off$sql)) "rr_off")),
+    props = unique(c(z0$column, angle$column, prio$column, size$column, face$column, if (!is.null(off$sql)) "og_off")),
     sql = off$sql,
     layout = layout,
     # a row drawn from the first whole zoom at or above its own: MapLibre judges a filter's zoom at whole zooms
@@ -876,16 +876,16 @@ rr_text <- function(
 }
 
 # A text's offset, `c(x, y)` in text heights (x to the right, y up), each a number or a column written bare. Numbers are
-# MapLibre's text-offset itself; a column's values become a key each row carries (`rr_off`) and a match of the key to
+# MapLibre's text-offset itself; a column's values become a key each row carries (`og_off`) and a match of the key to
 # its offset, so at most 256 pairs of values (to a thousandth of a text height)
-.rr_offset <- function(qq, cols, con, src, q) {
+.og_offset <- function(qq, cols, con, src, q) {
   if (is.null(qq) || rlang::quo_is_null(qq) || rlang::quo_is_missing(qq)) return(NULL)
   e <- rlang::quo_get_expr(qq)
   parts <- if (is.numeric(e) && length(e) == 2) as.list(e) else if (rlang::is_call(e, "c") && length(rlang::call_args(e)) == 2) {
     rlang::call_args(e)
   }
   bad <- function() {
-    stop("rr_text(): `offset` is c(x, y) in text heights (x to the right, y up), each a number or a column written bare.",
+    stop("og_text(): `offset` is c(x, y) in text heights (x to the right, y up), each a number or a column written bare.",
          call. = FALSE)
   }
   if (is.null(parts)) bad()
@@ -904,13 +904,13 @@ rr_text <- function(
   pairs <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT coalesce(%s, 0) AS x, coalesce(%s, 0) AS y FROM (%s) LIMIT 257",
                                         sql[1], sql[2], src))
   if (nrow(pairs) > 256) {
-    stop("rr_text(): an offset by a column takes at most 256 pairs of values (to a thousandth of a text height).",
+    stop("og_text(): an offset by a column takes at most 256 pairs of values (to a thousandth of a text height).",
          call. = FALSE)
   }
   key <- function(x, y) sprintf("%.3f|%.3f", x, y)
   list(
-    sql = sprintf("printf('%%.3f|%%.3f', coalesce(%s, 0), coalesce(%s, 0)) AS rr_off", sql[1], sql[2]),
-    layout = c(list("match", list("get", "rr_off")),
+    sql = sprintf("printf('%%.3f|%%.3f', coalesce(%s, 0), coalesce(%s, 0)) AS og_off", sql[1], sql[2]),
+    layout = c(list("match", list("get", "og_off")),
                unlist(lapply(seq_len(nrow(pairs)), function(i) {
                  list(key(pairs$x[i], pairs$y[i]), list("literal", c(pairs$x[i], -pairs$y[i])))
                }), recursive = FALSE),
@@ -920,7 +920,7 @@ rr_text <- function(
 
 # A text layer's styles: at points (and in areas), and, where the data have lines, along them (MapLibre's line-center,
 # a long name on a line of its own); each with the start zoom's filter
-.rr_text_styles <- function(id, sid, lab, tx, shapes, overlap, paint) {
+.og_text_styles <- function(id, sid, lab, tx, shapes, overlap, paint) {
   layout <- c(list("text-field" = list("to-string", list("get", lab)), "text-allow-overlap" = overlap,
                    "text-anchor" = "center"), tx$layout)
   lines <- list("in", list("geometry-type"), list("literal", list("LineString", "MultiLineString")))
@@ -930,7 +930,7 @@ rr_text <- function(
   }
   style <- function(st_id, lay, filter) {
     Filter(Negate(is.null), list(id = st_id, type = "symbol", "source-layer" = "features", filter = filter, layout = lay,
-                                 paint = paint, rr_face = tx$face))
+                                 paint = paint, og_face = tx$face))
   }
   if (!shapes) {
     return(list(style(sid, layout, tx$filter)))
@@ -944,7 +944,7 @@ rr_text <- function(
 }
 
 # One column named bare or as a string, for an argument that is always a column (a segment's end)
-.rr_one_col <- function(q, what) {
+.og_one_col <- function(q, what) {
   if (rlang::quo_is_missing(q)) {
     stop(sprintf("`%s` is a column of the data, written bare.", what), call. = FALSE)
   }
@@ -959,7 +959,7 @@ rr_text <- function(
 #' tracks of drifters, tagged animals, gliders and ships. A silence longer than `max_gap_s` seconds breaks a line. Coloured by a column, a line is cut where
 #' the column's value changes, each run in its value's colour, and stays joined across the change.
 #'
-#' @inheritParams rr_point
+#' @inheritParams og_point
 #' @param group The columns, written bare, whose values each have a line: one, or several, `c(id, leg)`. By default
 #'   none, one line through all the rows (and the map's and the layer's `choose` columns, so a choice shows whole
 #'   lines).
@@ -968,16 +968,16 @@ rr_text <- function(
 #' @param max_gap_s A silence between two rows of a line longer than this many seconds breaks it, as `3600` for an
 #'   hour; `Inf`, the default, for none, so no gap is hidden.
 #' @param colour The lines' colour: a colour, or one column written bare, whose runs of one value cut and colour the
-#'   line (Okabe-Ito and the other defaults of [rr_point()]).
-#' @return An [rr_map()] with the layer added.
+#'   line (Okabe-Ito and the other defaults of [og_point()]).
+#' @return An [og_map()] with the layer added.
 #' @export
 #' @examples
 #' \donttest{
-#' m <- rr_map(rr_example("dansk")) |>
-#'   rr_path(group = vessel_id, time = time_stamp, colour = behaviour, max_gap_s = 3600)
+#' m <- og_map(og_example("dansk")) |>
+#'   og_path(group = vessel_id, time = time_stamp, colour = behaviour, max_gap_s = 3600)
 #' format(m)
 #' }
-rr_path <- function(
+og_path <- function(
   map, data = NULL, lon = NULL, lat = NULL, group = NULL, time, max_gap_s = Inf,
   colour = NULL, linewidth = NULL, opacity = NULL, whole = NULL,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
@@ -991,56 +991,56 @@ rr_path <- function(
     colour_q <- dq[["color"]]
     dq[["color"]] <- NULL
   }
-  ml_props <- .rr_maplibre_props(dq, "rr_path") # MapLibre's paint and layout from `...`
-  .rr_scope()
-  .rr_check_gap(max_gap_s)
-  if (!inherits(map, "rr_map")) {
-    if (!is.null(data)) stop("rr_path(): give the data once, as the first argument or as `data`.", call. = FALSE)
+  ml_props <- .og_maplibre_props(dq, "og_path") # MapLibre's paint and layout from `...`
+  .og_scope()
+  .og_check_gap(max_gap_s)
+  if (!inherits(map, "og_map")) {
+    if (!is.null(data)) stop("og_path(): give the data once, as the first argument or as `data`.", call. = FALSE)
     data <- map
   }
-  tcol <- .rr_one_col(rlang::enquo(time), "time")
-  s <- .rr_quick(
-    map, if (!is.null(data)) .rr_data(data), lon, lat, NULL, rlang::quo(NULL), "Map", NULL,
+  tcol <- .og_one_col(rlang::enquo(time), "time")
+  s <- .og_quick(
+    map, if (!is.null(data)) .og_data(data), lon, lat, NULL, rlang::quo(NULL), "Map", NULL,
     groups = FALSE
   )
   ctx <- s$ctx_layer
-  own <- .rr_own_choose(rlang::enquo(choose), ctx)
+  own <- .og_own_choose(rlang::enquo(choose), ctx)
   ctx$time <- if (tcol %in% ctx$cols) tcol # the layer's, not the map's
-  grp0 <- .rr_select(rlang::enquo(group), ctx$cols, "group")
-  # on the map's own rows, the path's time and group are the map's too, for a time panel added after it (rr_time())
+  grp0 <- .og_select(rlang::enquo(group), ctx$cols, "group")
+  # on the map's own rows, the path's time and group are the map's too, for a time panel added after it (og_time())
   if (identical(s$state$ctx$src, ctx$src)) {
-    s$state$ctx$time <- .rr_or(s$state$ctx$time, ctx$time)
-    s$state$ctx$by <- .rr_or(s$state$ctx$by, if (length(grp0)) grp0[1])
+    s$state$ctx$time <- .og_or(s$state$ctx$time, ctx$time)
+    s$state$ctx$by <- .og_or(s$state$ctx$by, if (length(grp0)) grp0[1])
   }
   if (!is.null(ctx$geometry)) {
-    stop("rr_path() joins rows with positions (lon, lat); for rows that are lines, use rr_line().", call. = FALSE)
+    stop("og_path() joins rows with positions (lon, lat); for rows that are lines, use og_line().", call. = FALSE)
   }
   if (is.null(ctx$time) || !identical(ctx$time, tcol)) {
-    stop(sprintf("rr_path(): no column %s in the data to order the rows by.", tcol), call. = FALSE)
+    stop(sprintf("og_path(): no column %s in the data to order the rows by.", tcol), call. = FALSE)
   }
   con <- ctx$con
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
-  nm <- .rr_layer_names(s$state, name, "Paths", id)
+  nm <- .og_layer_names(s$state, name, "Paths", id)
   id <- nm$id
-  grp <- .rr_select(rlang::enquo(group), ctx$cols, "group")
-  keys <- unique(c(grp, intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields))
-  col <- .rr_aes(colour_q, ctx$cols, "colour", colour = TRUE)
+  grp <- .og_select(rlang::enquo(group), ctx$cols, "group")
+  keys <- unique(c(grp, intersect(.og_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields))
+  col <- .og_aes(colour_q, ctx$cols, "colour", colour = TRUE)
   if (length(col$columns) > 1) {
-    stop("rr_path() is coloured by one column; for another, add another rr_path().", call. = FALSE)
+    stop("og_path() is coloured by one column; for another, add another og_path().", call. = FALSE)
   }
   cc <- col$columns
-  type <- if (length(cc)) .rr_column_type(con, ctx$src, cc, ordered = cc %in% ctx$ordered, declared = ctx$dict[[cc]]$type)
-  gap <- .rr_gap_sql(max_gap_s)
-  t_s <- .rr_time_s_sql(con, ctx$src, ctx$time)
-  .rr_extension(con, "spatial")
+  type <- if (length(cc)) .og_column_type(con, ctx$src, cc, ordered = cc %in% ctx$ordered, declared = ctx$dict[[cc]]$type)
+  gap <- .og_gap_sql(max_gap_s)
+  t_s <- .og_time_s_sql(con, ctx$src, ctx$time)
+  .og_extension(con, "spatial")
   # a range chosen (a number, a date or a time) splits the lines by its bins, not its values: each run carries its bin's
   # start under the column's name, which the page's range compares
   ranged <- Filter(function(f) !is.null(f$range) && f$field %in% keys, c(s$state[["choose"]]$fields, own$config$fields))
   ranged <- ranged[!duplicated(vapply(ranged, `[[`, "", "field"))]
-  bin_nm <- function(f) paste0("rr_k_", f$field)
+  bin_nm <- function(f) paste0("og_k_", f$field)
   run_src <- if (length(ranged)) {
     sprintf("SELECT *, %s FROM (%s)", paste(vapply(ranged, function(f) {
-      sprintf("%s AS %s", .rr_range_start_sql(con, f), q(bin_nm(f)))
+      sprintf("%s AS %s", .og_range_start_sql(con, f), q(bin_nm(f)))
     }, ""), collapse = ", "), ctx$src)
   } else {
     ctx$src
@@ -1049,14 +1049,14 @@ rr_path <- function(
     f <- Filter(function(f) f$field == k, ranged)
     if (length(f)) bin_nm(f[[1]]) else k
   }, "", USE.NAMES = FALSE)
-  lines_src <- .rr_runs_sql(
+  lines_src <- .og_runs_sql(
     con, run_src, ctx$lon, ctx$lat, ctx$time, run_keys,
     values = if (length(cc)) {
-      if (type$kind == "discrete") .rr_category_sql(q(cc), type)
+      if (type$kind == "discrete") .og_category_sql(q(cc), type)
       else if (!is.null(type$time)) sprintf("epoch(%s)", q(cc))
       else sprintf("CAST(%s AS DOUBLE)", q(cc))
     },
-    names = "rr_c1", count = "rows", t_names = c("rr_t0", "rr_t1"), gap = gap, t_s = t_s
+    names = "og_c1", count = "rows", t_names = c("og_t0", "og_t1"), gap = gap, t_s = t_s
   )
   if (length(ranged)) {
     lines_src <- sprintf("SELECT * EXCLUDE (%s), %s FROM (%s)",
@@ -1064,21 +1064,21 @@ rr_path <- function(
       paste(vapply(ranged, function(f) sprintf("%s AS %s", q(bin_nm(f)), q(f$field)), ""), collapse = ", "),
       lines_src)
   }
-  colours <- if (length(cc)) .rr_colour_by(con, lines_src, "rr_c1", "rr_c1", palette, limits, stretch, type)
-  fixed <- if (is.null(col)) .rr_okabe_ito[1] else if (!is.null(col$value)) .rr_hex(col$value)
-  hov <- .rr_select(rlang::enquo(hover), keys, "hover")
-  pop <- .rr_select(rlang::enquo(popup), c(keys, if (length(cc)) cc), "popup")
-  props <- unique(c(keys, if (length(cc)) "rr_c1", "rows", "start", "stop", if (!is.null(t_s)) c("rr_t0", "rr_t1")))
+  colours <- if (length(cc)) .og_colour_by(con, lines_src, "og_c1", "og_c1", palette, limits, stretch, type)
+  fixed <- if (is.null(col)) .og_okabe_ito[1] else if (!is.null(col$value)) .og_hex(col$value)
+  hov <- .og_select(rlang::enquo(hover), keys, "hover")
+  pop <- .og_select(rlang::enquo(popup), c(keys, if (length(cc)) cc), "popup")
+  props <- unique(c(keys, if (length(cc)) "og_c1", "rows", "start", "stop", if (!is.null(t_s)) c("og_t0", "og_t1")))
   if (!is.null(t_s)) {
-    s$state$panel_fields[[id]] <- list(by = .rr_or(grp[1], NULL), t0 = "rr_t0", t1 = "rr_t1")
+    s$state$panel_fields[[id]] <- list(by = .og_or(grp[1], NULL), t0 = "og_t0", t1 = "og_t1")
   }
-  sent <- .rr_send(dplyr::tbl(con, dplyr::sql(lines_src)), properties = props, whole = .rr_whole_arg(whole))
+  sent <- .og_send(dplyr::tbl(con, dplyr::sql(lines_src)), properties = props, whole = .og_whole_arg(whole))
   sid <- paste0(id, "-line")
   title <- if (length(hov)) hov else if (length(intersect(pop, keys))) intersect(pop, keys)[1] else if (length(pop)) "start"
-  pm <- .rr_popup_meta(unique(c(keys, cc)), ctx$dict, labels, codes)
+  pm <- .og_popup_meta(unique(c(keys, cc)), ctx$dict, labels, codes)
   lab_of <- function(f) {
     m <- pm[[f]]
-    paste0(.rr_or(m$label, f), if (!is.null(m$unit)) sprintf(" (%s)", m$unit) else "")
+    paste0(.og_or(m$label, f), if (!is.null(m$unit)) sprintf(" (%s)", m$unit) else "")
   }
   coded <- function(f) {
     m <- pm[[f]]
@@ -1090,20 +1090,20 @@ rr_path <- function(
         Filter(Negate(is.null), list(field = f, label = lab_of(f), values = coded(f)))
       }),
       if (length(cc) && cc %in% pop) list(Filter(Negate(is.null), list(
-        field = "rr_c1", label = lab_of(cc), values = coded(cc),
+        field = "og_c1", label = lab_of(cc), values = coded(cc),
         format = if (type$kind == "continuous" && is.null(type$time)) "value"
       ))),
       list(list(field = "start", label = "from"), list(field = "stop", label = "to"),
            list(field = "rows", label = "rows", format = "count"))
     )
   }
-  layer <- rr_layer(
+  layer <- og_layer(
     id, sent$kind,
     label = nm$label,
-    info = .rr_or(info, paste0(
+    info = .og_or(info, paste0(
       if (length(grp)) sprintf("The rows of each %s", paste(grp, collapse = " and ")) else "The rows",
       " joined in order of ", ctx$time,
-      if (is.finite(max_gap_s)) sprintf(", broken where two are more than %s apart", .rr_duration_text(max_gap_s)),
+      if (is.finite(max_gap_s)) sprintf(", broken where two are more than %s apart", .og_duration_text(max_gap_s)),
       if (length(cc)) sprintf("%s coloured by %s", if (is.finite(max_gap_s)) ", and" else " and", cc),
       "."
     )),
@@ -1113,32 +1113,32 @@ rr_path <- function(
     count = list(text = "{1} lines"),
     minzoom = minzoom,
     maxzoom = maxzoom,
-    style = .rr_styles_for(.rr_style_props(list(list(
+    style = .og_styles_for(.og_style_props(list(list(
       id = sid, type = "line", "source-layer" = "features",
       layout = list("line-cap" = "round", "line-join" = "round"),
       paint = list("line-color" = if (length(cc)) colours$colour else fixed,
-                   "line-width" = .rr_or(linewidth, list("interpolate", list("linear"), list("zoom"), 3, 1, 8, 2, 13, 3.5)),
-                   "line-opacity" = .rr_or(opacity, 0.85))
-    )), ml_props, "rr_path"), sent$kind),
-    legend = if (!isTRUE(legend)) NULL else if (length(cc)) .rr_swatches(colours$legend, "line") else
-      .rr_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), "line"),
+                   "line-width" = .og_or(linewidth, list("interpolate", list("linear"), list("zoom"), 3, 1, 8, 2, 13, 3.5)),
+                   "line-opacity" = .og_or(opacity, 0.85))
+    )), ml_props, "og_path"), sent$kind),
+    legend = if (!isTRUE(legend)) NULL else if (length(cc)) .og_swatches(colours$legend, "line") else
+      .og_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), "line"),
     popup = if (!is.null(title)) {
       Filter(Negate(is.null), list(click = sid, title = title, fields = fields, hover = if (length(hov)) TRUE))
     }
   )
   layer$config$choose <- own$config
   layer$config$features <- attr(sent$data, "count") # sent whole, its count, so the page need not read the file
-  s$state$max_gap_s <- .rr_or(s$state$max_gap_s, max_gap_s)
+  s$state$max_gap_s <- .og_or(s$state$max_gap_s, max_gap_s)
   s$state$layer_section[[id]] <- section
-  .rr_hold(.rr_quick_map(s, layer, sent$table))
+  .og_hold(.og_quick_map(s, layer, sent$table))
 }
 
-# Rows joined into lines, the query a path is drawn from (rr_path(), and the quick look's track): a line per value of
-# `keys` and stretch, a stretch broken where two rows are more than the gap apart (`gap`, .rr_gap_sql()) and where any
+# Rows joined into lines, the query a path is drawn from (og_path(), and the quick look's track): a line per value of
+# `keys` and stretch, a stretch broken where two rows are more than the gap apart (`gap`, .og_gap_sql()) and where any
 # of `values` (SQL expressions, each kept as `names[i]`) changes; a run ends at the next run's first row, so the line
 # stays joined across a change. Each line carries its rows' count (`count`), its first and last time as text (start,
-# stop), and in seconds on the time panel's clock (`t_names`, from `t_s`, .rr_time_s_sql()), and its geometry.
-.rr_runs_sql <- function(con, src, lon, lat, time, keys, values, names, count, t_names, gap, t_s) {
+# stop), and in seconds on the time panel's clock (`t_names`, from `t_s`, .og_time_s_sql()), and its geometry.
+.og_runs_sql <- function(con, src, lon, lat, time, keys, values, names, count, t_names, gap, t_s) {
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
   # a time's seconds, or a number as it is (a sequence, a distance along a transect), for the gaps and the text
   one <- DBI::dbGetQuery(con, sprintf("SELECT %s AS t FROM (%s) LIMIT 0", q(time), src))$t
@@ -1149,7 +1149,7 @@ rr_path <- function(
   part <- if (!length(keys)) "" else paste("PARTITION BY", paste(q(keys), collapse = ", "))
   sprintf(
     "WITH s AS (
-       SELECT %1$s %2$s AS lon, %3$s AS lat, %4$s AS t, %10$s AS rr_ts %8$s FROM (%7$s)
+       SELECT %1$s %2$s AS lon, %3$s AS lat, %4$s AS t, %10$s AS og_ts %8$s FROM (%7$s)
        WHERE %2$s IS NOT NULL AND %3$s IS NOT NULL AND %4$s IS NOT NULL),
      w AS (
        SELECT *, CASE WHEN %15$s - %16$s > %6$s %9$s THEN 1 ELSE 0 END AS brk,
@@ -1158,7 +1158,7 @@ rr_path <- function(
      g AS (SELECT *, sum(brk) OVER (%5$s ORDER BY t ROWS UNBOUNDED PRECEDING) AS stretch FROM w),
      a AS (
        SELECT %1$s %11$s count(*) AS %12$s, %18$s AS start,
-              %19$s AS stop, min(rr_ts) AS %13$s, max(rr_ts) AS %14$s,
+              %19$s AS stop, min(og_ts) AS %13$s, max(og_ts) AS %14$s,
               list(ST_Point(lon, lat) ORDER BY t) AS pts,
               last(CASE WHEN dt_next <= %6$s THEN lon2 END ORDER BY t) AS lon2,
               last(CASE WHEN dt_next <= %6$s THEN lat2 END ORDER BY t) AS lat2
@@ -1170,7 +1170,7 @@ rr_path <- function(
     q(lon), q(lat), q(time), part, gap, src,
     paste(vapply(seq_len(k), function(i) sprintf(", %s AS v%d", values[i], i), ""), collapse = ""),
     paste(vapply(seq_len(k), function(i) sprintf(" OR v%1$d IS DISTINCT FROM lag(v%1$d) OVER o", i), ""), collapse = ""),
-    .rr_or(t_s, "CAST(NULL AS DOUBLE)"),
+    .og_or(t_s, "CAST(NULL AS DOUBLE)"),
     paste(vapply(seq_len(k), function(i) sprintf("any_value(v%d) AS %s, ", i, names[i]), ""), collapse = ""),
     count, t_names[1], t_names[2],
     sec("t"), sec("lag(t) OVER o"), sec("lead(t) OVER o"), txt("min(t)"), txt("max(t)")
@@ -1179,13 +1179,13 @@ rr_path <- function(
 
 # A layer's rows for a click: the columns `cols` of row `n` of the numbered table `nm` (or every row, `n = NULL`, for a
 # bundle), each with its kind for the page: a number, a whole number, a logical, a date, a time or a text
-.rr_row_reader <- function(con, nm, cols, meta = list()) {
+.og_row_reader <- function(con, nm, cols, meta = list()) {
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
   sel <- paste(vapply(cols, q, ""), collapse = ", ")
   function(n = NULL) {
     d <- DBI::dbGetQuery(con, sprintf(
-      "SELECT rr_row, %s FROM %s %s ORDER BY rr_row", sel, nm,
-      if (is.null(n)) "" else sprintf("WHERE rr_row = %d", as.integer(n))
+      "SELECT og_row, %s FROM %s %s ORDER BY og_row", sel, nm,
+      if (is.null(n)) "" else sprintf("WHERE og_row = %d", as.integer(n))
     ))
     kinds <- vapply(cols, function(cc) {
       v <- d[[cc]]
@@ -1199,7 +1199,7 @@ rr_path <- function(
       else if (is.list(d[[cc]])) d[[cc]] <- NA # a blob or a shape: not a value to read
     }
     list(cols = unname(Map(function(cc, k) {
-      m <- .rr_or(meta[[cc]], list())
+      m <- .og_or(meta[[cc]], list())
       Filter(Negate(is.null), list(name = cc, type = k, label = m$label, unit = m$unit, description = m$description,
                                    codes = if (length(m$codes)) as.list(m$codes)))
     }, cols, kinds)), rows = d)
@@ -1207,7 +1207,7 @@ rr_path <- function(
 }
 
 # A row as the page reads it: its columns, each a name, a kind and a value (null where missing)
-.rr_row_json <- function(r) {
+.og_row_json <- function(r) {
   if (!nrow(r$rows)) {
     return(NULL)
   }
@@ -1225,7 +1225,7 @@ rr_path <- function(
 # What the data say of their columns, as a list by column of `label`, `unit`, `description` and `codes` (a named
 # character vector, code to label). From a data frame's column attributes (`label`, as haven and labelled set it;
 # `units`, a text):
-.rr_dict_attributes <- function(d) {
+.og_dict_attributes <- function(d) {
   out <- list()
   for (cc in names(d)) {
     a <- attributes(d[[cc]])
@@ -1237,8 +1237,8 @@ rr_path <- function(
 }
 
 # ... and from a parquet file's own dictionary: an entry of data-dict.tidyverse.org's format stored in the file's
-# metadata under a key ending `data_dict` (as rebelrebel's examples hold it), for each file the query reads
-.rr_dict_parquet <- function(con, src) {
+# metadata under a key ending `data_dict` (as ogis's examples hold it), for each file the query reads
+.og_dict_parquet <- function(con, src) {
   paths <- regmatches(src, gregexpr("read_parquet\\('([^']+)'", src))[[1]]
   paths <- unique(sub("^read_parquet\\('", "", sub("'$", "", paths)))
   if (!length(paths) || !requireNamespace("yaml", quietly = TRUE)) {
@@ -1251,7 +1251,7 @@ rr_path <- function(
       DBI::dbQuoteString(con, p)
     ))$v, error = function(e) character())
     if (!length(kv)) next
-    entry <- tryCatch(.rr_yaml(enc2utf8(kv[1])), error = function(e) NULL)
+    entry <- tryCatch(.og_yaml(enc2utf8(kv[1])), error = function(e) NULL)
     for (c in entry$columns) {
       if (is.null(c$name) || !is.null(out[[c$name]])) next
       codes <- if (is.list(c$values) && !is.null(names(c$values))) unlist(c$values)
@@ -1266,20 +1266,20 @@ rr_path <- function(
 
 # A dictionary's YAML read, YAML 1.1's yes, no, on, off, y and n kept as written, not made TRUE and FALSE: a column
 # may be called n
-.rr_yaml <- function(text) {
+.og_yaml <- function(text) {
   as_written <- function(x) x
   yaml::yaml.load(text, handlers = list("bool#yes" = as_written, "bool#no" = as_written))
 }
 
 # Two dictionaries as one, the first's entries winning, field by field
-.rr_dict_merge <- function(a, b) {
-  for (cc in names(b)) a[[cc]] <- utils::modifyList(b[[cc]], .rr_or(a[[cc]], list()))
+.og_dict_merge <- function(a, b) {
+  for (cc in names(b)) a[[cc]] <- utils::modifyList(b[[cc]], .og_or(a[[cc]], list()))
   a
 }
 
 # A layer's columns as its popup shows them: the call's `labels` (column = label) and `codes` (column = a named vector,
 # code to label, or a table of code and label) over the data's dictionary
-.rr_popup_meta <- function(cols, dict, labels = NULL, codes = NULL) {
+.og_popup_meta <- function(cols, dict, labels = NULL, codes = NULL) {
   if (!is.null(labels) && (!is.character(labels) || is.null(names(labels)))) {
     stop("`labels` is a named character vector, a column's name to its label: c(speed = \"Speed (knots)\").", call. = FALSE)
   }
@@ -1287,7 +1287,7 @@ rr_path <- function(
     stop("`codes` is a named list, a column's name to its codes: a named vector (code = label) or a table of code and label.", call. = FALSE)
   }
   lapply(stats::setNames(cols, cols), function(cc) {
-    m <- .rr_or(dict[[cc]], list())
+    m <- .og_or(dict[[cc]], list())
     if (cc %in% names(labels)) {
       m$label <- labels[[cc]]
       m$unit <- NULL # the call's label says it all

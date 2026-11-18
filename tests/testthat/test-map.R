@@ -19,8 +19,8 @@ tile_of <- function(lon, lat, z) {
 
 # a map of the example pings by cell (a grid, filtered by behaviour) and the harbours (as tiles and as GeoJSON)
 example_map <- function() {
-  con <- .rr_connection()
-  pings <- dbplyr::sql_render(rr_example("dansk"))
+  con <- .og_connection()
+  pings <- dbplyr::sql_render(og_example("dansk"))
   grid_tile <- function(z, x, y, params) {
     where <- if (is.null(params$behaviour)) {
       ""
@@ -43,7 +43,7 @@ example_map <- function() {
       )
     )$tile[[1]]
   }
-  grid <- rr_layer(
+  grid <- og_layer(
     "pings",
     "grid",
     label = "Pings",
@@ -66,13 +66,13 @@ example_map <- function() {
       fields = list(list(field = "n", label = "pings", format = "count"))
     )
   )
-  h <- rr_example("dansk_harbours")
-  harbours <- rr_layer(
+  h <- og_example("dansk_harbours")
+  harbours <- og_layer(
     "harbours",
     "vector",
     label = "Harbours",
     visible = FALSE,
-    tiles = rr_tiles_table(
+    tiles = og_tiles_table(
       h,
       properties = "SI_HARB",
       points = "harbour_points"
@@ -94,7 +94,7 @@ example_map <- function() {
     x["SI_HARB"],
     geometry = sf::st_as_sfc(structure(x$geometry, class = "WKB"), crs = 4326)
   )
-  outline <- rr_layer(
+  outline <- og_layer(
     "outline",
     "geojson",
     label = "Outlines",
@@ -105,9 +105,9 @@ example_map <- function() {
       paint = list("line-color" = "#333")
     ))
   )
-  rr_map(
-    rr_section("data", "Data", list(grid)),
-    rr_section("ref", "Reference", list(harbours, outline)),
+  og_map(
+    og_section("data", "Data", list(grid)),
+    og_section("ref", "Reference", list(harbours, outline)),
     title = "Example",
     view = list(center = c(12.5, 56), zoom = 7),
     texts = list(Pings = list(en = "Pings", da = "Positioner")),
@@ -120,21 +120,21 @@ test_that("a layer and a map are checked as they are made", {
   noop <- function(z, x, y) raw(0)
   st <- list(list(id = "a", type = "line"))
   expect_error(
-    rr_layer("Bad-id", "vector", tiles = noop, style = st),
+    og_layer("Bad-id", "vector", tiles = noop, style = st),
     "lower case"
   )
   expect_error(
-    rr_layer("lang", "vector", tiles = noop, style = st),
+    og_layer("lang", "vector", tiles = noop, style = st),
     "address"
   )
-  expect_error(rr_layer("a", "vector", style = st), "needs `tiles`")
-  expect_error(rr_layer("a", "grid", tiles = noop), "needs `metrics`")
-  expect_error(rr_layer("a", "geojson", style = st), "needs `data`")
-  expect_error(rr_layer("a", "vector", tiles = noop), "needs `style`")
-  a <- rr_layer("a", "vector", tiles = noop, style = st)
-  expect_error(rr_map(rr_section("g", layers = list(a, a))), "used twice")
+  expect_error(og_layer("a", "vector", style = st), "needs `tiles`")
+  expect_error(og_layer("a", "grid", tiles = noop), "needs `metrics`")
+  expect_error(og_layer("a", "geojson", style = st), "needs `data`")
+  expect_error(og_layer("a", "vector", tiles = noop), "needs `style`")
+  a <- og_layer("a", "vector", tiles = noop, style = st)
+  expect_error(og_map(og_section("g", layers = list(a, a))), "used twice")
   g <- function(id) {
-    rr_layer(
+    og_layer(
       id,
       "grid",
       tiles = noop,
@@ -142,19 +142,19 @@ test_that("a layer and a map are checked as they are made", {
     )
   }
   expect_error(
-    rr_map(rr_section("g", layers = list(g("a"), g("b")))),
+    og_map(og_section("g", layers = list(g("a"), g("b")))),
     "one grid"
   )
   expect_error(
-    rr_map(rr_section("g", layers = list(a)), palette = "nope"),
+    og_map(og_section("g", layers = list(a)), palette = "nope"),
     "palette"
   )
-  expect_error(rr_map(list()), "rr_section")
+  expect_error(og_map(list()), "og_section")
 })
 
 test_that("the config keeps one-element arrays as arrays", {
   skip_if_not_installed("jsonlite")
-  a <- rr_layer(
+  a <- og_layer(
     "a",
     "vector",
     tiles = function(z, x, y) raw(0),
@@ -167,8 +167,8 @@ test_that("the config keeps one-element arrays as arrays", {
       layout = list("text-field" = list("zoom"))
     ))
   )
-  m <- rr_map(
-    rr_section("g", "G", list(a)),
+  m <- og_map(
+    og_section("g", "G", list(a)),
     languages = "en",
     about = "about1"
   )
@@ -191,7 +191,7 @@ test_that("the config keeps one-element arrays as arrays", {
 })
 
 test_that("the base maps are those that show the sea floor, each a picture with names over it", {
-  b <- rr_basemaps()
+  b <- og_basemaps()
   names(b) <- vapply(b, `[[`, "", "id")
   # a map opens on EMODnet's sea floor; none is the one that is not a map
   expect_equal(names(b)[1], "emodnet")
@@ -206,7 +206,7 @@ test_that("the base maps are those that show the sea floor, each a picture with 
   expect_lt(b$emodnet_dark$paint[["raster-brightness-max"]], 1)
   expect_null(b$none$tiles)
   # the page opens on a picture: its names' style first, then the picture put under the names
-  page <- .rr_map_page("{}")
+  page <- .og_map_page("{}")
   expect_match(page, "style: BASEMAPS[0].style ?? BASEMAPS[0].labels ?? baseStyle(BASEMAPS[0])", fixed = TRUE)
   expect_match(page, "if (!BASEMAPS[0].style) setBase(BASEMAPS[0].id);", fixed = TRUE)
   expect_match(page, "next = compose(b, next);", fixed = TRUE)
@@ -216,7 +216,7 @@ test_that("the server's routes: the page, its config, meta, tiles and data", {
   skip_if_not_installed("jsonlite")
   skip_if_no_spatial()
   m <- example_map()
-  app <- .rr_map_app(m)
+  app <- .og_map_app(m)
   page <- get(app, "/")
   expect_equal(page$status, 200L)
   expect_false(grepl("__CONFIG__", page$body, fixed = TRUE))
@@ -230,7 +230,7 @@ test_that("the server's routes: the page, its config, meta, tiles and data", {
     c("pings", "harbours", "outline")
   )
   meta <- jsonlite::fromJSON(get(app, "/meta")$body)
-  expect_equal(meta$engine, .rr_map_engine)
+  expect_equal(meta$engine, .og_map_engine)
   expect_equal(meta$layers$harbours$count, 942L)
   expect_true(nzchar(meta$layers$harbours$v)) # the server's start, in the tiles' address
   expect_equal(
@@ -249,12 +249,12 @@ test_that("the server's routes: the page, its config, meta, tiles and data", {
   expect_gt(length(all$body), length(fishing$body))
   expect_gt(length(fishing$body), 0)
   # a harbour's own tile has features in both layers
-  con <- .rr_connection()
+  con <- .og_connection()
   p <- DBI::dbGetQuery(
     con,
     sprintf(
       "SELECT ST_X(ST_PointOnSurface(geometry)) AS x, ST_Y(ST_PointOnSurface(geometry)) AS y FROM (%s) LIMIT 1",
-      dbplyr::sql_render(rr_example("dansk_harbours"))
+      dbplyr::sql_render(og_example("dansk_harbours"))
     )
   )
   h <- tile_of(p$x, p$y, 10)
@@ -275,10 +275,10 @@ test_that("the server's routes: the page, its config, meta, tiles and data", {
 
 test_that("a table's properties of any type reach its tiles, cast to what a tile holds", {
   skip_if_no_spatial()
-  con <- .rr_connection()
+  con <- .og_connection()
   duckdb::duckdb_register(
     con,
-    "rb_test_types",
+    "og_test_types",
     data.frame(
       lon = 12.6,
       lat = 56.0,
@@ -287,14 +287,14 @@ test_that("a table's properties of any type reach its tiles, cast to what a tile
       time = as.POSIXct("2026-10-24 21:00:00", tz = "UTC")
     )
   )
-  on.exit(duckdb::duckdb_unregister(con, "rb_test_types"))
+  on.exit(duckdb::duckdb_unregister(con, "og_test_types"))
   x <- dplyr::tbl(
     con,
     dplyr::sql(
-      "SELECT *, 3::TINYINT AS n, 2.5::DECIMAL(4, 1) AS kg, 7::UINTEGER AS id FROM rb_test_types"
+      "SELECT *, 3::TINYINT AS n, 2.5::DECIMAL(4, 1) AS kg, 7::UINTEGER AS id FROM og_test_types"
     )
   )
-  tiles <- rr_tiles_table(
+  tiles <- og_tiles_table(
     x,
     lon = "lon",
     lat = "lat",
@@ -307,7 +307,7 @@ test_that("a table's properties of any type reach its tiles, cast to what a tile
   expect_match(text, "gillnet", fixed = TRUE)
   expect_match(text, "2026-10-24", fixed = TRUE)
   expect_equal(
-    .rr_mvt_cast(
+    .og_mvt_cast(
       c("a", "b", "c", "d", "e"),
       c("INTEGER", "SMALLINT", "UINTEGER", "DECIMAL(4,1)", "ENUM('x')")
     ),
@@ -323,16 +323,16 @@ test_that("a table's properties of any type reach its tiles, cast to what a tile
 
 test_that("tables cut into tiles never share a name, after set.seed() or a reload", {
   skip_if_no_spatial()
-  h <- rr_example("dansk_harbours")
+  h <- og_example("dansk_harbours")
   set.seed(1)
   x <- stats::runif(1)
   set.seed(1)
-  a <- rr_tiles_table(h, properties = "SI_HARB")
+  a <- og_tiles_table(h, properties = "SI_HARB")
   expect_equal(stats::runif(1), x) # the user's random numbers are as they were
   set.seed(1)
-  b <- rr_tiles_table(h, properties = "SI_HARB")
-  .rr_tiles$n <- 0L # as after the package is loaded again, the connection's tables still there
-  d <- rr_tiles_table(h, properties = "SI_HARB")
+  b <- og_tiles_table(h, properties = "SI_HARB")
+  .og_tiles$n <- 0L # as after the package is loaded again, the connection's tables still there
+  d <- og_tiles_table(h, properties = "SI_HARB")
   expect_equal(
     c(attr(a, "count"), attr(b, "count"), attr(d, "count")),
     rep(942L, 3)
@@ -341,7 +341,7 @@ test_that("tables cut into tiles never share a name, after set.seed() or a reloa
 
 test_that("a tile function that fails replies with its reason", {
   skip_if_not_installed("jsonlite")
-  boom <- rr_layer(
+  boom <- og_layer(
     "boom",
     "vector",
     label = "Boom",
@@ -353,7 +353,7 @@ test_that("a tile function that fails replies with its reason", {
       paint = list("line-color" = "#333")
     ))
   )
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(boom)), title = "Boom"))
+  app <- .og_map_app(og_map(og_section("g", "G", list(boom)), title = "Boom"))
   r <- get(app, "/tiles/boom/1/0/0.pbf")
   expect_equal(r$status, 500L)
   expect_equal(r$body, "no tile here")
@@ -362,7 +362,7 @@ test_that("a tile function that fails replies with its reason", {
 test_that("a grid's parameters are checked before its tile function sees them", {
   skip_if_not_installed("jsonlite")
   skip_if_no_spatial()
-  app <- .rr_map_app(example_map())
+  app <- .og_map_app(example_map())
   bad <- get(app, "/tiles/pings/7/68/39.pbf", "behaviour=Fishing%27%3B%20DROP")
   expect_equal(bad$status, 400L)
   expect_match(bad$body, "behaviour is Fishing, Other", fixed = TRUE)
@@ -376,7 +376,7 @@ test_that("a grid's parameters are checked before its tile function sees them", 
   js <- get(app, "/vendor/maplibre-gl.js")
   expect_equal(js$status, 200L)
   expect_match(js$headers$`Content-Type`, "text/javascript", fixed = TRUE)
-  expect_identical(js$body, readBin(system.file("engine", "vendor", "maplibre-gl.js", package = "rebelrebel"), "raw", 2e6))
+  expect_identical(js$body, readBin(system.file("engine", "vendor", "maplibre-gl.js", package = "ogis"), "raw", 2e6))
   expect_match(get(app, "/vendor/uPlot.min.css")$headers$`Content-Type`, "text/css", fixed = TRUE)
   expect_equal(get(app, "/vendor/maplibre-contour.min.js")$status, 200L)
   expect_equal(get(app, "/vendor/nope.js")$status, 404L)
@@ -402,42 +402,42 @@ test_that("a grid's range filter takes its bounds together and within its meta",
   f <- list(list(id = "years", type = "range", params = list("y1", "y2")))
   meta <- list(ranges = list(years = c(2007, 2026)))
   expect_equal(
-    .rr_map_params(f, meta, list(y1 = "2010", y2 = "2012")),
+    .og_map_params(f, meta, list(y1 = "2010", y2 = "2012")),
     list(y1 = "2010", y2 = "2012")
   )
-  expect_match(.rr_map_params(f, meta, list(y1 = "2010")), "given together")
+  expect_match(.og_map_params(f, meta, list(y1 = "2010")), "given together")
   expect_match(
-    .rr_map_params(f, meta, list(y1 = "1990", y2 = "2012")),
+    .og_map_params(f, meta, list(y1 = "1990", y2 = "2012")),
     "lie in 2007 to 2026"
   )
-  expect_equal(.rr_map_params(f, meta, list()), list())
+  expect_equal(.og_map_params(f, meta, list()), list())
 })
 
 test_that("a server starts in the background and stops", {
   skip_if_not_installed("httpuv")
   skip_if_not_installed("jsonlite")
-  a <- rr_layer(
+  a <- og_layer(
     "a",
     "vector",
     tiles = function(z, x, y) raw(0),
     style = list(list(id = "a-line", type = "line"))
   )
   port <- httpuv::randomPort()
-  url <- rr_serve(
-    rr_map(rr_section("g", layers = list(a))),
+  url <- og_serve(
+    og_map(og_section("g", layers = list(a))),
     port = port,
     open = FALSE,
     query = list(lang = "en")
   )
   expect_equal(url, sprintf("http://localhost:%d/?lang=en", port))
-  expect_equal(rr_stop(port), port)
-  expect_equal(rr_stop(port), integer(0))
+  expect_equal(og_stop(port), port)
+  expect_equal(og_stop(port), integer(0))
 })
 
 test_that("a layer's variants: styles to choose between in the page, checked as they are made", {
   skip_if_not_installed("jsonlite")
   st <- list(list(id = "a-dot", type = "circle", "source-layer" = "features"))
-  a <- rr_layer(
+  a <- og_layer(
     "a",
     "vector",
     tiles = function(z, x, y) raw(0),
@@ -462,7 +462,7 @@ test_that("a layer's variants: styles to choose between in the page, checked as 
     c("x", "Y")
   ) # a label defaults to the value
   cfg <- jsonlite::fromJSON(
-    .rr_map_app(rr_map(rr_section("g", layers = list(a))))$call(
+    .og_map_app(og_map(og_section("g", layers = list(a))))$call(
       list(
         REQUEST_METHOD = "GET",
         PATH_INFO = "/config.json",
@@ -476,7 +476,7 @@ test_that("a layer's variants: styles to choose between in the page, checked as 
     "#ffffff"
   )
   bad <- function(v) {
-    rr_layer(
+    og_layer(
       "a",
       "vector",
       tiles = function(z, x, y) raw(0),
@@ -517,14 +517,14 @@ test_that("a layer's state: values its style reads, checked as they are made", {
     list(id = "colour", options = list(list(value = "#0b3954", label = "dark blue"),
                                        list(value = "#ffffff", label = "white")), default = "#ffffff")
   )
-  n <- rr_layer("n", "geojson", data = gj, style = st, state = state)
+  n <- og_layer("n", "geojson", data = gj, style = st, state = state)
   s <- n$config$state
   expect_equal(vapply(s, `[[`, "", "id"), c("areas", "early", "colour"))
   expect_equal(s[[2]]$default, -1) # the first option's value when not given
   expect_equal(s[[2]]$options[[3]]$label, "1") # a label defaults to the value
   expect_equal(s[[3]]$label, "colour") # and a control's to its id
   cfg <- jsonlite::fromJSON(
-    .rr_map_app(rr_map(rr_section("g", layers = list(n))))$call(
+    .og_map_app(og_map(og_section("g", layers = list(n))))$call(
       list(REQUEST_METHOD = "GET", PATH_INFO = "/config.json", QUERY_STRING = "")
     )$body,
     simplifyVector = FALSE
@@ -532,7 +532,7 @@ test_that("a layer's state: values its style reads, checked as they are made", {
   expect_identical(cfg$layers[[1]]$state[[1]]$default, FALSE)
   expect_identical(cfg$layers[[1]]$state[[2]]$options[[1]]$value, -1L) # a number stays a number in the page
   bad <- function(state, style = st, id = "n") {
-    rr_layer(id, "geojson", data = gj, style = style, state = state)
+    og_layer(id, "geojson", data = gj, style = style, state = state)
   }
   expect_error(bad(list(list(id = "nope", default = TRUE))), "read by none")
   expect_error(bad(state[1], style = st[2]), "global-state")
@@ -547,28 +547,28 @@ test_that("a layer's state: values its style reads, checked as they are made", {
   expect_error(bad("areas"), "list of controls")
   expect_error(bad(list()), "list of controls")
   expect_error(
-    rr_layer("g", "grid", tiles = function(z, x, y, p) raw(0), metrics = list(list(field = "n")), state = state),
+    og_layer("g", "grid", tiles = function(z, x, y, p) raw(0), metrics = list(list(field = "n")), state = state),
     "drawn by the page"
   )
   # a layer named as another's state would share its place in the address
-  other <- rr_layer("n_areas", "geojson", data = gj, style = list(list(id = "o", type = "fill")))
-  expect_error(rr_map(rr_section("g", layers = list(n, other))), "another layer's state")
+  other <- og_layer("n_areas", "geojson", data = gj, style = list(list(id = "o", type = "fill")))
+  expect_error(og_map(og_section("g", layers = list(n, other))), "another layer's state")
 })
 
 test_that("a gap in words: whole hours, minutes or seconds, else hours", {
-  expect_equal(.rr_duration_text(3600), "1 hour")
-  expect_equal(.rr_duration_text(7200), "2 hours")
-  expect_equal(.rr_duration_text(5400), "1.5 hours")
-  expect_equal(.rr_duration_text(1800), "30 minutes")
-  expect_equal(.rr_duration_text(60), "1 minute")
-  expect_equal(.rr_duration_text(90), "90 seconds")
+  expect_equal(.og_duration_text(3600), "1 hour")
+  expect_equal(.og_duration_text(7200), "2 hours")
+  expect_equal(.og_duration_text(5400), "1.5 hours")
+  expect_equal(.og_duration_text(1800), "30 minutes")
+  expect_equal(.og_duration_text(60), "1 minute")
+  expect_equal(.og_duration_text(90), "90 seconds")
 })
 
 test_that("a map is served when printed at a console; a replaced map's tables are dropped and made again", {
   skip_if_not_installed("httpuv")
   skip_if_not_installed("jsonlite")
   skip_if_no_spatial()
-  con <- .rr_connection()
+  con <- .og_connection()
   exists <- function(m) {
     vapply(
       attr(m, "tables"),
@@ -576,11 +576,11 @@ test_that("a map is served when printed at a console; a replaced map's tables ar
       logical(1)
     )
   }
-  df <- dplyr::collect(utils::head(rr_example("dansk"), 500))
+  df <- dplyr::collect(utils::head(og_example("dansk"), 500))
   port <- httpuv::randomPort()
   # as tiles, whose tables are the subject (a layer sent whole has none)
-  m1 <- rr_path(df, group = vessel_id, time = time_stamp, whole = FALSE) |> rr_point(whole = FALSE)
-  m2 <- rr_point(df, colour = behaviour, whole = FALSE)
+  m1 <- og_path(df, group = vessel_id, time = time_stamp, whole = FALSE) |> og_point(whole = FALSE)
+  m2 <- og_point(df, colour = behaviour, whole = FALSE)
   attr(m1, "port") <- port
   attr(m2, "port") <- port
   rlang::with_interactive(print(m1))
@@ -589,7 +589,7 @@ test_that("a map is served when printed at a console; a replaced map's tables ar
   expect_false(any(exists(m1)))
   expect_gt(length(m1$layers$points$tiles(10, 547, 320)), 0) # shown again, a table is made again
   expect_true(exists(m1)[2])
-  expect_equal(rr_stop(port), port)
+  expect_equal(og_stop(port), port)
   expect_false(any(exists(m2)))
 })
 
@@ -608,27 +608,27 @@ test_that("a dem layer: elevation images from an MBTiles file, served as images 
   DBI::dbExecute(con, "INSERT INTO tiles VALUES (1, 0, 1, ?)", params = list(list(as.raw(1:4))))
   DBI::dbDisconnect(con)
 
-  tiles <- rr_tiles_mbtiles(f)
+  tiles <- og_tiles_mbtiles(f)
   expect_identical(tiles(1, 0, 0), as.raw(1:4))
   expect_null(tiles(1, 0, 1))
   expect_equal(attr(tiles, "bounds"), c(-30, 60, -5, 70))
-  expect_error(rr_tiles_mbtiles(tempfile()), "path of an MBTiles file")
+  expect_error(og_tiles_mbtiles(tempfile()), "path of an MBTiles file")
 
   shade <- list(list(id = "depth-shade", type = "hillshade"))
-  l <- rr_layer("depth", "dem", tiles = tiles, style = shade)
+  l <- og_layer("depth", "dem", tiles = tiles, style = shade)
   expect_equal(l$config[c("encoding", "tile_size", "format", "minzoom", "maxzoom")],
                list(encoding = "terrarium", tile_size = 256L, format = "png", minzoom = 0L, maxzoom = 1L))
   expect_equal(l$config$bounds, list(-30, 60, -5, 70)) # an array in the config's JSON
   # given arguments win over the file's
-  expect_equal(rr_layer("depth", "dem", tiles = tiles, style = shade, tile_size = 512)$config$tile_size, 512L)
-  expect_error(rr_layer("depth", "dem", style = shade), "needs `tiles`, a function returning an image tile")
-  expect_error(rr_layer("depth", "dem", tiles = tiles, style = shade, encoding = "lerc"), "terrarium")
+  expect_equal(og_layer("depth", "dem", tiles = tiles, style = shade, tile_size = 512)$config$tile_size, 512L)
+  expect_error(og_layer("depth", "dem", style = shade), "needs `tiles`, a function returning an image tile")
+  expect_error(og_layer("depth", "dem", tiles = tiles, style = shade, encoding = "lerc"), "terrarium")
   expect_error(
-    rr_layer("lines", "vector", tiles = function(z, x, y) raw(0), style = shade, bounds = c(0, 0, 1, 1)),
+    og_layer("lines", "vector", tiles = function(z, x, y) raw(0), style = shade, bounds = c(0, 0, 1, 1)),
     "for a dem or contour layer"
   )
 
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   ok <- get(app, "/tiles/depth/1/0/0.png")
   expect_equal(ok$status, 200L)
   expect_equal(ok$headers$`Content-Type`, "image/png")
@@ -660,7 +660,7 @@ test_that("elevation tiles from a grid: Terrarium images that decode to the grid
   )
   plane <- function(lon, lat) -50 + 100 * (lon - 10) - 200 * (lat - 56)
   g$elevation <- plane(g$lon, g$lat)
-  tiles <- rr_tiles_dem(g)
+  tiles <- og_tiles_dem(g)
   expect_equal(attr(tiles, "bounds"), c(9.99, 55.995, 10.41, 56.305))
   expect_equal(attr(tiles, "count"), nrow(g))
   expect_equal(attr(tiles, "format"), "png")
@@ -669,9 +669,9 @@ test_that("elevation tiles from a grid: Terrarium images that decode to the grid
   # a fine grid stops at zoom 8 unless asked deeper; a minzoom deeper than 8 is kept
   fine <- expand.grid(lon = seq(10, 10.01, by = 0.0005), lat = seq(56, 56.01, by = 0.0005))
   fine$elevation <- -50
-  expect_equal(attr(rr_tiles_dem(fine), "maxzoom"), 8L) # its own limit is 11
-  expect_equal(attr(rr_tiles_dem(fine, maxzoom = 11), "maxzoom"), 11L)
-  expect_equal(attr(rr_tiles_dem(fine, minzoom = 9), "maxzoom"), 9L)
+  expect_equal(attr(og_tiles_dem(fine), "maxzoom"), 8L) # its own limit is 11
+  expect_equal(attr(og_tiles_dem(fine, maxzoom = 11), "maxzoom"), 11L)
+  expect_equal(attr(og_tiles_dem(fine, minzoom = 9), "maxzoom"), 9L)
   t <- tile_of(10.2, 56.15, 9)
   z <- t[["z"]]
   tx <- t[["x"]]
@@ -690,26 +690,26 @@ test_that("elevation tiles from a grid: Terrarium images that decode to the grid
   expect_true(all(E[beyond] == 0)) # nodata: sea level
   # wholly outside the grid a level tile, not none: maplibre-contour draws no lines in a tile whose neighbour is refused
   expect_true(all(decode(tiles(z, 0, 0)) == 0))
-  expect_true(all(decode(rr_tiles_dem(g, nodata = -5)(z, 0, 0)) == -5))
+  expect_true(all(decode(og_tiles_dem(g, nodata = -5)(z, 0, 0)) == -5))
 
   # the same tile from a lazy table, and from the rows shuffled
-  con <- .rr_connection()
-  duckdb::duckdb_register(con, "rb_test_dem_grid", g)
-  on.exit(duckdb::duckdb_unregister(con, "rb_test_dem_grid"), add = TRUE)
+  con <- .og_connection()
+  duckdb::duckdb_register(con, "og_test_dem_grid", g)
+  on.exit(duckdb::duckdb_unregister(con, "og_test_dem_grid"), add = TRUE)
   expect_identical(
-    rr_tiles_dem(dplyr::tbl(con, "rb_test_dem_grid"))(z, tx, ty),
+    og_tiles_dem(dplyr::tbl(con, "og_test_dem_grid"))(z, tx, ty),
     tiles(z, tx, ty)
   )
   shuffled <- g[withr::with_seed(1, sample(nrow(g))), ]
-  expect_identical(rr_tiles_dem(shuffled)(z, tx, ty), tiles(z, tx, ty))
+  expect_identical(og_tiles_dem(shuffled)(z, tx, ty), tiles(z, tx, ty))
 
   # zoomed out, the cells averaged in blocks: a level grid stays level
   flat <- transform(g, elevation = -20)
-  expect_true(all(decode(rr_tiles_dem(flat)(0, 0, 0)) %in% c(-20, 0)))
+  expect_true(all(decode(og_tiles_dem(flat)(0, 0, 0)) %in% c(-20, 0)))
 
   # a missing cell is a hole: the pixels nearest it carry nodata, which may be given
   holed <- flat[!(abs(flat$lon - 10.2) < 1e-9 & abs(flat$lat - 56.15) < 1e-9), ]
-  Eh <- decode(rr_tiles_dem(holed, nodata = -1)(z, tx, ty))
+  Eh <- decode(og_tiles_dem(holed, nodata = -1)(z, tx, ty))
   near <- outer(px$lat, px$lon, function(la, lo) {
     abs(lo - 10.2) < 0.009 & abs(la - 56.15) < 0.0045
   })
@@ -721,28 +721,28 @@ test_that("elevation tiles from a grid: Terrarium images that decode to the grid
   # columns by other names; the checks
   names(g) <- c("x", "y", "z")
   expect_identical(
-    rr_tiles_dem(g, lon = "x", lat = "y", elevation = "z")(z, tx, ty),
+    og_tiles_dem(g, lon = "x", lat = "y", elevation = "z")(z, tx, ty),
     tiles(z, tx, ty)
   )
-  expect_error(rr_tiles_dem(g), "no column `lon`, `lat`, `elevation`")
+  expect_error(og_tiles_dem(g), "no column `lon`, `lat`, `elevation`")
   names(g) <- c("lon", "lat", "elevation")
-  expect_error(rr_tiles_dem(rbind(g, g[1, ])), "1 rows repeat a cell")
+  expect_error(og_tiles_dem(rbind(g, g[1, ])), "1 rows repeat a cell")
   off <- g
   off$lon[5] <- off$lon[5] + 0.003 # half a cell would be a finer grid with holes
-  expect_error(rr_tiles_dem(off), "a longitude lies off that lattice")
+  expect_error(og_tiles_dem(off), "a longitude lies off that lattice")
   expect_error(
-    rr_tiles_dem(g[g$lon == 10, ]),
+    og_tiles_dem(g[g$lon == 10, ]),
     "at least two cells each way"
   )
-  expect_error(rr_tiles_dem(g, tile_size = 300), "256 or 512")
+  expect_error(og_tiles_dem(g, tile_size = 300), "256 or 512")
   expect_error(
-    rr_tiles_dem(g, minzoom = 5, maxzoom = 2),
+    og_tiles_dem(g, minzoom = 5, maxzoom = 2),
     "no less than `minzoom`"
   )
 
   # a dem layer takes its attributes, and the server sends its tiles as images
   skip_if_not_installed("jsonlite")
-  l <- rr_layer(
+  l <- og_layer(
     "relief",
     "dem",
     tiles = tiles,
@@ -758,7 +758,7 @@ test_that("elevation tiles from a grid: Terrarium images that decode to the grid
       maxzoom = 6L
     )
   )
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   ok <- get(app, sprintf("/tiles/relief/%d/%.0f/%.0f.png", z, tx, ty))
   expect_equal(ok$status, 200L)
   expect_identical(ok$body, tiles(z, tx, ty))
@@ -770,40 +770,40 @@ test_that("elevation tiles from a grid: Terrarium images that decode to the grid
   # tiles with no fit leave the scale on log
   d <- expand.grid(lon = seq(10, 10.4, by = 0.01), lat = seq(56, 56.3, by = 0.01))
   d$elevation <- -(1 + 100 * (d$lon - 10) / 0.4) # 1 to 101 m deep, west to east
-  dt <- rr_tiles_dem(d)
+  dt <- og_tiles_dem(d)
   expect_identical(attr(dt, "fit"), "page")
   colour_style <- list(list(id = "depth-colour", type = "color-relief"))
-  dl <- rr_layer("depth", "dem", tiles = dt, style = colour_style, colour = TRUE)
+  dl <- og_layer("depth", "dem", tiles = dt, style = colour_style, colour = TRUE)
   expect_equal(dl$config$colour[c("scale", "fit")], list(scale = "equal", fit = TRUE))
   expect_identical(dl$config$fit, "page")
   expect_identical(dl$fit, "page")
-  expect_equal(rr_layer("depth", "dem", tiles = dt, style = colour_style,
+  expect_equal(og_layer("depth", "dem", tiles = dt, style = colour_style,
                             colour = list(scale = "log"))$config$colour$scale, "log")
   own <- function(west, south, east, north) list(floor = 5, cap = 50)
-  ol <- rr_layer("depth", "dem", tiles = dt, style = colour_style, colour = list(fit = own))
+  ol <- og_layer("depth", "dem", tiles = dt, style = colour_style, colour = list(fit = own))
   expect_identical(ol$fit, own)
   expect_null(ol$config$fit)
-  rl <- rr_layer("relief", "dem", tiles = dt, style = list(list(id = "relief-shade", type = "hillshade")),
+  rl <- og_layer("relief", "dem", tiles = dt, style = list(list(id = "relief-shade", type = "hillshade")),
                      shade = TRUE)
   expect_true(rl$config$shade$fit)
   expect_identical(rl$config$fit, "page")
-  cl <- rr_layer("contours", "contour", tiles = dt, contours = list(thresholds = list("5" = 10), multiplier = -1),
+  cl <- og_layer("contours", "contour", tiles = dt, contours = list(thresholds = list("5" = 10), multiplier = -1),
                      style = list(list(id = "contours-line", type = "line", "source-layer" = "contours")))
   expect_true(cl$config$contours$fit)
   expect_identical(cl$config$fit, "page")
   bare <- function(z, x, y) NULL
-  expect_equal(rr_layer("depth", "dem", tiles = bare, style = colour_style, colour = TRUE)$config$colour$scale, "log")
-  tl <- rr_layer("depth", "dem", tiles = bare, style = colour_style, colour = list(fit = TRUE))
+  expect_equal(og_layer("depth", "dem", tiles = bare, style = colour_style, colour = TRUE)$config$colour$scale, "log")
+  tl <- og_layer("depth", "dem", tiles = bare, style = colour_style, colour = list(fit = TRUE))
   expect_equal(tl$config$colour[c("scale", "fit")], list(scale = "equal", fit = TRUE))
   expect_identical(tl$config$fit, "page")
-  expect_error(rr_layer("depth", "dem", tiles = dt, style = colour_style, colour = list(fit = "yes")),
+  expect_error(og_layer("depth", "dem", tiles = dt, style = colour_style, colour = list(fit = "yes")),
                "is TRUE \\(made in the page")
-  m <- rr_map(rr_section("g", "G", list(dl)))
-  expect_equal(m$config$fit, .rr_map_bundle_fit(list()))
-  expect_null(rr_map(rr_section("g", "G", list(ol)))$config$fit)
-  app <- .rr_map_app(m)
+  m <- og_map(og_section("g", "G", list(dl)))
+  expect_equal(m$config$fit, .og_map_bundle_fit(list()))
+  expect_null(og_map(og_section("g", "G", list(ol)))$config$fit)
+  app <- .og_map_app(m)
   expect_equal(get(app, "/fit/depth", "bbox=10,56,10.4,56.3")$status, 404L)
-  expect_equal(get(.rr_map_app(rr_map(rr_section("g", "G", list(ol)))), "/fit/depth", "bbox=10,56,10.4,56.3")$status,
+  expect_equal(get(.og_map_app(og_map(og_section("g", "G", list(ol)))), "/fit/depth", "bbox=10,56,10.4,56.3")$status,
                200L)
 })
 
@@ -825,11 +825,11 @@ test_that("elevation tiles from a raster: a GeoTIFF in any projection, a SpatRas
   r <- terra::rast(g, type = "xyz", crs = "EPSG:4326")
   f <- withr::local_tempfile(fileext = ".tif")
   terra::writeRaster(r, f)
-  from_file <- rr_tiles_dem(f)
-  expect_identical(from_file(z, tx, ty), rr_tiles_dem(g)(z, tx, ty))
+  from_file <- og_tiles_dem(f)
+  expect_identical(from_file(z, tx, ty), og_tiles_dem(g)(z, tx, ty))
   expect_equal(attr(from_file, "bounds"), c(9.99, 55.995, 10.41, 56.305))
-  expect_identical(attr(rr_tiles_dem(f), "source"), attr(from_file, "source")) # layers on one file share its tiles
-  expect_identical(rr_tiles_dem(r)(z, tx, ty), from_file(z, tx, ty))
+  expect_identical(attr(og_tiles_dem(f), "source"), attr(from_file, "source")) # layers on one file share its tiles
+  expect_identical(og_tiles_dem(r)(z, tx, ty), from_file(z, tx, ty))
   # a projected grid (Lambert azimuthal, metres): a plane in its own coordinates comes out at the pixels within a few
   # centimetres, each warped from the grid once (GDAL's bilinear warp of a projected grid is off by about 0.013 m here,
   # about 6 m of position on cells of 500 m; a grid in longitude and latitude, above, is exact)
@@ -842,7 +842,7 @@ test_that("elevation tiles from a raster: a GeoTIFF in any projection, a SpatRas
   terra::values(laea) <- pl(xy[, 1], xy[, 2])
   fl <- withr::local_tempfile(fileext = ".tif")
   terra::writeRaster(laea, fl)
-  tl <- rr_tiles_dem(fl)
+  tl <- og_tiles_dem(fl)
   b <- attr(tl, "bounds")
   expect_true(b[1] < b[3] && b[2] < b[4])
   expect_equal(attr(tl, "maxzoom"), 7L) # at 56 N zoom 7's pixels, about 340 m, are the first no wider than 500 m
@@ -862,10 +862,10 @@ test_that("elevation tiles from a raster: a GeoTIFF in any projection, a SpatRas
   # a raster of several layers: `elevation` names the one drawn
   two <- c(r, r * 2)
   names(two) <- c("elevation", "double")
-  expect_identical(rr_tiles_dem(two)(z, tx, ty), from_file(z, tx, ty))
-  expect_identical(decode(rr_tiles_dem(two, elevation = "double")(z, tx, ty)) <= 0, decode(from_file(z, tx, ty)) <= 0)
+  expect_identical(og_tiles_dem(two)(z, tx, ty), from_file(z, tx, ty))
+  expect_identical(decode(og_tiles_dem(two, elevation = "double")(z, tx, ty)) <= 0, decode(from_file(z, tx, ty)) <= 0)
   names(two) <- c("a", "b")
-  expect_error(rr_tiles_dem(two), "2 layers \\(a, b\\): `elevation` names the one drawn")
+  expect_error(og_tiles_dem(two), "2 layers \\(a, b\\): `elevation` names the one drawn")
   # a file's overviews are read only where a pixel spans eight cells or more: at zoom 4, where a pixel spans two to four
   # cells of 0.01 degrees, the tile of a file with overviews is the tile of the same grid without, though GDAL's warp
   # alone would have taken them
@@ -878,7 +878,7 @@ test_that("elevation tiles from a raster: a GeoTIFF in any projection, a SpatRas
     terra::writeRaster(rough, pyramid)
     utils::capture.output(sf::gdal_addo(pyramid, overviews = c(2, 4, 8), method = "average")) # its progress, quietly
     t4 <- tile_of(11, 57, 4)
-    expect_identical(rr_tiles_dem(pyramid)(4, t4[["x"]], t4[["y"]]), rr_tiles_dem(plain)(4, t4[["x"]], t4[["y"]]))
+    expect_identical(og_tiles_dem(pyramid)(4, t4[["x"]], t4[["y"]]), og_tiles_dem(plain)(4, t4[["x"]], t4[["y"]]))
     m4 <- 2 * pi * 6378137 / 2^4
     tpl <- terra::rast(nrows = 512, ncols = 512, crs = "EPSG:3857",
                        xmin = -pi * 6378137 + t4[["x"]] * m4, xmax = -pi * 6378137 + (t4[["x"]] + 1) * m4,
@@ -889,44 +889,44 @@ test_that("elevation tiles from a raster: a GeoTIFF in any projection, a SpatRas
   # the checks: a raster with no coordinate reference system, a path GDAL cannot read, a table too large to read
   bare <- r
   terra::crs(bare) <- ""
-  expect_error(rr_tiles_dem(bare), "no coordinate reference system")
-  expect_error(rr_tiles_dem(withr::local_tempfile(fileext = ".tif")), "no raster GDAL reads")
-  expect_error(rr_tiles_dem(list(1)), "a raster file's path, a terra SpatRaster, or a data frame")
-  con <- .rr_connection()
+  expect_error(og_tiles_dem(bare), "no coordinate reference system")
+  expect_error(og_tiles_dem(withr::local_tempfile(fileext = ".tif")), "no raster GDAL reads")
+  expect_error(og_tiles_dem(list(1)), "a raster file's path, a terra SpatRaster, or a data frame")
+  con <- .og_connection()
   big <- dplyr::tbl(con, dplyr::sql("SELECT range AS lon, range AS lat, 0 AS elevation FROM range(10000001)"))
-  expect_error(rr_tiles_dem(big), "10,000,001 cells, too many to read into R")
+  expect_error(og_tiles_dem(big), "10,000,001 cells, too many to read into R")
 })
 
 test_that("a dem layer's relief controls: MapLibre's defaults filled in, each value checked, its address names taken", {
   dem <- function(z, x, y) NULL
   shade_style <- list(list(id = "relief-shade", type = "hillshade"))
-  l <- rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = TRUE)
+  l <- og_layer("relief", "dem", tiles = dem, style = shade_style, shade = TRUE)
   expect_equal( # MapLibre's, but the intensity and the shadow a bathymetry map in use settled on
     l$config$shade,
     list(method = "standard", direction = 335, altitude = 45, exaggeration = 0.6, opacity = 100,
          shadow = "#1b2a3a", highlight = "#ffffff", auto = TRUE)
   )
-  given <- rr_layer("relief", "dem", tiles = dem, style = shade_style,
+  given <- og_layer("relief", "dem", tiles = dem, style = shade_style,
                         shade = list(method = "igor", direction = 315, highlight = "#FFF8E0"))$config$shade
   expect_equal(given[c("method", "direction", "altitude", "highlight")],
                list(method = "igor", direction = 315, altitude = 45, highlight = "#fff8e0"))
-  expect_null(rr_layer("relief", "dem", tiles = dem, style = shade_style)$config$shade)
+  expect_null(og_layer("relief", "dem", tiles = dem, style = shade_style)$config$shade)
 
   colour_style <- list(list(id = "depth-colour", type = "color-relief"))
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, shade = TRUE), "`hillshade` style")
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, shade = TRUE), "`hillshade` style")
   expect_error(
-    rr_layer("lines", "vector", tiles = function(z, x, y) raw(0), style = shade_style, shade = TRUE),
+    og_layer("lines", "vector", tiles = function(z, x, y) raw(0), style = shade_style, shade = TRUE),
     "`hillshade` style"
   )
-  expect_error(rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(method = "sun")), "method")
-  expect_error(rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(altitude = 95)), "altitude")
-  expect_error(rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(shadow = "black")), "shadow")
-  expect_error(rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(sun = 1)), "TRUE or a list")
+  expect_error(og_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(method = "sun")), "method")
+  expect_error(og_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(altitude = 95)), "altitude")
+  expect_error(og_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(shadow = "black")), "shadow")
+  expect_error(og_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(sun = 1)), "TRUE or a list")
 
   # a choice may not take a name the relief's controls write into the address
   expect_error(
-    rr_map(
-      rr_section("g", "G", list(l)),
+    og_map(
+      og_section("g", "G", list(l)),
       choose = list(fields = list(list(field = "relief_dir", options = list(list(value = "a", match = "a")),
                                        layers = "relief")))
     ),
@@ -937,7 +937,7 @@ test_that("a dem layer's relief controls: MapLibre's defaults filled in, each va
 test_that("a dem layer's colour controls: defaults filled in, each value checked, the palette the map's, names taken", {
   dem <- function(z, x, y) NULL
   colour_style <- list(list(id = "depth-colour", type = "color-relief"))
-  l <- rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)
+  l <- og_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)
   expect_equal(
     l$config$colour[c("of", "floor", "cap", "scale", "mode", "cut", "cut_as", "opacity")],
     list(of = "depth", floor = 10, cap = 2000, scale = "log", mode = "ramp", cut = 0, cut_as = "clear", opacity = 100)
@@ -948,7 +948,7 @@ test_that("a dem layer's colour controls: defaults filled in, each value checked
   # the palettes it offers: for a depth the seven looks, quiet first; for an elevation every palette; a palette given
   # outside the list put first in it; one the map lacks refused
   offered <- function(colour, ...) {
-    m <- rr_map(rr_section("g", "G", list(rr_layer("depth", "dem", tiles = dem, style = colour_style,
+    m <- og_map(og_section("g", "G", list(og_layer("depth", "dem", tiles = dem, style = colour_style,
                                                          colour = colour))), ...)
     co <- m$config$layers[[1]]$colour
     list(palette = co[["palette"]], palettes = unlist(co$palettes))
@@ -958,41 +958,41 @@ test_that("a dem layer's colour controls: defaults filled in, each value checked
   expect_equal(offered(list(palette = "chart")), list(palette = "chart", palettes = looks))
   expect_equal(offered(list(palette = "magma")), list(palette = "magma", palettes = c("magma", looks)))
   expect_equal(offered(list(palettes = c("haxby", "magma"))), list(palette = "haxby", palettes = c("haxby", "magma")))
-  expect_equal(offered(list(of = "elevation"))$palettes, vapply(rr_palettes(), `[[`, "", "id"))
+  expect_equal(offered(list(of = "elevation"))$palettes, vapply(og_palettes(), `[[`, "", "id"))
   expect_error(offered(list(palettes = c("quiet", "rainbow"))), "rainbow is not among the map's `palettes`")
   expect_error(offered(list(palettes = c("quiet", "quiet"))), "each once")
   # one of your own, added to the map's; a palette given again under an id replaces the earlier, in its place
   mine <- list(list(id = "rainbow", label = "rainbow", colors = grDevices::rainbow(9)))
-  expect_equal(offered(list(palette = "rainbow"), palettes = c(rr_palettes(), mine))$palettes, c("rainbow", looks))
+  expect_equal(offered(list(palette = "rainbow"), palettes = c(og_palettes(), mine))$palettes, c("rainbow", looks))
   quiet2 <- list(list(id = "quiet", label = "quiet, mine", colors = c("#ffffff", "#000000")))
-  p <- rr_map(rr_section("g", "G", list(l)), palettes = c(rr_palettes(), quiet2))$config$palettes
+  p <- og_map(og_section("g", "G", list(l)), palettes = c(og_palettes(), quiet2))$config$palettes
   expect_length(p, 18)
   expect_equal(p[[13]]$label, "quiet, mine")
   # the grid's palettes and a depth's, by `use`
-  use <- vapply(rr_palettes(), function(p) paste(p$use, collapse = "+"), "")
-  expect_equal(unname(use[vapply(rr_palettes(), `[[`, "", "id") %in% looks]),
+  use <- vapply(og_palettes(), function(p) paste(p$use, collapse = "+"), "")
+  expect_equal(unname(use[vapply(og_palettes(), `[[`, "", "id") %in% looks]),
                c("grid+depth", rep("depth", 6)))
   expect_equal(sum(grepl("grid", use)), 12)
-  given <- rr_layer("depth", "dem", tiles = dem, style = colour_style,
+  given <- og_layer("depth", "dem", tiles = dem, style = colour_style,
                         colour = list(palette = "blues", cut = 20, cut_as = "grey", mode = "bands"))$config$colour
   expect_equal(given[c("palette", "cut", "cut_as", "mode")], list(palette = "blues", cut = 20, cut_as = "grey", mode = "bands"))
 
   shade_style <- list(list(id = "relief-shade", type = "hillshade"))
-  expect_error(rr_layer("relief", "dem", tiles = dem, style = shade_style, colour = TRUE), "`color-relief` style")
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(cut = 15)), "cut")
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(bands = c(50, 20))), "bands")
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(scale = "sqrt")), "scale")
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(floor = 0)), "floor")
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(hue = 1)), "TRUE or a list")
+  expect_error(og_layer("relief", "dem", tiles = dem, style = shade_style, colour = TRUE), "`color-relief` style")
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(cut = 15)), "cut")
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(bands = c(50, 20))), "bands")
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(scale = "sqrt")), "scale")
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(floor = 0)), "floor")
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(hue = 1)), "TRUE or a list")
 
   expect_error(
-    rr_map(rr_section("g", "G", list(rr_layer("depth", "dem", tiles = dem, style = colour_style,
+    og_map(og_section("g", "G", list(og_layer("depth", "dem", tiles = dem, style = colour_style,
                                                     colour = list(palette = "rainbow"))))),
     "palette"
   )
   expect_error(
-    rr_map(
-      rr_section("g", "G", list(l)),
+    og_map(
+      og_section("g", "G", list(l)),
       choose = list(fields = list(list(field = "depth_cut", options = list(list(value = "a", match = "a")),
                                        layers = "depth")))
     ),
@@ -1005,35 +1005,35 @@ test_that("a contour layer: its intervals by zoom checked and kept as an object,
   png1 <- as.raw(1:4)
   tiles <- structure(function(z, x, y) if (z == 1) png1 else NULL, format = "png", encoding = "terrarium", maxzoom = 1L)
   lines <- list(list(id = "contours-line", type = "line", "source-layer" = "contours"))
-  l <- rr_layer("contours", "contour", tiles = tiles, style = lines,
+  l <- og_layer("contours", "contour", tiles = tiles, style = lines,
                     contours = list(thresholds = list("9" = c(50, 200), "6" = c(500, 1000)), multiplier = -1))
   expect_equal(names(l$config$contours$thresholds), c("6", "9")) # in zoom order
   expect_equal(l$config$contours$multiplier, -1)
   expect_equal(l$config[c("format", "encoding", "maxzoom")], list(format = "png", encoding = "terrarium", maxzoom = 1L))
-  cfg <- jsonlite::fromJSON(.rr_map_app(rr_map(rr_section("g", "G", list(l))))$call(
+  cfg <- jsonlite::fromJSON(.og_map_app(og_map(og_section("g", "G", list(l))))$call(
     list(REQUEST_METHOD = "GET", PATH_INFO = "/config.json", QUERY_STRING = "")
   )$body, simplifyVector = FALSE)
   expect_equal(cfg$layers[[1]]$contours$thresholds, list("6" = list(500, 1000), "9" = list(50, 200)))
 
-  expect_error(rr_layer("contours", "contour", tiles = tiles, style = lines), "`contours` is a list of `thresholds`")
+  expect_error(og_layer("contours", "contour", tiles = tiles, style = lines), "`contours` is a list of `thresholds`")
   expect_error(
-    rr_layer("contours", "contour", tiles = tiles, style = lines, contours = list(thresholds = list("x" = 100))),
+    og_layer("contours", "contour", tiles = tiles, style = lines, contours = list(thresholds = list("x" = 100))),
     "thresholds"
   )
   expect_error(
-    rr_layer("contours", "contour", tiles = tiles, style = lines, contours = list(thresholds = list("6" = c(500, 100)))),
+    og_layer("contours", "contour", tiles = tiles, style = lines, contours = list(thresholds = list("6" = c(500, 100)))),
     "thresholds"
   )
   expect_error(
-    rr_layer("contours", "contour", tiles = tiles, style = lines,
+    og_layer("contours", "contour", tiles = tiles, style = lines,
                  contours = list(thresholds = list("6" = 100), multiplier = 0)),
     "multiplier"
   )
   dem <- list(list(id = "d", type = "hillshade"))
-  expect_error(rr_layer("d", "dem", tiles = tiles, style = dem, contours = list(thresholds = list("6" = 100))),
+  expect_error(og_layer("d", "dem", tiles = tiles, style = dem, contours = list(thresholds = list("6" = 100))),
                "for a contour layer")
 
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   ok <- get(app, "/tiles/contours/1/0/0.png")
   expect_equal(ok$status, 200L)
   expect_equal(ok$headers$`Content-Type`, "image/png")
@@ -1050,10 +1050,10 @@ test_that("a dem layer's colours fitted to the view: the server asks the layer's
     seen <<- c(west, south, east, north)
     if (west < -100) NULL else c(12.5, 480)
   }
-  l <- rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(fit = fit))
+  l <- og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(fit = fit))
   expect_true(l$config$colour$fit) # the page's button; the function stays on the server
   expect_true(is.function(l$fit))
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   r <- get(app, "/fit/depth", "bbox=-25.5,63.5,-20,65")
   expect_equal(r$status, 200L)
   expect_equal(jsonlite::fromJSON(r$body), list(floor = 12.5, cap = 480))
@@ -1062,19 +1062,19 @@ test_that("a dem layer's colours fitted to the view: the server asks the layer's
   expect_equal(get(app, "/fit/depth", "bbox=-20,63.5,-25,65")$status, 400L) # west east of east
   expect_equal(get(app, "/fit/depth", "")$status, 400L)
   expect_equal(get(app, "/fit/other", "bbox=-25,63,-20,65")$status, 404L)
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(fit = 3)), "a function")
-  expect_null(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)$config$colour$fit)
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(fit = 3)), "a function")
+  expect_null(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)$config$colour$fit)
 })
 
 test_that("a dem layer's colours follow the view by default, and its address name is taken", {
   dem <- function(z, x, y) NULL
   colour_style <- list(list(id = "depth-colour", type = "color-relief"))
-  expect_true(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)$config$colour$auto)
-  expect_false(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(auto = FALSE))$config$colour$auto)
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(auto = "yes")), "auto")
-  l <- rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)
+  expect_true(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)$config$colour$auto)
+  expect_false(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(auto = FALSE))$config$colour$auto)
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(auto = "yes")), "auto")
+  l <- og_layer("depth", "dem", tiles = dem, style = colour_style, colour = TRUE)
   expect_error(
-    rr_map(rr_section("g", "G", list(l)),
+    og_map(og_section("g", "G", list(l)),
            choose = list(fields = list(list(field = "depth_auto", options = list(list(value = "a", match = "a")),
                                             layers = "depth")))),
     "depth_auto"
@@ -1088,14 +1088,14 @@ test_that("a fit may give the values' quantiles in view, for colours in equal sh
   fit <- function(west, south, east, north) {
     if (west < -100) list(floor = 1, cap = 9, quantiles = c(5, 3)) else list(floor = 3, cap = 80, quantiles = c(3, 20, 40, 80))
   }
-  l <- rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(fit = fit, scale = "equal"))
+  l <- og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(fit = fit, scale = "equal"))
   expect_equal(l$config$colour$scale, "equal")
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   r <- get(app, "/fit/depth", "bbox=-25,63,-20,65")
   expect_equal(r$status, 200L)
   expect_equal(jsonlite::fromJSON(r$body, simplifyVector = FALSE), list(floor = 3, cap = 80, q = list(3, 20, 40, 80)))
   expect_equal(get(app, "/fit/depth", "bbox=-120,63,-110,65")$status, 500L) # quantiles not rising
-  expect_error(rr_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(scale = "equal")),
+  expect_error(og_layer("depth", "dem", tiles = dem, style = colour_style, colour = list(scale = "equal")),
                "needs `colour\\$fit`")
 })
 
@@ -1104,21 +1104,21 @@ test_that("a contour layer's levels from the view: its fit kept on the server, f
   tiles <- structure(function(z, x, y) NULL, format = "png")
   lines <- list(list(id = "contours-line", type = "line", "source-layer" = "contours"))
   fit <- function(west, south, east, north) list(floor = 3, cap = 80, quantiles = c(3, 20, 40, 80))
-  l <- rr_layer("contours", "contour", tiles = tiles, style = lines,
+  l <- og_layer("contours", "contour", tiles = tiles, style = lines,
                     contours = list(thresholds = list("5" = 100), multiplier = -1, fit = fit))
   expect_true(l$config$contours$fit)
   expect_true(l$config$contours$auto)
   expect_true(is.function(l$fit))
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   expect_equal(jsonlite::fromJSON(get(app, "/fit/contours", "bbox=-25,63,-20,65")$body)$q, c(3, 20, 40, 80))
-  expect_false(rr_layer("contours", "contour", tiles = tiles, style = lines,
+  expect_false(og_layer("contours", "contour", tiles = tiles, style = lines,
                             contours = list(thresholds = list("5" = 100), auto = FALSE))$config$contours$auto)
-  expect_null(rr_layer("contours", "contour", tiles = tiles, style = lines,
+  expect_null(og_layer("contours", "contour", tiles = tiles, style = lines,
                            contours = list(thresholds = list("5" = 100)))$config$contours$fit)
-  expect_error(rr_layer("contours", "contour", tiles = tiles, style = lines,
+  expect_error(og_layer("contours", "contour", tiles = tiles, style = lines,
                             contours = list(thresholds = list("5" = 100), fit = 1)), "a function")
   expect_error(
-    rr_map(rr_section("g", "G", list(l)),
+    og_map(og_section("g", "G", list(l)),
            choose = list(fields = list(list(field = "contours_auto", options = list(list(value = "a", match = "a")),
                                             layers = "contours")))),
     "contours_auto"
@@ -1130,17 +1130,17 @@ test_that("a shading's intensity from the view: its fit answered by the route, o
   dem <- function(z, x, y) NULL
   shade_style <- list(list(id = "relief-shade", type = "hillshade"))
   fit <- function(west, south, east, north) if (west < -100) list(exaggeration = 2) else list(exaggeration = 0.45)
-  l <- rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(exaggeration = 0.6, fit = fit))
+  l <- og_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(exaggeration = 0.6, fit = fit))
   expect_true(l$config$shade$fit)
   expect_true(l$config$shade$auto)
   expect_true(is.function(l$fit))
-  app <- .rr_map_app(rr_map(rr_section("g", "G", list(l))))
+  app <- .og_map_app(og_map(og_section("g", "G", list(l))))
   expect_equal(jsonlite::fromJSON(get(app, "/fit/relief", "bbox=-25,63,-20,65")$body), list(exaggeration = 0.45))
   expect_equal(get(app, "/fit/relief", "bbox=-120,63,-110,65")$status, 500L) # out of 0-1
   both <- list(list(id = "c", type = "color-relief"), list(id = "s", type = "hillshade"))
-  expect_error(rr_layer("d", "dem", tiles = dem, style = both, shade = list(fit = fit), colour = list(fit = fit)),
+  expect_error(og_layer("d", "dem", tiles = dem, style = both, shade = list(fit = fit), colour = list(fit = fit)),
                "one fit")
-  expect_error(rr_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(fit = "x")), "a function")
+  expect_error(og_layer("relief", "dem", tiles = dem, style = shade_style, shade = list(fit = "x")), "a function")
 })
 
 test_that("a bundle: the page, its data and tiles as scripts, the tiles once for layers on one file", {
@@ -1160,15 +1160,15 @@ test_that("a bundle: the page, its data and tiles as scripts, the tiles once for
     DBI::dbExecute(con, "INSERT INTO tiles VALUES (?, ?, ?, ?)", params = list(t[1], t[2], t[3], list(as.raw(c(t, 9)))))
   }
   DBI::dbDisconnect(con)
-  expect_equal(attr(rr_tiles_mbtiles(f), "source"), normalizePath(f))
+  expect_equal(attr(og_tiles_mbtiles(f), "source"), normalizePath(f))
 
   # two layers on one file, each from its own reader, and a geojson layer
-  depth <- rr_layer("depth", "dem", tiles = rr_tiles_mbtiles(f), style = list(list(id = "d", type = "hillshade")))
-  relief <- rr_layer("relief", "dem", tiles = rr_tiles_mbtiles(f), style = list(list(id = "r", type = "hillshade")))
+  depth <- og_layer("depth", "dem", tiles = og_tiles_mbtiles(f), style = list(list(id = "d", type = "hillshade")))
+  relief <- og_layer("relief", "dem", tiles = og_tiles_mbtiles(f), style = list(list(id = "r", type = "hillshade")))
   gj <- '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Þórshöfn"},"geometry":{"type":"Point","coordinates":[-15.3,66.2]}}]}'
-  places <- rr_layer("places", "geojson", data = gj, style = list(list(id = "p", type = "circle")))
-  m <- rr_map(rr_section("g", "G", list(depth, relief, places)))
-  out <- rr_bundle(m, d, maxzoom = 1)
+  places <- og_layer("places", "geojson", data = gj, style = list(list(id = "p", type = "circle")))
+  m <- og_map(og_section("g", "G", list(depth, relief, places)))
+  out <- og_bundle(m, d, maxzoom = 1)
   expect_equal(attr(out, "tiles"), 2L) # zooms 0 and 1, once for both layers
   expect_true(attr(out, "bytes") > 0)
   # one archive, for both layers on the file: a PNG's, to zoom 1 (none past maxzoom), the tiles as the file holds them
@@ -1185,7 +1185,7 @@ test_that("a bundle: the page, its data and tiles as scripts, the tiles once for
   expect_null(pm_tile(a, 2, 1, 0))
   expect_null(a$meta$vector_layers) # an image's archive names no vector layers
   data <- paste(readLines(file.path(d, "data", "places.js"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(data, '^RB_BUNDLE\\("data/places",\\{')
+  expect_match(data, '^OG_BUNDLE\\("data/places",\\{')
   expect_match(data, "Þórshöfn", fixed = TRUE)
 
   page <- paste(readLines(file.path(d, "index.html"), encoding = "UTF-8"), collapse = "\n")
@@ -1207,34 +1207,34 @@ test_that("a bundle: the page, its data and tiles as scripts, the tiles once for
   # the page's libraries travel with it
   expect_setequal(
     list.files(file.path(d, "vendor")),
-    list.files(system.file("engine", "vendor", package = "rebelrebel"))
+    list.files(system.file("engine", "vendor", package = "ogis"))
   )
   expect_false(grepl("cdn.jsdelivr", page, fixed = TRUE))
   # the server's page has none
-  expect_match(.rr_map_page("{}"), '<script id="bundle" type="application/json">null</script>', fixed = TRUE)
+  expect_match(.og_map_page("{}"), '<script id="bundle" type="application/json">null</script>', fixed = TRUE)
 
   # a bundle is written over only when asked, and then only its own files go
   writeLines("the caller's", file.path(d, "README.md"))
-  expect_error(rr_bundle(m, d), "holds a bundle")
-  rr_bundle(m, d, maxzoom = 2, overwrite = TRUE)
+  expect_error(og_bundle(m, d), "holds a bundle")
+  og_bundle(m, d, maxzoom = 2, overwrite = TRUE)
   expect_true(file.exists(file.path(d, "README.md")))
   a <- pm_archive(d, "depth")
   expect_identical(pm_tile(a, 2, 1, 0), as.raw(c(2, 1, 3, 9)))
   expect_identical(pm_tile(a, 2, 1, 1), as.raw(c(2, 1, 2, 9)))
 
   # its arguments checked
-  expect_error(rr_bundle(list(), d), "rr_map")
-  expect_error(rr_bundle(m, d, maxzoom = 1.5, overwrite = TRUE), "whole number")
-  expect_error(rr_bundle(m, d, overwrite = NA), "TRUE or FALSE")
-  expect_error(rr_bundle(m, d, fit = list(probs = c(0.9, 0.1)), overwrite = TRUE), "probs out of range")
-  expect_error(rr_bundle(m, d, fit = list(slope = list(q = 1)), overwrite = TRUE), "a list of any of")
-  expect_error(rr_bundle(m, d, fit = list(n = 1), overwrite = TRUE), "n out of range")
-  v <- .rr_map_bundle_fit(list(nodata = NULL, slope = list(k = 3)))
+  expect_error(og_bundle(list(), d), "og_map")
+  expect_error(og_bundle(m, d, maxzoom = 1.5, overwrite = TRUE), "whole number")
+  expect_error(og_bundle(m, d, overwrite = NA), "TRUE or FALSE")
+  expect_error(og_bundle(m, d, fit = list(probs = c(0.9, 0.1)), overwrite = TRUE), "probs out of range")
+  expect_error(og_bundle(m, d, fit = list(slope = list(q = 1)), overwrite = TRUE), "a list of any of")
+  expect_error(og_bundle(m, d, fit = list(n = 1), overwrite = TRUE), "n out of range")
+  v <- .og_map_bundle_fit(list(nodata = NULL, slope = list(k = 3)))
   expect_null(v$nodata) # no value left out
   expect_equal(v$slope, list(k = 3, p = 0.9, min = 0.3, max = 1))
-  no_bounds <- rr_layer("depth", "dem", tiles = function(z, x, y) NULL, maxzoom = 2,
+  no_bounds <- og_layer("depth", "dem", tiles = function(z, x, y) NULL, maxzoom = 2,
                             style = list(list(id = "d", type = "hillshade")))
-  expect_error(rr_bundle(rr_map(rr_section("g", "G", list(no_bounds))), tempfile()), "needs its `bounds`")
+  expect_error(og_bundle(og_map(og_section("g", "G", list(no_bounds))), tempfile()), "needs its `bounds`")
 })
 
 test_that("a bundle leaves out the layers a server draws, with a message, and keeps a table's tiles", {
@@ -1242,7 +1242,7 @@ test_that("a bundle leaves out the layers a server draws, with a message, and ke
   skip_if_no_spatial()
   d <- tempfile("bundle_")
   on.exit(unlink(d, recursive = TRUE))
-  expect_message(rr_bundle(example_map(), d, maxzoom = 8), "Left out of the bundle, as their tiles are made by a server: pings[.]")
+  expect_message(og_bundle(example_map(), d, maxzoom = 8), "Left out of the bundle, as their tiles are made by a server: pings[.]")
   page <- paste(readLines(file.path(d, "index.html"), encoding = "UTF-8"), collapse = "\n")
   config <- jsonlite::fromJSON(
     sub('(?s).*<script id="config" type="application/json">(.*?)</script>.*', "\\1", page, perl = TRUE),
@@ -1253,13 +1253,13 @@ test_that("a bundle leaves out the layers a server draws, with a message, and ke
   expect_true(file.exists(file.path(d, "data", "outline.js")))
   # the harbours' tiles: only those that hold one, to zoom 8, the page drawing zoom 8's larger past it
   expect_equal(config$layers[[1]]$maxzoom, 8L)
-  at <- attr(rr_example("dansk_harbours") |> rr_tiles_table(properties = "SI_HARB"), "tiles_at")(8)
+  at <- attr(og_example("dansk_harbours") |> og_tiles_table(properties = "SI_HARB"), "tiles_at")(8)
   expect_true(nrow(at) > 0)
   a <- pm_archive(d, "harbours")
   expect_equal(a$header$tile_type, 1L) # vector tiles
   expect_equal(a$meta$vector_layers$id, "features")
   expect_equal(a$header$maxzoom, 8L)
-  expect_setequal(pm_ids_at(a, 8), .rr_pmtiles_id(rep(8, nrow(at)), at$x, at$y))
+  expect_setequal(pm_ids_at(a, 8), .og_pmtiles_id(rep(8, nrow(at)), at$x, at$y))
   m <- example_map()
   for (i in c(1, nrow(at))) expect_identical(pm_tile(a, 8, at$x[i], at$y[i]), m$layers$harbours$tiles(8, at$x[i], at$y[i]))
   expect_equal(list.files(file.path(d, "tiles")), "harbours.pmtiles.js")
@@ -1270,7 +1270,7 @@ test_that("a PMTiles archive: tile ids as the reference reader's, leaf directori
   z <- c(0, 1, 1, 1, 1, 2, 2, 7, 8, 14, 20)
   x <- c(0, 0, 0, 1, 1, 0, 3, 68, 130, 8700, 524287)
   y <- c(0, 0, 1, 1, 0, 0, 1, 39, 70, 5100, 0)
-  expect_equal(.rr_pmtiles_id(z, x, y), c(0, 1, 2, 3, 4, 5, 17, 19428, 77799, 318331125, 458129844906))
+  expect_equal(.og_pmtiles_id(z, x, y), c(0, 1, 2, 3, 4, 5, 17, 19428, 77799, 318331125, 458129844906))
   # more tiles than a leaf directory holds (4,096) under a small root: leaf directories, each tile found, given in no
   # order
   set.seed(1)
@@ -1279,7 +1279,7 @@ test_that("a PMTiles archive: tile ids as the reference reader's, leaf directori
   data <- lapply(seq_len(nrow(at)), function(i) as.raw(c(i %% 256, i %/% 256, sample(0:255, i %% 7))))
   f <- tempfile(fileext = ".pmtiles")
   on.exit(unlink(f))
-  .rr_pmtiles_write(rep(7, nrow(at)), at$x, at$y, data, f, c(-10, 50, 10, 60), type = "webp", name = "t", root_max = 50)
+  .og_pmtiles_write(rep(7, nrow(at)), at$x, at$y, data, f, c(-10, 50, 10, 60), type = "webp", name = "t", root_max = 50)
   a <- pm_archive(f)
   expect_true(a$leaves > 1)
   expect_equal(a$header$tile_type, 4L)
@@ -1295,7 +1295,7 @@ test_that("a bundle's grid: its rows summed by cell at each level, in blocks the
     x = c(0L, 1L, 2L, -1L, 300L), y = c(0L, 0L, 1L, -1L, 200L),
     behaviour = c("F", "F", "O", "F", NA), n = c(1, 2, 4, 8, 16), h = c(0.5, 0.5, 1, 1, 2)
   )
-  grid <- rr_layer(
+  grid <- og_layer(
     "cells", "grid", label = "Cells", tiles = function(z, x, y, p) raw(0),
     meta = list(options = list(behaviour = data.frame(value = c("F", "O"))), v = 1),
     filters = list(
@@ -1305,12 +1305,12 @@ test_that("a bundle's grid: its rows summed by cell at each level, in blocks the
     ),
     metrics = list(list(field = "n", label = "count"), list(field = "h_km2", label = "hours per km2"))
   )
-  m <- rr_map(rr_section("g", "G", list(grid)))
+  m <- og_map(og_section("g", "G", list(grid)))
   spec <- list(rows = rows, unit = 0.01, levels = c(1, 2), columns = c(behaviour = "behaviour"), sums = c("n", "h"),
                fields = list(n = "n", h_km2 = c("h", "km2")))
   d <- tempfile("bundle_")
   on.exit(unlink(d, recursive = TRUE))
-  expect_message(rr_bundle(m, d, grids = list(cells = spec)), "left out of the bundle, as its rows have no column for them: speed")
+  expect_message(og_bundle(m, d, grids = list(cells = spec)), "left out of the bundle, as its rows have no column for them: speed")
   page <- paste(readLines(file.path(d, "index.html"), encoding = "UTF-8"), collapse = "\n")
   block <- function(id) {
     jsonlite::fromJSON(
@@ -1332,8 +1332,8 @@ test_that("a bundle's grid: its rows summed by cell at each level, in blocks the
   # a block read as the page reads it: rows, each sum (float32), the cell in the block (uint16), the codes (uint8)
   read_block <- function(key, sums = 2) {
     js <- readLines(file.path(d, "grids", "cells", paste0(key, ".js")))
-    expect_match(js, sprintf('^RB_BUNDLE\\("grids/cells/%s",', key))
-    bytes <- memDecompress(jsonlite::base64_dec(sub('^RB_BUNDLE\\("[^"]+","(.*)"\\);$', "\\1", js)), "gzip")
+    expect_match(js, sprintf('^OG_BUNDLE\\("grids/cells/%s",', key))
+    bytes <- memDecompress(jsonlite::base64_dec(sub('^OG_BUNDLE\\("[^"]+","(.*)"\\);$', "\\1", js)), "gzip")
     con <- rawConnection(bytes)
     on.exit(close(con))
     n <- readBin(con, "integer", 1, size = 4, endian = "little")
@@ -1356,21 +1356,21 @@ test_that("a bundle's grid: its rows summed by cell at each level, in blocks the
     g <- spec
     v <- list(...)
     g[names(v)] <- v
-    expect_error(rr_bundle(m, tempfile(), grids = list(cells = g)), msg)
+    expect_error(og_bundle(m, tempfile(), grids = list(cells = g)), msg)
   }
   bad("rising", levels = c(2, 1))
   bad("metric h_km2", fields = list(n = "n"))
   bad("`fields`", fields = list(n = "x", h_km2 = c("h", "km2")))
   bad("names the layer's filters", columns = c(colour = "behaviour"))
   bad("`sums`", sums = "speed")
-  expect_error(rr_bundle(m, tempfile(), grids = list(other = spec)), "names no grid layer")
-  expect_message(rr_bundle(m, tempfile()), "made by a server: cells")
+  expect_error(og_bundle(m, tempfile(), grids = list(other = spec)), "names no grid layer")
+  expect_message(og_bundle(m, tempfile()), "made by a server: cells")
 })
 
-# The time panel (rr_time()) -------------------------------------------------------------------------------------
+# The time panel (og_time()) -------------------------------------------------------------------------------------
 
 time_pings <- function() {
-  d <- dplyr::collect(rr_example("dansk"))
+  d <- dplyr::collect(og_example("dansk"))
   d <- d[
     d$vessel_id %in% c("EX_1", "EX_12"),
     c("vessel_id", "time_stamp", "lon", "lat", "speed", "course", "behaviour")
@@ -1383,7 +1383,7 @@ time_pings <- function() {
 test_that("a time panel: each vessel and its spans in the config, a span's series from /time", {
   skip_if_no_spatial()
   d <- time_pings()
-  m <- rr_time(
+  m <- og_time(
     d,
     c(speed, course),
     by = vid,
@@ -1397,9 +1397,9 @@ test_that("a time panel: each vessel and its spans in the config, a span's serie
   # a mark's label: its column's, or the name it is given
   expect_equal(tp$marks, list(list(field = "flag", label = "flag")))
   d$fast <- d$speed > 8
-  named <- rr_time(d, speed, by = vid, marks = c(slow = flag, quick = "fast"))$config$time$marks
+  named <- og_time(d, speed, by = vid, marks = c(slow = flag, quick = "fast"))$config$time$marks
   expect_equal(named, list(list(field = "flag", label = "slow"), list(field = "fast", label = "quick")))
-  expect_equal(rr_time(d, speed, by = vid, marks = c(flag, quick = fast))$config$time$marks[[1]]$label, "flag")
+  expect_equal(og_time(d, speed, by = vid, marks = c(flag, quick = fast))$config$time$marks[[1]]$label, "flag")
   expect_equal(tp$lanes[[1]]$label, "behaviour")
   # a vessel with more than span_max pings is offered by month only, its latest month first
   ex12 <- tp$vessels[[2]]
@@ -1407,7 +1407,7 @@ test_that("a time panel: each vessel and its spans in the config, a span's serie
   expect_false("all" %in% vapply(ex12$spans, `[[`, "", "value"))
   expect_equal(ex12$span, "2014-12")
   expect_equal(tp$vessels[[1]]$span, "all")
-  app <- .rr_map_app(m)
+  app <- .og_map_app(m)
   r <- get(app, "/time", "v=EX_1&span=all")
   expect_equal(r$status, 200L)
   s <- jsonlite::fromJSON(r$body)
@@ -1428,23 +1428,23 @@ test_that("a time panel: each vessel and its spans in the config, a span's serie
   expect_setequal(unique(l$label), unique(e1$behaviour))
   # no gap breaks the panel's line or a lane's run by default; max_gap_s does, the panel's own or the track's
   expect_null(tp$max_gap_s)
-  m2 <- rr_time(d, speed, by = vid, lanes = list(behaviour = "behaviour"), max_gap_s = 3600)
+  m2 <- og_time(d, speed, by = vid, lanes = list(behaviour = "behaviour"), max_gap_s = 3600)
   expect_equal(m2$config$time$max_gap_s, 3600)
-  l2 <- jsonlite::fromJSON(get(.rr_map_app(m2), "/time", "v=EX_1&span=all")$body)$lanes[["1"]]
+  l2 <- jsonlite::fromJSON(get(.og_map_app(m2), "/time", "v=EX_1&span=all")$body)$lanes[["1"]]
   expect_gt(length(l2$t0), length(l$t0))
   t1 <- as.numeric(e1$time)
   inside <- function(a, b) max(c(0, diff(t1[t1 >= a & t1 <= b])))
   expect_true(all(mapply(inside, l2$t0, l2$t1) <= 3600))
   expect_gt(max(mapply(inside, l$t0, l$t1)), 3600)
   expect_equal(
-    (d |> rr_path(group = vid, time = time, max_gap_s = 1800) |> rr_time(speed))$config$time$max_gap_s,
+    (d |> og_path(group = vid, time = time, max_gap_s = 1800) |> og_time(speed))$config$time$max_gap_s,
     1800
   )
   expect_equal(
-    (d |> rr_path(group = vid, time = time, max_gap_s = 1800) |> rr_time(speed, max_gap_s = 60))$config$time$max_gap_s,
+    (d |> og_path(group = vid, time = time, max_gap_s = 1800) |> og_time(speed, max_gap_s = 60))$config$time$max_gap_s,
     60
   )
-  expect_error(rr_time(d, speed, by = vid, max_gap_s = -1), "number of seconds")
+  expect_error(og_time(d, speed, by = vid, max_gap_s = -1), "number of seconds")
   # a month's span, and the refusals
   r <- get(app, "/time", "v=EX_12&span=2014-12")
   expect_equal(r$status, 200L)
@@ -1459,7 +1459,7 @@ test_that("a time panel: each vessel and its spans in the config, a span's serie
   )
   expect_equal(get(app, "/time", "")$status, 400L)
   expect_equal(
-    get(.rr_map_app(rr_point(d)), "/time", "v=EX_1&span=all")$status,
+    get(.og_map_app(og_point(d)), "/time", "v=EX_1&span=all")$status,
     404L
   )
 })
@@ -1467,7 +1467,7 @@ test_that("a time panel: each vessel and its spans in the config, a span's serie
 test_that("a time panel pipes with the layers, either way round, one to a map", {
   skip_if_no_spatial()
   d <- time_pings()
-  m <- d |> rr_path(group = vid, time = time, colour = behaviour) |> rr_time(speed) |> rr_point(colour = speed)
+  m <- d |> og_path(group = vid, time = time, colour = behaviour) |> og_time(speed) |> og_point(colour = speed)
   expect_equal(vapply(m$config$layers, `[[`, "", "id"), c("paths", "points"))
   expect_false(is.null(m$config$time))
   expect_true(is.function(m$time$series))
@@ -1476,12 +1476,12 @@ test_that("a time panel pipes with the layers, either way round, one to a map", 
     vapply(m$time$tables, `[[`, "", "name") %in%
       vapply(attr(m, "tables"), `[[`, "", "name")
   ))
-  expect_error(rr_time(m, speed), "one time panel")
+  expect_error(og_time(m, speed), "one time panel")
   expect_match(format(m)[3], "time panel: speed over time, 2 groups")
   # vessels in natural order where their keys are not all numbers
-  expect_equal(order(.rr_natural_key(c("EX_10", "EX_2", "EX_1"))), c(3L, 2L, 1L))
+  expect_equal(order(.og_natural_key(c("EX_10", "EX_2", "EX_1"))), c(3L, 2L, 1L))
   # a map of the panel alone
-  m0 <- rr_time(d, speed, by = vid)
+  m0 <- og_time(d, speed, by = vid)
   expect_length(m0$config$layers, 0)
   expect_equal(m0$config$time$cols[[1]]$field, "speed")
 })
@@ -1502,32 +1502,32 @@ test_that("a time panel's lanes from interval tables, its vessel keys matched ac
     start = as.POSIXct("2014-12-08", tz = "UTC"),
     end = as.POSIXct("2014-12-09", tz = "UTC")
   )
-  m <- rr_time(
+  m <- og_time(
     d,
     speed,
     by = v,
     lanes = list(calls = list(data = calls, start = "T_in", end = "T_out", label = "port"), voyages = voyages)
   )
-  app <- .rr_map_app(m)
+  app <- .og_map_app(m)
   s1 <- jsonlite::fromJSON(get(app, "/time", "v=1&span=all")$body)
   expect_equal(s1$lanes[["1"]]$label, "a")
   s2 <- jsonlite::fromJSON(get(app, "/time", "v=2&span=all")$body)
   expect_equal(s2$lanes[["2"]]$t0, as.numeric(voyages$start))
   expect_error(
-    rr_time(d, speed, by = vid, lanes = list(x = data.frame(v = 1, a = Sys.time()))),
+    og_time(d, speed, by = vid, lanes = list(x = data.frame(v = 1, a = Sys.time()))),
     "no start and end"
   )
-  expect_error(rr_time(d, speed, by = vid, lanes = list(x = "nope")), "no column nope")
-  expect_error(rr_time(d, speed, by = vid, lanes = list("behaviour")), "named list")
-  expect_error(rr_time(d, behaviour, by = vid), "numeric")
-  expect_error(rr_time(d[, c("vid", "lon", "lat", "speed")], speed, by = vid), "time column")
+  expect_error(og_time(d, speed, by = vid, lanes = list(x = "nope")), "no column nope")
+  expect_error(og_time(d, speed, by = vid, lanes = list("behaviour")), "named list")
+  expect_error(og_time(d, behaviour, by = vid), "numeric")
+  expect_error(og_time(d[, c("vid", "lon", "lat", "speed")], speed, by = vid), "time column")
 })
 
 test_that("a time panel's spans: the whole series of raw pings, or a column's runs or a table's intervals", {
   skip_if_no_spatial()
   d <- time_pings()
   # raw pings, nothing but time and position: each vessel's whole series alone, no months, no list in the page
-  tp <- rr_time(d, speed, by = vid)$config$time
+  tp <- og_time(d, speed, by = vid)$config$time
   expect_equal(
     lapply(tp$vessels, function(v) vapply(v$spans, `[[`, "", "value")),
     list("all", "all")
@@ -1536,10 +1536,10 @@ test_that("a time panel's spans: the whole series of raw pings, or a column's ru
   # a column's runs of one value: numbered in time order, named by value and start, a span holding every ping of its
   # vessel from its start to its end; the column's name, or the name given, labels them
   d$haul <- ifelse(d$behaviour == "Fishing", paste0("h", cumsum(c(1, diff(d$behaviour == "Fishing") == 1))), NA)
-  m <- rr_time(d, speed, by = vid, span = c(Haul = "haul"))
+  m <- og_time(d, speed, by = vid, span = c(Haul = "haul"))
   tp <- m$config$time
   expect_equal(tp$span_label, "Haul")
-  expect_equal(rr_time(d, speed, by = vid, span = "haul")$config$time$span_label, "haul")
+  expect_equal(og_time(d, speed, by = vid, span = "haul")$config$time$span_label, "haul")
   e1 <- d[d$vid == "EX_1", ]
   e1 <- e1[order(e1$time), ]
   runs <- rle(ifelse(is.na(e1$haul), "", e1$haul))
@@ -1552,7 +1552,7 @@ test_that("a time panel's spans: the whole series of raw pings, or a column's ru
     sp[[2]]$name,
     sprintf("%s · %s", e1$haul[first], format(e1$time[first], "%Y-%m-%d %H:%M"))
   )
-  s <- jsonlite::fromJSON(get(.rr_map_app(m), "/time", "v=EX_1&span=s1")$body)
+  s <- jsonlite::fromJSON(get(.og_map_app(m), "/time", "v=EX_1&span=s1")$body)
   expect_equal(s$t, as.numeric(e1$time[first:last]))
   expect_equal(sp[[2]]$n, length(s$t))
   expect_match(format(m)[3], "spans: Haul")
@@ -1561,13 +1561,13 @@ test_that("a time panel's spans: the whole series of raw pings, or a column's ru
   d2 <- d
   mid <- which(d2$vid == "EX_1" & d2$time == e1$time[first + 1])
   d2$haul[mid] <- NA
-  sp2 <- rr_time(d2, speed, by = vid, span = "haul")$config$time$vessels[[1]]$spans
+  sp2 <- og_time(d2, speed, by = vid, span = "haul")$config$time$vessels[[1]]$spans
   expect_equal(length(sp2), length(sp))
-  s2 <- jsonlite::fromJSON(get(.rr_map_app(rr_time(d2, speed, by = vid, span = "haul")), "/time", "v=EX_1&span=s1")$body)
+  s2 <- jsonlite::fromJSON(get(.og_map_app(og_time(d2, speed, by = vid, span = "haul")), "/time", "v=EX_1&span=s1")$body)
   expect_equal(s2$t, as.numeric(e1$time[first:last]))
   # a state's values come and go: their spans overlap, which is said
-  expect_message(rr_time(d, speed, by = vid, span = "behaviour"), "belongs in `lanes`")
-  expect_no_message(rr_time(d, speed, by = vid, span = "haul"))
+  expect_message(og_time(d, speed, by = vid, span = "behaviour"), "belongs in `lanes`")
+  expect_no_message(og_time(d, speed, by = vid, span = "haul"))
   # a table's intervals, with a label column; an interval that holds no ping is left out
   tab <- data.frame(
     vid = c("EX_1", "EX_1", "EX_12"),
@@ -1575,34 +1575,34 @@ test_that("a time panel's spans: the whole series of raw pings, or a column's ru
     end = c(min(e1$time) + 3600, as.POSIXct("2000-01-02", tz = "UTC"), max(d$time[d$vid == "EX_12"])),
     trip = c("t1", "none", "t2")
   )
-  tp <- rr_time(d, speed, by = vid, span = list(data = tab, label = "trip"))$config$time
+  tp <- og_time(d, speed, by = vid, span = list(data = tab, label = "trip"))$config$time
   expect_equal(tp$span_label, "Span")
   # a table named as a column is: list(trips = <table or spec>)
-  tn <- rr_time(d, speed, by = vid, span = list(trips = list(data = tab, label = "trip")))$config$time
+  tn <- og_time(d, speed, by = vid, span = list(trips = list(data = tab, label = "trip")))$config$time
   expect_equal(tn$span_label, "trips")
   expect_equal(tn$vessels[[1]]$spans, tp$vessels[[1]]$spans)
-  expect_equal(rr_time(d, speed, by = vid, span = list(trips = tab))$config$time$span_label, "trips")
+  expect_equal(og_time(d, speed, by = vid, span = list(trips = tab))$config$time$span_label, "trips")
   expect_equal(vapply(tp$vessels[[1]]$spans, `[[`, "", "value"), c("all", "s1"))
   expect_equal(tp$vessels[[1]]$spans[[2]]$n, sum(e1$time <= min(e1$time) + 3600))
   # a vessel over span_max is offered by its spans alone, the latest first; with none, by month
-  tp <- rr_time(d, speed, by = vid, span = list(data = tab, label = "trip"), span_max = 10000)$config$time
+  tp <- og_time(d, speed, by = vid, span = list(data = tab, label = "trip"), span_max = 10000)$config$time
   expect_equal(vapply(tp$vessels[[2]]$spans, `[[`, "", "value"), "s1")
   expect_equal(tp$vessels[[2]]$span, "s1")
-  expect_error(rr_time(d, speed, by = vid, span = "nope"), "`span`: no column nope")
+  expect_error(og_time(d, speed, by = vid, span = "nope"), "`span`: no column nope")
   # the layers whose features carry the vessel and a time, which the page filters to the vessel and span
-  ml <- d |> rr_path(group = vid, time = time, colour = behaviour, whole = FALSE) |> rr_point(colour = speed) |> rr_time(speed)
+  ml <- d |> og_path(group = vid, time = time, colour = behaviour, whole = FALSE) |> og_point(colour = speed) |> og_time(speed)
   expect_equal(
     ml$config$time$layers,
     list(
-      list(id = "paths", by = "vid", t0 = "rr_t0", t1 = "rr_t1"),
-      list(id = "points", by = "vid", t = "rr_t")
+      list(id = "paths", by = "vid", t0 = "og_t0", t1 = "og_t1"),
+      list(id = "points", by = "vid", t = "og_t")
     )
   )
   # their times are the panel's: a track's first and last, a ping's own
   lines <- DBI::dbGetQuery(
-    .rr_connection(),
+    .og_connection(),
     sprintf(
-      "SELECT vid, min(rr_t0) AS t0, max(rr_t1) AS t1 FROM %s GROUP BY vid ORDER BY vid",
+      "SELECT vid, min(og_t0) AS t0, max(og_t1) AS t1 FROM %s GROUP BY vid ORDER BY vid",
       attr(ml$layers$paths$tiles, "table")
     )
   )
@@ -1613,15 +1613,15 @@ test_that("a time panel's spans: the whole series of raw pings, or a column's ru
 test_that("a bundle carries the time panel's spans, a file each", {
   skip_if_no_spatial()
   d <- time_pings()
-  m <- rr_time(d, speed, by = vid, span_max = 10000)
+  m <- og_time(d, speed, by = vid, span_max = 10000)
   dir <- tempfile()
-  rr_bundle(m, dir)
+  og_bundle(m, dir)
   f <- sort(list.files(file.path(dir, "time")))
   # EX_1 held whole, EX_12 over span_max by its one month
   expect_equal(f, c("0_all.js", "1_2014-12.js"))
   js <- readLines(file.path(dir, "time", "0_all.js"), warn = FALSE)
   s <- jsonlite::fromJSON(sub(
-    '^RB_BUNDLE\\("time/0_all",(.*)\\);$',
+    '^OG_BUNDLE\\("time/0_all",(.*)\\);$',
     "\\1",
     paste(js, collapse = "")
   ))
@@ -1636,36 +1636,36 @@ test_that("a bundle carries the time panel's spans, a file each", {
 test_that("a label on hover: style ids of the layer's own, TRUE for the click's, with a title", {
   data <- '{"type": "FeatureCollection", "features": []}'
   st <- list(list(id = "a-fill", type = "fill"), list(id = "a-line", type = "line"))
-  a <- rr_layer("a", "geojson", data = data, style = st,
+  a <- og_layer("a", "geojson", data = data, style = st,
                     popup = list(click = "a-fill", hover = TRUE, title = "name"))
   expect_equal(a$config$popup$hover, list("a-fill"))
-  b <- rr_layer("b", "geojson", data = data, style = st,
+  b <- og_layer("b", "geojson", data = data, style = st,
                     popup = list(hover = c("a-fill", "a-line"), title = "name", hover_fields = TRUE))
   expect_equal(b$config$popup$hover, list("a-fill", "a-line"))
   expect_null(b$config$popup$click)
   # one id stays an array in the config's JSON
-  j <- .rr_map_json(rr_map(rr_section("g", layers = list(a)))$config)
+  j <- .og_map_json(og_map(og_section("g", layers = list(a)))$config)
   expect_match(j, '"hover":["a-fill"]', fixed = TRUE)
-  expect_error(rr_layer("c", "geojson", data = data, style = st, popup = list(hover = "nope", title = "name")),
+  expect_error(og_layer("c", "geojson", data = data, style = st, popup = list(hover = "nope", title = "name")),
                "style ids")
-  expect_error(rr_layer("c", "geojson", data = data, style = st, popup = list(hover = "a-fill")), "title")
-  expect_error(rr_layer("c", "geojson", data = data, style = st, popup = list(hover = TRUE, title = "name")),
+  expect_error(og_layer("c", "geojson", data = data, style = st, popup = list(hover = "a-fill")), "title")
+  expect_error(og_layer("c", "geojson", data = data, style = st, popup = list(hover = TRUE, title = "name")),
                "click")
-  expect_error(rr_layer("c", "geojson", data = data, style = st,
+  expect_error(og_layer("c", "geojson", data = data, style = st,
                             popup = list(hover = "a-fill", title = "name", hover_fields = "yes")), "TRUE or FALSE")
-  expect_error(rr_layer("c", "geojson", data = data, style = st,
+  expect_error(og_layer("c", "geojson", data = data, style = st,
                             popup = list(click = "a-fill", title = "name", hover_fields = TRUE)), "goes with")
-  expect_error(rr_layer("c", "dem", tiles = function(z, x, y) NULL,
+  expect_error(og_layer("c", "dem", tiles = function(z, x, y) NULL,
                             style = list(list(id = "c-shade", type = "hillshade")),
                             popup = list(hover = "c-shade", title = "name")), "vector or geojson")
   # no hover, as before
-  expect_null(rr_layer("d", "geojson", data = data, style = st, popup = list(click = "a-fill", title = "x"))$config$popup$hover)
+  expect_null(og_layer("d", "geojson", data = data, style = st, popup = list(click = "a-fill", title = "x"))$config$popup$hover)
 })
 
 # a request to a map's app, as httpuv makes it: a page opened as localhost, its header, and a body to read
 notes_call <- function(app, method, path, body = NULL, host = "localhost:8811", page = TRUE, origin = NULL) {
   req <- list(REQUEST_METHOD = method, PATH_INFO = path, QUERY_STRING = "", HTTP_HOST = host)
-  if (page) req$HTTP_X_RB_NOTES <- "1"
+  if (page) req$HTTP_X_OG_NOTES <- "1"
   req$HTTP_ORIGIN <- origin
   if (!is.null(body)) {
     req$rook.input <- list(read = function(...) charToRaw(enc2utf8(body)))
@@ -1678,14 +1678,14 @@ test_that("notes from R: a note, a reply at its place, a reply to a reply in the
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "notes are written in a UTF-8 locale")
   f <- tempfile(fileext = ".geojson")
-  n0 <- rr_notes(f)
+  n0 <- og_notes(f)
   expect_equal(nrow(n0), 0)
   expect_named(n0, c("id", "thread", "reply_to", "time", "author", "text", "lon", "lat", "zoom", "under", "address"))
-  expect_equal(rr_notes_add(f, "Er brún Rósagarðs hér?", lon = -14.6, lat = 64.05, author = "reader"), 1L)
-  expect_equal(rr_notes_add(f, "Já, við 200 m.", reply_to = 1), 2L)
-  expect_equal(rr_notes_add(f, "Og þá?", reply_to = 2, author = "reader"), 3L)
-  expect_equal(rr_notes_add(f, "Another place", lon = -20, lat = 65), 4L)
-  n <- rr_notes(f)
+  expect_equal(og_notes_add(f, "Er brún Rósagarðs hér?", lon = -14.6, lat = 64.05, author = "reader"), 1L)
+  expect_equal(og_notes_add(f, "Já, við 200 m.", reply_to = 1), 2L)
+  expect_equal(og_notes_add(f, "Og þá?", reply_to = 2, author = "reader"), 3L)
+  expect_equal(og_notes_add(f, "Another place", lon = -20, lat = 65), 4L)
+  n <- og_notes(f)
   expect_equal(n$id, 1:4)
   expect_equal(n$thread, c(1L, 1L, 1L, 4L))
   expect_equal(n$reply_to, c(NA, 1L, 1L, NA))
@@ -1699,17 +1699,17 @@ test_that("notes from R: a note, a reply at its place, a reply to a reply in the
   expect_length(lines, 6)
   expect_match(lines[2], "Rósagarðs", fixed = TRUE)
   expect_equal(jsonlite::fromJSON(f, simplifyVector = FALSE)$type, "FeatureCollection")
-  expect_error(rr_notes_add(f, "", lon = 1, lat = 1), "text")
-  expect_error(rr_notes_add(f, "x"), "place")
-  expect_error(rr_notes_add(f, "x", lon = 200, lat = 1), "place")
-  expect_error(rr_notes_add(f, "x", reply_to = 99), "reply_to")
-  expect_error(rr_notes_add(f, "x", lon = 1, lat = 1, author = ""), "author")
-  expect_error(rr_notes_add("notes.csv", "x", lon = 1, lat = 1), "geojson")
-  expect_error(rr_notes_add(file.path(tempfile(), "n.geojson"), "x", lon = 1, lat = 1), "does not exist")
+  expect_error(og_notes_add(f, "", lon = 1, lat = 1), "text")
+  expect_error(og_notes_add(f, "x"), "place")
+  expect_error(og_notes_add(f, "x", lon = 200, lat = 1), "place")
+  expect_error(og_notes_add(f, "x", reply_to = 99), "reply_to")
+  expect_error(og_notes_add(f, "x", lon = 1, lat = 1, author = ""), "author")
+  expect_error(og_notes_add("notes.csv", "x", lon = 1, lat = 1), "geojson")
+  expect_error(og_notes_add(file.path(tempfile(), "n.geojson"), "x", lon = 1, lat = 1), "does not exist")
   # a file that is not notes is never overwritten
   g <- tempfile(fileext = ".geojson")
   writeLines('{"type": "Feature"}', g)
-  expect_error(rr_notes_add(g, "x", lon = 1, lat = 1), "not a notes file")
+  expect_error(og_notes_add(g, "x", lon = 1, lat = 1), "not a notes file")
   expect_equal(readLines(g), '{"type": "Feature"}')
 })
 
@@ -1717,10 +1717,10 @@ test_that("notes served: the page's notes, replies and deletions through /notes,
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "notes are written in a UTF-8 locale")
   f <- tempfile(fileext = ".geojson")
-  a <- rr_layer("a", "geojson", data = '{"type": "FeatureCollection", "features": []}',
+  a <- og_layer("a", "geojson", data = '{"type": "FeatureCollection", "features": []}',
                     style = list(list(id = "a-fill", type = "fill")))
-  m <- rr_map(rr_section("g", layers = list(a)))
-  app <- .rr_map_app(m, notes = f)
+  m <- og_map(og_section("g", layers = list(a)))
+  app <- .og_map_app(m, notes = f)
   cfg <- jsonlite::fromJSON(get(app, "/config.json")$body, simplifyVector = FALSE)
   expect_equal(cfg$notes$file, basename(f))
   expect_null(m$config$notes) # the map itself is left as it was: a bundle of it has no notes
@@ -1743,8 +1743,8 @@ test_that("notes served: the page's notes, replies and deletions through /notes,
   expect_null(p$reply_to)
   r <- notes_call(app, "POST", "/notes", '{"text": "A reply", "reply_to": 1}')
   expect_equal(jsonlite::fromJSON(r$body, simplifyVector = FALSE)$added, 2L)
-  rr_notes_add(f, "From R", reply_to = 1, author = "claude") # R and the server write the same file
-  n <- rr_notes(f)
+  og_notes_add(f, "From R", reply_to = 1, author = "claude") # R and the server write the same file
+  n <- og_notes(f)
   expect_equal(n$author, c("reader", "reader", "claude"))
   expect_equal(n$under[1], "Areas: Rósagarður")
   expect_equal(unique(n$lon), -20.5)
@@ -1762,17 +1762,17 @@ test_that("notes served: the page's notes, replies and deletions through /notes,
   expect_equal(notes_call(app, "POST", "/notes", '{"text": "x", "lon": 1, "lat": 1}', host = "evil.example:8811")$status, 403L)
   expect_equal(notes_call(app, "GET", "/notes", host = "evil.example:8811")$status, 403L)
   expect_equal(notes_call(app, "POST", "/notes", '{"text": "x", "lon": 1, "lat": 1}', origin = "http://localhost:8811")$status, 200L)
-  expect_equal(nrow(rr_notes(f)), 4)
+  expect_equal(nrow(og_notes(f)), 4)
   # a reply deleted alone, a thread's first note with its replies
   expect_equal(notes_call(app, "DELETE", "/notes/2")$status, 200L)
-  expect_equal(rr_notes(f)$id, c(1L, 3L, 4L))
+  expect_equal(og_notes(f)$id, c(1L, 3L, 4L))
   expect_equal(notes_call(app, "DELETE", "/notes/1")$status, 200L)
-  expect_equal(rr_notes(f)$id, 4L)
+  expect_equal(og_notes(f)$id, 4L)
   expect_equal(notes_call(app, "DELETE", "/notes/1")$status, 404L)
   # a number is never given twice: the last note deleted, the next takes the one after it
   expect_equal(notes_call(app, "DELETE", "/notes/4")$status, 200L)
-  expect_equal(nrow(rr_notes(f)), 0)
-  expect_equal(rr_notes_add(f, "after", lon = 1, lat = 1), 5L)
+  expect_equal(nrow(og_notes(f)), 0)
+  expect_equal(og_notes_add(f, "after", lon = 1, lat = 1), 5L)
   expect_equal(jsonlite::fromJSON(f, simplifyVector = FALSE)$last_id, 5L)
   expect_null(jsonlite::fromJSON(notes_call(app, "GET", "/notes")$body, simplifyVector = FALSE)$last_id)
   expect_equal(notes_call(app, "DELETE", "/notes/5", page = FALSE)$status, 403L)
@@ -1784,7 +1784,7 @@ test_that("notes served: the page's notes, replies and deletions through /notes,
   expect_match(r$body, "not a notes file")
   expect_equal(readLines(f), "{broken")
   # a map served without notes has no such route
-  plain <- .rr_map_app(m)
+  plain <- .og_map_app(m)
   expect_equal(notes_call(plain, "GET", "/notes")$status, 404L)
   expect_equal(notes_call(plain, "POST", "/notes", '{"text": "x", "lon": 1, "lat": 1}')$status, 405L)
   expect_null(jsonlite::fromJSON(get(plain, "/config.json")$body, simplifyVector = FALSE)$notes)
@@ -1792,7 +1792,7 @@ test_that("notes served: the page's notes, replies and deletions through /notes,
 
 # a layer whose features take a verdict
 verdict_layer <- function(id = "a", ...) {
-  rr_layer(id, "geojson", data = '{"type": "FeatureCollection", "features": []}',
+  og_layer(id, "geojson", data = '{"type": "FeatureCollection", "features": []}',
                style = list(list(id = paste0(id, "-dot"), type = "circle")),
                popup = list(click = paste0(id, "-dot"), title = "name",
                             verdict = list(field = "key", text = TRUE,
@@ -1810,15 +1810,15 @@ test_that("a popup's verdict: checked, its options an array in the config", {
   expect_equal(vapply(v$questions[[1]]$options, `[[`, "", "value"), c("right", "place", "name"))
   expect_equal(v$questions[[1]]$options[[2]]$colour, "#fdae61")
   expect_false(v$questions[[1]]$options[[1]]$other)
-  cfg <- jsonlite::fromJSON(.rr_map_json(rr_map(rr_section("g", layers = list(a)))$config), simplifyVector = FALSE)
+  cfg <- jsonlite::fromJSON(.og_map_json(og_map(og_section("g", layers = list(a)))$config), simplifyVector = FALSE)
   expect_length(cfg$layers[[1]]$popup$verdict$questions[[1]]$options, 3)
   # a label defaults to its value; text defaults to FALSE
-  b <- rr_layer("b", "geojson", data = "{}", style = list(list(id = "b-dot", type = "circle")),
+  b <- og_layer("b", "geojson", data = "{}", style = list(list(id = "b-dot", type = "circle")),
                     popup = list(click = "b-dot", verdict = list(field = "k", options = list(list(value = "y"), list(value = "n")))))
   expect_equal(b$config$popup$verdict$questions[[1]]$options[[1]]$label, "y")
   expect_false(b$config$popup$verdict$text)
   bad <- function(verdict, click = "b-dot", kind = "geojson") {
-    rr_layer("b", kind, data = if (kind == "geojson") "{}", tiles = if (kind == "vector") function(z, x, y) raw(0),
+    og_layer("b", kind, data = if (kind == "geojson") "{}", tiles = if (kind == "vector") function(z, x, y) raw(0),
                  style = list(list(id = "b-dot", type = "circle")), popup = list(click = click, verdict = verdict))
   }
   ok <- list(list(value = "y"), list(value = "n"))
@@ -1837,10 +1837,10 @@ test_that("verdicts served: given, replaced, withdrawn, read back; from the page
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "verdicts are written in a UTF-8 locale")
   f <- tempfile(fileext = ".csv")
-  plain <- rr_layer("p", "geojson", data = '{"type": "FeatureCollection", "features": []}',
+  plain <- og_layer("p", "geojson", data = '{"type": "FeatureCollection", "features": []}',
                         style = list(list(id = "p-fill", type = "fill")))
-  m <- rr_map(rr_section("g", layers = list(verdict_layer(), plain)))
-  app <- .rr_map_app(m, verdicts = f)
+  m <- og_map(og_section("g", layers = list(verdict_layer(), plain)))
+  app <- .og_map_app(m, verdicts = f)
   cfg <- jsonlite::fromJSON(get(app, "/config.json")$body, simplifyVector = FALSE)
   expect_equal(cfg$verdicts$file, basename(f))
   expect_null(m$config$verdicts) # the map itself is left as it was: a bundle of it has no verdicts
@@ -1859,12 +1859,12 @@ test_that("verdicts served: given, replaced, withdrawn, read back; from the page
   notes_call(app, "POST", "/verdicts", '{"layer": "a", "id": 7, "value": "right", "lon": 1, "lat": 2}')
   # a later answer replaces the earlier; an empty one withdraws it; every answer kept in the file
   notes_call(app, "POST", "/verdicts", '{"layer": "a", "id": "eldeyjarbodi", "value": "name", "lon": -23.7, "lat": 63.45}')
-  expect_equal(rr_verdicts(f)$value, c("right", "name"))
-  expect_equal(rr_verdicts(f)$id, c("7", "eldeyjarbodi"))
+  expect_equal(og_verdicts(f)$value, c("right", "name"))
+  expect_equal(og_verdicts(f)$id, c("7", "eldeyjarbodi"))
   r <- notes_call(app, "POST", "/verdicts", '{"layer": "a", "id": "7", "value": "", "lon": 1, "lat": 2}')
   expect_equal(r$status, 200L)
   expect_length(jsonlite::fromJSON(r$body, simplifyVector = FALSE)$verdicts, 1)
-  all <- rr_verdicts(f, all = TRUE)
+  all <- og_verdicts(f, all = TRUE)
   expect_equal(all$value, c("place", "right", "name", ""))
   expect_equal(names(all), c("time", "layer", "id", "question", "value", "other", "text", "title", "lon", "lat", "zoom"))
   expect_equal(unique(all$question), "verdict") # a page of one question may leave it out
@@ -1896,13 +1896,13 @@ test_that("verdicts served: given, replaced, withdrawn, read back; from the page
   expect_match(r$body, "not a verdicts file")
   expect_equal(readLines(f), c("a,b", "1,2"))
   # a map served without verdicts has no such route
-  expect_equal(notes_call(.rr_map_app(m), "GET", "/verdicts")$status, 404L)
-  expect_null(jsonlite::fromJSON(get(.rr_map_app(m), "/config.json")$body, simplifyVector = FALSE)$verdicts)
+  expect_equal(notes_call(.og_map_app(m), "GET", "/verdicts")$status, 404L)
+  expect_null(jsonlite::fromJSON(get(.og_map_app(m), "/config.json")$body, simplifyVector = FALSE)$verdicts)
 })
 
 # a layer whose features take two questions, one skipped by an answer to the first, an answer naming another, a note
 two_questions <- function() {
-  rr_layer("n", "geojson", data = '{"type": "FeatureCollection", "features": []}',
+  og_layer("n", "geojson", data = '{"type": "FeatureCollection", "features": []}',
                style = list(list(id = "n-dot", type = "circle")),
                popup = list(click = "n-dot", title = "name", verdict = list(field = "key", text = TRUE, questions = list(
                  list(id = "name", label = "qName", options = list(
@@ -1917,10 +1917,10 @@ test_that("a verdict's questions: checked, an answer naming another, a question 
   expect_equal(vapply(q, `[[`, "", "id"), c("name", "place"))
   expect_true(q[[1]]$options[[2]]$other)
   expect_equal(q[[2]]$skip, list(name = list("not")))
-  cfg <- jsonlite::fromJSON(.rr_map_json(rr_map(rr_section("g", layers = list(two_questions())))$config), simplifyVector = FALSE)
+  cfg <- jsonlite::fromJSON(.og_map_json(og_map(og_section("g", layers = list(two_questions())))$config), simplifyVector = FALSE)
   expect_equal(cfg$layers[[1]]$popup$verdict$questions[[2]]$skip$name, list("not")) # an array, one answer or several
   bad <- function(verdict) {
-    rr_layer("b", "geojson", data = "{}", style = list(list(id = "b-dot", type = "circle")),
+    og_layer("b", "geojson", data = "{}", style = list(list(id = "b-dot", type = "circle")),
                  popup = list(click = "b-dot", verdict = verdict))
   }
   ok <- list(list(value = "y"), list(value = "n"))
@@ -1940,22 +1940,22 @@ test_that("verdicts served by question: an answer naming another, a note, each q
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "verdicts are written in a UTF-8 locale")
   f <- tempfile(fileext = ".csv")
-  m <- rr_map(rr_section("g", layers = list(two_questions())))
-  app <- .rr_map_app(m, verdicts = f)
+  m <- og_map(og_section("g", layers = list(two_questions())))
+  app <- .og_map_app(m, verdicts = f)
   post <- function(body) notes_call(app, "POST", "/verdicts", body)
   expect_equal(post('{"layer": "n", "id": "bodi", "question": "name", "value": "form", "other": "Eldeyjarboði", "lon": -23.7, "lat": 63.4}')$status, 200L)
   expect_equal(post('{"layer": "n", "id": "bodi", "question": "place", "value": "wrong", "lon": -23.7, "lat": 63.4}')$status, 200L)
   expect_equal(post('{"layer": "n", "id": "bodi", "question": "note", "text": "Austan við", "lon": -23.7, "lat": 63.4}')$status, 200L)
   expect_equal(post('{"layer": "n", "id": "sker", "question": "name", "value": "not", "lon": -23.1, "lat": 63.6}')$status, 200L)
-  v <- rr_verdicts(f)
+  v <- og_verdicts(f)
   expect_equal(paste(v$id, v$question, v$value, v$other), c("bodi name form Eldeyjarboði", "bodi place wrong ", "bodi note  ", "sker name not "))
   expect_equal(v$text[v$question == "note"], "Austan við")
   # each question's latest: the place withdrawn, the note cleared, the name kept
   post('{"layer": "n", "id": "bodi", "question": "place", "value": "", "lon": -23.7, "lat": 63.4}')
   post('{"layer": "n", "id": "bodi", "question": "note", "text": "", "lon": -23.7, "lat": 63.4}')
-  v <- rr_verdicts(f)
+  v <- og_verdicts(f)
   expect_equal(paste(v$id, v$question), c("bodi name", "sker name"))
-  expect_equal(nrow(rr_verdicts(f, all = TRUE)), 6)
+  expect_equal(nrow(og_verdicts(f, all = TRUE)), 6)
   r <- jsonlite::fromJSON(notes_call(app, "GET", "/verdicts")$body, simplifyVector = FALSE)$verdicts
   expect_equal(r[[1]]$other, "Eldeyjarboði")
   # refused: no name where the answer names one, a name where it does not, no question, a question not there,
@@ -1972,19 +1972,19 @@ test_that("verdicts served by question: an answer naming another, a note, each q
   g <- tempfile(fileext = ".csv")
   writeLines(c('"time","layer","id","value","text","title","lon","lat","zoom"',
                '"2026-11-09T09:19:03Z","a","x","place","Hér","X",-22.78,63.78,10'), g, useBytes = TRUE)
-  old <- rr_verdicts(g)
+  old <- og_verdicts(g)
   expect_equal(c(old$question, old$value, old$other, old$text), c("verdict", "place", "", "Hér"))
-  app1 <- .rr_map_app(rr_map(rr_section("g", layers = list(verdict_layer()))), verdicts = g)
+  app1 <- .og_map_app(og_map(og_section("g", layers = list(verdict_layer()))), verdicts = g)
   expect_equal(notes_call(app1, "POST", "/verdicts", '{"layer": "a", "id": "y", "value": "name", "lon": 1, "lat": 1}')$status, 200L)
   expect_equal(names(utils::read.csv(g)), c("time", "layer", "id", "question", "value", "other", "text", "title", "lon", "lat", "zoom"))
-  expect_equal(rr_verdicts(g)$id, c("x", "y"))
+  expect_equal(og_verdicts(g)$id, c("x", "y"))
 })
 
 test_that("a verdict kept under another layer's answers: shared both ways, the same questions asked", {
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "verdicts are written in a UTF-8 locale")
   shared <- function(id, store = NULL, options = list(list(value = "right"), list(value = "not"))) {
-    rr_layer(id, "geojson", data = '{"type": "FeatureCollection", "features": []}',
+    og_layer(id, "geojson", data = '{"type": "FeatureCollection", "features": []}',
                  style = list(list(id = paste0(id, "-dot"), type = "circle")),
                  popup = list(click = paste0(id, "-dot"), title = "name",
                               verdict = list(field = "key", store = store, options = options)))
@@ -1993,67 +1993,67 @@ test_that("a verdict kept under another layer's answers: shared both ways, the s
   expect_null(shared("a")$config$popup$verdict$store)
   expect_error(shared("b", "a b"), "store")
   f <- tempfile(fileext = ".csv")
-  m <- rr_map(rr_section("g", layers = list(shared("a"), shared("b", "a"))))
-  app <- .rr_map_app(m, verdicts = f)
+  m <- og_map(og_section("g", layers = list(shared("a"), shared("b", "a"))))
+  app <- .og_map_app(m, verdicts = f)
   # an answer given through b is kept as a's, and read as a's
   r <- notes_call(app, "POST", "/verdicts", '{"layer": "b", "id": "x", "value": "not", "lon": 1, "lat": 1}')
   expect_equal(r$status, 200L)
   expect_equal(jsonlite::fromJSON(r$body, simplifyVector = FALSE)$verdicts[[1]]$layer, "a")
   notes_call(app, "POST", "/verdicts", '{"layer": "a", "id": "x", "value": "right", "lon": 1, "lat": 1}')
-  v <- rr_verdicts(f)
+  v <- og_verdicts(f)
   expect_equal(paste(v$layer, v$id, v$value), "a x right") # one feature, its latest answer, whichever layer gave it
-  expect_equal(rr_verdicts(f, all = TRUE)$layer, c("a", "a"))
+  expect_equal(og_verdicts(f, all = TRUE)$layer, c("a", "a"))
   # layers sharing answers ask the same questions, or the map is refused
-  odd <- rr_map(rr_section("g", layers = list(shared("a"), shared("b", "a", list(list(value = "yes"), list(value = "no"))))))
-  expect_error(.rr_map_app(odd, verdicts = f), "different questions")
-  expect_error(rr_serve(odd, port = httpuv::randomPort(), open = FALSE, verdicts = tempfile(fileext = ".csv")), "different questions")
+  odd <- og_map(og_section("g", layers = list(shared("a"), shared("b", "a", list(list(value = "yes"), list(value = "no"))))))
+  expect_error(.og_map_app(odd, verdicts = f), "different questions")
+  expect_error(og_serve(odd, port = httpuv::randomPort(), open = FALSE, verdicts = tempfile(fileext = ".csv")), "different questions")
 })
 
 test_that("a server with verdicts: the file and the map checked as it starts", {
   skip_if_not_installed("httpuv")
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "verdicts are written in a UTF-8 locale")
-  m <- rr_map(rr_section("g", layers = list(verdict_layer())))
+  m <- og_map(og_section("g", layers = list(verdict_layer())))
   g <- tempfile(fileext = ".csv")
   writeLines("x,y", g)
-  expect_error(rr_serve(m, port = httpuv::randomPort(), open = FALSE, verdicts = g), "not a verdicts file")
-  expect_error(rr_serve(m, port = httpuv::randomPort(), open = FALSE, verdicts = tempfile(fileext = ".json")), "csv")
-  expect_error(rr_serve(m, port = httpuv::randomPort(), open = FALSE, verdicts = file.path(tempfile(), "v.csv")),
+  expect_error(og_serve(m, port = httpuv::randomPort(), open = FALSE, verdicts = g), "not a verdicts file")
+  expect_error(og_serve(m, port = httpuv::randomPort(), open = FALSE, verdicts = tempfile(fileext = ".json")), "csv")
+  expect_error(og_serve(m, port = httpuv::randomPort(), open = FALSE, verdicts = file.path(tempfile(), "v.csv")),
                "does not exist")
-  a <- rr_layer("a", "vector", tiles = function(z, x, y) raw(0), style = list(list(id = "a-line", type = "line")))
-  expect_error(rr_serve(rr_map(rr_section("g", layers = list(a))), port = httpuv::randomPort(), open = FALSE,
+  a <- og_layer("a", "vector", tiles = function(z, x, y) raw(0), style = list(list(id = "a-line", type = "line")))
+  expect_error(og_serve(og_map(og_section("g", layers = list(a))), port = httpuv::randomPort(), open = FALSE,
                             verdicts = tempfile(fileext = ".csv")), "has none")
   port <- httpuv::randomPort()
-  rr_serve(m, port = port, open = FALSE, verdicts = tempfile(fileext = ".csv"))
-  expect_equal(rr_stop(port), port)
+  og_serve(m, port = port, open = FALSE, verdicts = tempfile(fileext = ".csv"))
+  expect_equal(og_stop(port), port)
 })
 
 test_that("a server with notes: the file checked as it starts", {
   skip_if_not_installed("httpuv")
   skip_if_not_installed("jsonlite")
   skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "notes are written in a UTF-8 locale")
-  a <- rr_layer("a", "vector", tiles = function(z, x, y) raw(0), style = list(list(id = "a-line", type = "line")))
-  m <- rr_map(rr_section("g", layers = list(a)))
+  a <- og_layer("a", "vector", tiles = function(z, x, y) raw(0), style = list(list(id = "a-line", type = "line")))
+  m <- og_map(og_section("g", layers = list(a)))
   g <- tempfile(fileext = ".geojson")
   writeLines("[]", g)
-  expect_error(rr_serve(m, port = httpuv::randomPort(), open = FALSE, notes = g), "not a notes file")
-  expect_error(rr_serve(m, port = httpuv::randomPort(), open = FALSE, notes = file.path(tempfile(), "n.geojson")),
+  expect_error(og_serve(m, port = httpuv::randomPort(), open = FALSE, notes = g), "not a notes file")
+  expect_error(og_serve(m, port = httpuv::randomPort(), open = FALSE, notes = file.path(tempfile(), "n.geojson")),
                "does not exist")
   port <- httpuv::randomPort()
-  rr_serve(m, port = port, open = FALSE, notes = tempfile(fileext = ".geojson"))
-  expect_equal(rr_stop(port), port)
+  og_serve(m, port = port, open = FALSE, notes = tempfile(fileext = ".geojson"))
+  expect_equal(og_stop(port), port)
 })
 
 test_that("a choice's option may name a base map, shown while it is the one value chosen", {
-  v <- rr_layer("areas", "vector", tiles = function(z, x, y) NULL,
+  v <- og_layer("areas", "vector", tiles = function(z, x, y) NULL,
                 style = list(list(id = "areas-fill", type = "fill", "source-layer" = "features")))
   ch <- function(base) list(fields = list(list(field = "scale", multi = FALSE, layers = "areas",
                                                options = list(list(value = "a", match = "a", base = base),
                                                               list(value = "b", match = "b")))))
-  m <- rr_map(rr_section("g", "G", list(v)), choose = ch("chart_a"))
+  m <- og_map(og_section("g", "G", list(v)), choose = ch("chart_a"))
   expect_identical(m$config$choose$fields[[1]]$options[[1]]$base, "chart_a")
   expect_null(m$config$choose$fields[[1]]$options[[2]]$base)
-  expect_error(rr_map(rr_section("g", "G", list(v)), choose = ch(c("x", "y"))), "base")
-  expect_error(rr_map(rr_section("g", "G", list(v)), choose = ch(NA_character_)), "base")
-  expect_error(rr_map(rr_section("g", "G", list(v)), choose = ch("")), "base")
+  expect_error(og_map(og_section("g", "G", list(v)), choose = ch(c("x", "y"))), "base")
+  expect_error(og_map(og_section("g", "G", list(v)), choose = ch(NA_character_)), "base")
+  expect_error(og_map(og_section("g", "G", list(v)), choose = ch("")), "base")
 })

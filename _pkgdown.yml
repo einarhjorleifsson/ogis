@@ -1,4 +1,4 @@
-url: https://einarhjorleifsson.github.io/rebelrebel/
+url: https://einarhjorleifsson.github.io/ogis/
 
 template:
   bootstrap: 5
@@ -8,54 +8,54 @@ reference:
   desc: >
     A map from data, which the layer functions add to with the pipe.
   contents:
-  - rr_map
+  - og_map
 - title: "Layers"
   desc: >
     A mark each, one row of the data to one mark: points, paths (rows joined in time), lines, segments, areas and
     text.
   contents:
-  - rr_point
-  - rr_path
+  - og_point
+  - og_path
 - title: "Time"
   desc: >
     A panel under the map: a group's rows over time, linked to the map.
   contents:
-  - rr_time
+  - og_time
 - title: "In MapLibre's own terms"
   desc: >
     A layer, its section and its tiles made by hand, for what the layer functions do not draw; added to the pipe by
-    rr_add_layer().
+    og_add_layer().
   contents:
-  - rr_layer
-  - rr_add_layer
-  - rr_section
-  - rr_tiles_table
-  - rr_tiles_dem
-  - rr_tiles_mbtiles
+  - og_layer
+  - og_add_layer
+  - og_section
+  - og_tiles_table
+  - og_tiles_dem
+  - og_tiles_mbtiles
 - title: "Colours and base maps"
   contents:
-  - rr_palettes
+  - og_palettes
 - title: "A page of your own"
   desc: >
     A script of your own on the map, and routes of its own on the server: for a page that does more than show.
   contents:
-  - rr_script
+  - og_script
 - title: "Show and share"
   desc: >
     A map served from R on this machine, or written as a folder that opens with no R.
   contents:
-  - print.rr_map
-  - rr_serve
-  - rr_bundle
+  - print.og_map
+  - og_serve
+  - og_bundle
 - title: "What readers write"
   desc: >
     Notes and verdicts written on a served map, kept in a file beside it.
   contents:
-  - rr_notes
-  - rr_verdicts
+  - og_notes
+  - og_verdicts
 - title: "Example data"
   contents:
-  - rr_example
+  - og_example
   - dansk
   - dansk_harbours
   - dansk_relief

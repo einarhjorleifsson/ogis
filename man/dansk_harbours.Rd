@@ -23,13 +23,13 @@ Workshop on Geo-Spatial Data for Small-Scale Fisheries." Commit
 Licence: MIT, Copyright (c) 2021 ICES Expert Groups.
 }
 \description{
-Each row is a harbour, as a polygon; 942 harbours, most of them in Europe. Read it with \code{rr_example("dansk_harbours")}.
+Each row is a harbour, as a polygon; 942 harbours, most of them in Europe. Read it with \code{og_example("dansk_harbours")}.
 }
 \details{
 \code{data/harbours.rds} of the WKSSFGEO repository, with the id \code{SI_HARB} added (\code{data-raw/DATASET.R}).
 }
 \seealso{
-\code{\link[=rr_example]{rr_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
+\code{\link[=og_example]{og_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
 
 Other example data:
 \code{\link{dansk}},

@@ -1,6 +1,6 @@
 # Skip a test when DuckDB's spatial extension cannot be loaded (no network to install it).
 skip_if_no_spatial <- function() {
-  con <- .rr_connection()
+  con <- .og_connection()
   ok <- !inherits(
     try(DBI::dbExecute(con, "LOAD spatial"), silent = TRUE),
     "try-error"

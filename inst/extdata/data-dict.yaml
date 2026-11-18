@@ -1,11 +1,11 @@
 $version: 0.1.0
 $learn_more: https://data-dict.tidyverse.org/
 
-name: rebelrebel
-label: rebelrebel's example data
+name: ogis
+label: ogis's example data
 description: >
-  The datasets shipped with the R package rebelrebel, one parquet file per table in its `extdata` folder, read with
-  `rr_example("<table>")`. Each file also carries its own entry of this dictionary, its citation in BibTeX and its
+  The datasets shipped with the R package ogis, one parquet file per table in its `extdata` folder, read with
+  `og_example("<table>")`. Each file also carries its own entry of this dictionary, its citation in BibTeX and its
   licence in its parquet metadata, as written by the R package ramb, where these files were made.
 details: >
   Positions are longitude and latitude in decimal degrees on WGS 84 unless a column says otherwise. Shapes are DuckDB

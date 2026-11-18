@@ -1,11 +1,11 @@
-# A point drawn as a ring (rr_point(stroke = )), an area's outline alone (rr_polygon(fill = NA))
+# A point drawn as a ring (og_point(stroke = )), an area's outline alone (og_polygon(fill = NA))
 
 paint_of <- function(m, i = 1, j = 1) m$config$layers[[i]]$style[[j]]$paint
 
 test_that("stroke draws a point as a ring of its colour, its legend and colour choices a ring's", {
   skip_if_no_spatial()
-  pos <- rr_example("trawlsurvey")
-  m <- rr_map(pos) |> rr_point(colour = "#00a5c8", size = 14, stroke = 2, id = "fast")
+  pos <- og_example("trawlsurvey")
+  m <- og_map(pos) |> og_point(colour = "#00a5c8", size = 14, stroke = 2, id = "fast")
   p <- paint_of(m)
   expect_identical(p[["circle-opacity"]], 0)
   expect_identical(p[["circle-stroke-color"]], "#00A5C8")
@@ -14,27 +14,27 @@ test_that("stroke draws a point as a ring of its colour, its legend and colour c
   expect_identical(p[["circle-stroke-opacity"]], 0.85)
   expect_identical(m$config$layers[[1]]$legend[[1]]$swatch, list(ring = "#00A5C8"))
   # by columns: each choice paints the ring
-  m <- rr_map(pos) |> rr_point(colour = c(behaviour, speed), stroke = 1.5, opacity = 0.6)
+  m <- og_map(pos) |> og_point(colour = c(behaviour, speed), stroke = 1.5, opacity = 0.6)
   l <- m$config$layers[[1]]
   expect_identical(l$style[[1]]$paint[["circle-stroke-opacity"]], 0.6)
   expect_true(all(vapply(l$variants$options, function(o) names(o$paint[[1]]) == "circle-stroke-color", NA)))
   expect_true(all(unlist(lapply(l$legend, function(e) names(e$swatch))) == "ring"))
   # MapLibre's own terms still win
-  m <- rr_map(pos) |> rr_point(stroke = 2, "circle-stroke-width" = 4)
+  m <- og_map(pos) |> og_point(stroke = 2, "circle-stroke-width" = 4)
   expect_identical(paint_of(m)[["circle-stroke-width"]], 4)
   # a filled point as before
-  p <- paint_of(rr_map(pos) |> rr_point(size = 6))
+  p <- paint_of(og_map(pos) |> og_point(size = 6))
   expect_identical(p[["circle-opacity"]], 0.85)
   expect_identical(p[["circle-stroke-color"]], "rgba(255,255,255,0.7)")
   for (bad in list("2", -1, 0, c(1, 2), NA_real_)) {
-    expect_error(rr_map(pos) |> rr_point(stroke = bad), "`stroke` is a ring's width", info = format(bad))
+    expect_error(og_map(pos) |> og_point(stroke = bad), "`stroke` is a ring's width", info = format(bad))
   }
 })
 
 test_that("fill = NA draws an area's outline alone, its fill clear so a click inside still finds it", {
   skip_if_no_spatial()
-  h <- rr_example("dansk_harbours")
-  m <- rr_map(h) |> rr_polygon(fill = NA, colour = "#b2182b", id = "h")
+  h <- og_example("dansk_harbours")
+  m <- og_map(h) |> og_polygon(fill = NA, colour = "#b2182b", id = "h")
   fill <- paint_of(m, 1, 1)
   line <- paint_of(m, 1, 2)
   expect_identical(fill[["fill-opacity"]], 0)
@@ -44,11 +44,11 @@ test_that("fill = NA draws an area's outline alone, its fill clear so a click in
   expect_identical(m$config$layers[[1]]$legend[[1]]$swatch, list(fill = "transparent", stroke = "#B2182B"))
   expect_identical(unlist(m$config$layers[[1]]$popup$click), "h-fill")
   # its width and opacity as given; NA as text too
-  m <- rr_map(h) |> rr_polygon(fill = NA_character_, linewidth = 1, opacity = 0.5)
+  m <- og_map(h) |> og_polygon(fill = NA_character_, linewidth = 1, opacity = 0.5)
   expect_identical(paint_of(m, 1, 2)[["line-width"]], 1)
   expect_identical(paint_of(m, 1, 2)[["line-opacity"]], 0.5)
   # a filled area as before
-  m <- rr_map(h) |> rr_polygon(fill = "#d9822b")
+  m <- og_map(h) |> og_polygon(fill = "#d9822b")
   expect_identical(paint_of(m, 1, 1)[["fill-opacity"]], 0.5)
   expect_identical(paint_of(m, 1, 2)[["line-width"]], 1)
   expect_null(paint_of(m, 1, 2)[["line-opacity"]])
@@ -57,12 +57,12 @@ test_that("fill = NA draws an area's outline alone, its fill clear so a click in
 test_that("in the page, a ring and an outline are drawn, and a click inside each finds its row", {
   skip_if_no_spatial()
   skip_if_no_chrome()
-  pos <- rr_example("trawlsurvey")
+  pos <- og_example("trawlsurvey")
   dir <- withr::local_tempdir()
-  m <- rr_map(view = list(center = c(-21, 64.5), zoom = 5)) |>
-    rr_polygon(rr_example("dansk_harbours"), fill = NA, colour = "#b2182b", id = "harbours") |>
-    rr_point(pos, colour = behaviour, size = 30, stroke = 3, id = "rings")
-  rr_bundle(m, dir, overwrite = TRUE)
+  m <- og_map(view = list(center = c(-21, 64.5), zoom = 5)) |>
+    og_polygon(og_example("dansk_harbours"), fill = NA, colour = "#b2182b", id = "harbours") |>
+    og_point(pos, colour = behaviour, size = 30, stroke = 3, id = "rings")
+  og_bundle(m, dir, overwrite = TRUE)
   b <- open_page(paste0(serve_dir(dir), "index.html"))
   expect_true(wait_until(function() {
     isTRUE(page_eval(b, "typeof map !== 'undefined' && map.loaded() && map.queryRenderedFeatures({ layers: ['rings-dot'] }).length > 0"))

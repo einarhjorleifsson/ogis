@@ -6,12 +6,12 @@ knitr:
     comment: "#>"
 ---
 
-`rr_text()` writes a column's values on the map: names, ids, numbers. Each of its looks takes a value, or a column
+`og_text()` writes a column's values on the map: names, ids, numbers. Each of its looks takes a value, or a column
 written bare, so every row may have its own. Where two labels meet, MapLibre draws the first placed and leaves out the
 other; zoom in and they part.
 
 ```{r}
-library(rebelrebel)
+library(ogis)
 ```
 
 ## At points, in areas and along lines
@@ -21,10 +21,10 @@ south, east and north (the harbours reach far beyond it).
 
 ```{r}
 #| out-height: 400px
-harbours <- rr_example("dansk_harbours")
-rr_map(view = list(bounds = c(8, 54.5, 13, 58))) |>
-  rr_polygon(harbours, fill = "#d9822b", name = "Harbours") |>
-  rr_text(harbours, label = SI_HARB, fontface = "italic",
+harbours <- og_example("dansk_harbours")
+og_map(view = list(bounds = c(8, 54.5, 13, 58))) |>
+  og_polygon(harbours, fill = "#d9822b", name = "Harbours") |>
+  og_text(harbours, label = SI_HARB, fontface = "italic",
           name = "Harbour ids")
 ```
 
@@ -33,10 +33,10 @@ its id.
 
 ```{r}
 #| out-height: 400px
-tows <- rr_example("trawlsurveytows")
-rr_map(view = list(bounds = c(-24.5, 65.2, -21.5, 66.6))) |>
-  rr_line(tows, name = "Tows") |>
-  rr_text(tows, label = id.lgs, size = 11, offset = c(0, 0.8),
+tows <- og_example("trawlsurveytows")
+og_map(view = list(bounds = c(-24.5, 65.2, -21.5, 66.6))) |>
+  og_line(tows, name = "Tows") |>
+  og_text(tows, label = id.lgs, size = 11, offset = c(0, 0.8),
           name = "Tow ids")
 ```
 
@@ -51,13 +51,13 @@ positions on a tow show from zoom 4, the others from zoom 9 (zoom in to see them
 placed first.
 
 ```{r}
-positions <- rr_example("trawlsurvey") |>
+positions <- og_example("trawlsurvey") |>
   dplyr::mutate(
     turn = 90 - heading,
     from = dplyr::if_else(behaviour == "hauling", 4, 9)
   )
-rr_map() |>
-  rr_text(positions, label = vid, angle = turn, minzoom = from,
+og_map() |>
+  og_text(positions, label = vid, angle = turn, minzoom = from,
           priority = speed, colour = behaviour, legend = TRUE,
           name = "Positions")
 ```

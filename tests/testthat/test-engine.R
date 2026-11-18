@@ -4,8 +4,8 @@ test_that("a click survives MapLibre's lost index: the layer's data sent again, 
   skip_if_no_spatial()
   skip_if_no_chrome()
   dir <- withr::local_tempdir()
-  m <- rr_example("trawlsurvey") |> rr_point(popup = c(vid, speed), name = "Points")
-  rr_bundle(m, dir, overwrite = TRUE)
+  m <- og_example("trawlsurvey") |> og_point(popup = c(vid, speed), name = "Points")
+  og_bundle(m, dir, overwrite = TRUE)
   b <- open_page(paste0(serve_dir(dir), "index.html"))
   errors <- character()
   b$Runtime$enable()
@@ -34,7 +34,7 @@ test_that("a click survives MapLibre's lost index: the layer's data sent again, 
 })
 
 test_that("every query of the page is guarded: none calls MapLibre's queryRenderedFeatures but query()", {
-  page <- readLines(system.file("engine", "index.html", package = "rebelrebel"), warn = FALSE)
+  page <- readLines(system.file("engine", "index.html", package = "ogis"), warn = FALSE)
   calls <- grep("map[.]queryRenderedFeatures", page, value = TRUE)
   expect_length(calls, 1) # in query() itself
   expect_match(calls, "const q = list =>", fixed = TRUE)
@@ -46,15 +46,15 @@ test_that("served: a note's pin opens its note, a hover shows a label, the point
   skip_if_no_spatial()
   skip_if_no_chrome()
   skip_if(!isTRUE(l10n_info()[["UTF-8"]]), "notes are written in a UTF-8 locale")
-  pings <- rr_example("trawlsurvey")
+  pings <- og_example("trawlsurvey")
   at <- dplyr::collect(utils::head(dplyr::arrange(pings, time), 400))[c(1, 400), ] # a ping, and one far from it
   notes <- file.path(withr::local_tempdir(), "notes.geojson")
-  rr_notes_add(notes, "a note on the first ping", lon = at$lon[1], lat = at$lat[1])
-  m <- pings |> rr_point(popup = c(vid, speed), hover = vid, name = "Points")
-  url <- rr_serve(m, open = FALSE, wait = FALSE, notes = notes)
-  withr::defer(rr_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
+  og_notes_add(notes, "a note on the first ping", lon = at$lon[1], lat = at$lat[1])
+  m <- pings |> og_point(popup = c(vid, speed), hover = vid, name = "Points")
+  url <- og_serve(m, open = FALSE, wait = FALSE, notes = notes)
+  withr::defer(og_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
   b <- open_page(url)
-  expect_true(wait_until(function() isTRUE(page_eval(b, 'map.loaded() && !!map.getLayer("rb-notes-dot") && map.queryRenderedFeatures({ layers: ["rb-notes-dot"] }).length > 0')), 30))
+  expect_true(wait_until(function() isTRUE(page_eval(b, 'map.loaded() && !!map.getLayer("og-notes-dot") && map.queryRenderedFeatures({ layers: ["og-notes-dot"] }).length > 0')), 30))
   px <- function(lon, lat) unlist(page_eval(b, sprintf(
     '(() => { const p = map.project([%.8f, %.8f]), r = map.getContainer().getBoundingClientRect(); return [r.left + p.x, r.top + p.y]; })()', lon, lat)))
   mouse <- function(xy, click = FALSE) {
@@ -74,7 +74,7 @@ test_that("served: a note's pin opens its note, a hover shows a label, the point
   expect_true(wait_until(function() isTRUE(page_eval(b, "map.loaded()")), 20))
   mouse(px(at$lon[2], at$lat[2]))
   expect_true(wait_until(function() identical(page_eval(b, "map.getCanvas().style.cursor"), "pointer"), 10))
-  expect_true(wait_until(function() grepl(as.character(at$vid[2]), page_eval(b, 'document.querySelector(".rb-hover")?.textContent ?? "-"')), 10))
+  expect_true(wait_until(function() grepl(as.character(at$vid[2]), page_eval(b, 'document.querySelector(".og-hover")?.textContent ?? "-"')), 10))
   r <- page_eval(b, "(() => { const r = map.getContainer().getBoundingClientRect(); return [r.left + 5, r.top + r.height - 5]; })()")
   mouse(unlist(r))
   expect_true(wait_until(function() identical(page_eval(b, "map.getCanvas().style.cursor"), ""), 10))

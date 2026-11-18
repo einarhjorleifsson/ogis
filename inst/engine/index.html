@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Map</title>
-<!-- rebelrebel's map viewer (rr_map(), rr_serve()): the engine. What it shows comes from its config, which the server
+<!-- ogis's map viewer (og_map(), og_serve()): the engine. What it shows comes from its config, which the server
      writes into the script tag "config" below as it serves the page. -->
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <script src="vendor/maplibre-gl.js"></script>
@@ -91,16 +91,16 @@
   .langs button.on { background: var(--bar); border-color: var(--bar); color: #fff; }
   #menu, #close { display: none; }
   /* a feature's label on hover (popup `hover`): light, beside the pointer, never in its way */
-  .rb-hover { pointer-events: none; }
-  .rb-hover .maplibregl-popup-content { padding: 3px 8px; background: rgba(255,255,255,.93); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-  .rb-hover .maplibregl-popup-tip { display: none; }
+  .og-hover { pointer-events: none; }
+  .og-hover .maplibregl-popup-content { padding: 3px 8px; background: rgba(255,255,255,.93); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .og-hover .maplibregl-popup-tip { display: none; }
   /* a feature's row on a click (a layer function's popup): a table of its columns, scrolling when long */
-  .rr-row-popup .rr-row-body { max-height: min(55vh, 420px); overflow-y: auto; margin-top: 4px; }
-  table.rr-row { border-collapse: collapse; font-size: 13px; }
-  table.rr-row th { text-align: left; font-weight: normal; color: #5a6470; padding: 1px 10px 1px 0; vertical-align: top; white-space: nowrap; }
-  table.rr-row td { padding: 1px 0; word-break: break-word; }
-  img.rr-thumb { max-width: 220px; max-height: 160px; display: block; }
-  /* the notes (rr_serve(notes = )): pins on the map, a thread each, listed in their group */
+  .og-row-popup .og-row-body { max-height: min(55vh, 420px); overflow-y: auto; margin-top: 4px; }
+  table.og-row { border-collapse: collapse; font-size: 13px; }
+  table.og-row th { text-align: left; font-weight: normal; color: #5a6470; padding: 1px 10px 1px 0; vertical-align: top; white-space: nowrap; }
+  table.og-row td { padding: 1px 0; word-break: break-word; }
+  img.og-thumb { max-width: 220px; max-height: 160px; display: block; }
+  /* the notes (og_serve(notes = )): pins on the map, a thread each, listed in their group */
   #n-add.on { background: var(--bar); color: #fff; border-color: var(--bar); }
   #n-list { list-style: none; margin: 6px 0 0; padding: 0; max-height: 40vh; overflow-y: auto; }
   #n-list li { display: flex; gap: 6px; padding: 3px 2px; cursor: pointer; border-top: 1px solid var(--line); }
@@ -109,8 +109,8 @@
                  box-shadow: 0 0 0 .5px #666; }
   #n-list li span { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .note { width: min(300px, 70vw); }
-  /* a feature's verdict (rr_serve(verdicts = )): a button an option, the answer given filled in its colour */
-  .rb-verdict-popup { max-height: min(65vh, 560px); overflow-y: auto; }
+  /* a feature's verdict (og_serve(verdicts = )): a button an option, the answer given filled in its colour */
+  .og-verdict-popup { max-height: min(65vh, 560px); overflow-y: auto; }
   .verdict { margin: 6px 0 7px; padding: 6px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .verdict .v-opts { display: flex; flex-wrap: wrap; gap: 4px; }
   .verdict button { border: 1.5px solid var(--vc); background: #fff; color: #222; border-radius: 4px; padding: 2px 8px;
@@ -134,7 +134,7 @@
   .note textarea { width: 100%; box-sizing: border-box; font: inherit; margin-top: 6px; resize: vertical; }
   .note .acts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 4px; }
   .note .err { color: #b30000; margin-top: 3px; }
-  /* the time panel (rr_time()): under the map, beside the sidebar */
+  /* the time panel (og_time()): under the map, beside the sidebar */
   :root { --timeh: clamp(230px, 36vh, 360px); }
   body.has-time #map { bottom: var(--timeh); }
   #timep { position: absolute; left: var(--side); right: 0; bottom: 0; height: var(--timeh); z-index: 2; background: #fff;
@@ -179,7 +179,7 @@
   <!-- a search over the layers' texts (search = ), shown when a layer has one -->
   <div id="find" hidden><input id="find-q" type="search" autocomplete="off" data-tp="findPlaceholder"><ol id="find-hits"></ol></div>
   <div id="groups">
-    <!-- the time panel's controls (rr_time()), shown when the map has one -->
+    <!-- the time panel's controls (og_time()), shown when the map has one -->
     <details class="group" id="g-time" open hidden>
       <summary data-t="gTime"></summary>
       <div class="body">
@@ -192,7 +192,7 @@
         <div class="row"><button id="t-whole" data-t="tWholeBtn" data-tt="tWholeTip"></button></div>
       </div>
     </details>
-    <!-- the notes (rr_serve(notes = )), shown when the server keeps them -->
+    <!-- the notes (og_serve(notes = )), shown when the server keeps them -->
     <details class="group" id="g-notes" open hidden>
       <summary data-t="gNotes"></summary>
       <div class="body">
@@ -235,7 +235,7 @@
 <script id="config" type="application/json">__CONFIG__</script>
 <script id="bundle" type="application/json">__BUNDLE__</script>
 <script>
-// The engine's version: rr_serve() sends its own in /meta, and a server older than the page is named as such
+// The engine's version: og_serve() sends its own in /meta, and a server older than the page is named as such
 const ENGINE = 7;
 // The engine's texts, in English; a config adds languages and the texts of its layers ({1}, {2} filled in here)
 const ENGINE_TEXTS = {
@@ -315,21 +315,21 @@ const G = LAYERS.find(l => l.kind === "grid");   // one grid layer at most, with
 const SOURCES = new Set(LAYERS.map(l => l.id));    // each layer's source is named by its id
 const DEM = new Set(LAYERS.filter(l => l.kind === "dem").map(l => l.id));   // elevations, drawn under a grid
 const CONTOUR = new Set(LAYERS.filter(l => l.kind === "contour").map(l => l.id));   // over them, under the labels
-// the order the layers are drawn in, the later over the earlier (rr_map()'s `order`), each among its own kind: the
+// the order the layers are drawn in, the later over the earlier (og_map()'s `order`), each among its own kind: the
 // elevations, the contours over them and the grid under the base's labels, the others over everything
 const RANK = new Map(LAYERS.map((l, i) => [l.id, i]));
 const band = id => DEM.has(id) ? "dem" : CONTOUR.has(id) ? "contour" : G?.id === id ? "grid" : "over";
-// The time panel (rr_time()), if the map has one; its sources are the page's, kept over a change of base map
+// The time panel (og_time()), if the map has one; its sources are the page's, kept over a change of base map
 const TP = CONFIG.time ?? null;
 let TS = null, TU = null, TW = null;   // the vessel's span as loaded, its chart, and the window [from, to] in seconds
-if (TP) for (const id of ["rb-time-line", "rb-time-pts", "rb-time-hover"]) SOURCES.add(id);
-// A bundle (rr_bundle()): the page opened as a file, with no server. Its meta is here; its tiles (an archive a source)
-// and data are script files beside it, each handing its value to RB_BUNDLE(), since a page opened as a file may load a
+if (TP) for (const id of ["og-time-line", "og-time-pts", "og-time-hover"]) SOURCES.add(id);
+// A bundle (og_bundle()): the page opened as a file, with no server. Its meta is here; its tiles (an archive a source)
+// and data are script files beside it, each handing its value to OG_BUNDLE(), since a page opened as a file may load a
 // script where it may not fetch(). Tiles go to MapLibre through the bundle:// protocol; layers on the same tiles share
 // their archive
 const BUNDLE = JSON.parse(document.getElementById("bundle")?.textContent || "null");
 const bundleWait = {};
-window.RB_BUNDLE = (key, v) => { if (bundleWait[key]) bundleWait[key].v = v; };
+window.OG_BUNDLE = (key, v) => { if (bundleWait[key]) bundleWait[key].v = v; };
 const bundleRows = {};   // a layer's rows in a bundle, once read on its first click
 function bundleLoad(key) {
   bundleWait[key] ??= { p: new Promise((resolve, reject) => {
@@ -369,7 +369,7 @@ const loadPm = () => pmLib ??= new Promise((resolve, reject) => {
 });
 const HOSTED = /^https?:$/.test(location.protocol);
 function bundleRanges(key) {
-  const url = `${key}.pmtiles.js`, pre = `RB_BUNDLE("${key}.pmtiles","`;
+  const url = `${key}.pmtiles.js`, pre = `OG_BUNDLE("${key}.pmtiles","`;
   const head = new TextEncoder().encode(pre).length;   // in bytes, for a range; the text's own length for a slice
   let whole = null;
   return {
@@ -404,16 +404,16 @@ const bundleUrl = url => { const s = url.slice("bundle://".length).split("/"); r
 if (BUNDLE) maplibregl.addProtocol("bundle", async p => ({
   data: (await bundleTile(...bundleUrl(p.url)).catch(() => null)) ?? new ArrayBuffer(0)
 }));
-// The notes (rr_serve(notes = )): only from a server that keeps them, never in a bundle. A thread's pin is red while
+// The notes (og_serve(notes = )): only from a server that keeps them, never in a bundle. A thread's pin is red while
 // its last word is the reader's, blue once answered
 const NOTES = !BUNDLE && CONFIG.notes ? CONFIG.notes : null;
 const VERDICTS = !BUNDLE && CONFIG.verdicts ? CONFIG.verdicts : null;
-if (NOTES) SOURCES.add("rb-notes");
+if (NOTES) SOURCES.add("og-notes");
 const N_WAIT = "#d7301f", N_DONE = "#2c5d87";
 let noting = false, notes = [], notePopup = null, noteShown = null;   // placing a note; the notes; the thread shown
 // a layer's tiles: the server's, or the bundle's
 const layerTiles =(l, ext, v) => BUNDLE ? `bundle://${bundleTiles(l)}/{z}/{x}/{y}` : `${location.origin}/tiles/${l.id}/{z}/{x}/{y}.${ext}?v=${v}`;
-// A bundle's grid (rr_bundle()'s `grids`): its rows by cell at a few cell sizes, in blocks of cells. Each tile the
+// A bundle's grid (og_bundle()'s `grids`): its rows by cell at a few cell sizes, in blocks of cells. Each tile the
 // map asks for is made here, as its server would: the blocks under it at the size that makes a cell one to two screen
 // pixels (the `px` filter times that), their rows kept by the filters in the tile's address and summed by cell, sent
 // as a vector tile with the server's fields. The blocks read are kept, 256 MB at most, the least recently used let go
@@ -566,7 +566,7 @@ let LANG = LANGS.includes(CONFIG.language) ? CONFIG.language : LANGS.includes("e
 let addressRead = false, userColour = false, addressTimer = 0;
 const counts = {};      // a layer's features, for the text beside it; -1 when the server has none of them
 let FONT = ["Open Sans Regular"];   // the first style's label font, for the layers' labels on any base map
-// a text layer's faces (rr_text(fontface = )): each the fonts the base style itself uses for that face, for a base
+// a text layer's faces (og_text(fontface = )): each the fonts the base style itself uses for that face, for a base
 // map's glyphs hold only its own fonts (Carto's: Montserrat Medium, Montserrat Regular Italic, Montserrat SemiBold,
 // Montserrat SemiBold Italic); a face the style lacks takes the plain one
 let FACES = { plain: FONT };
@@ -577,7 +577,7 @@ function facesOf(style) {
   const plain = FONT;
   return { plain, italic: find(false, true) ?? plain, bold: find(true, false) ?? plain, "bold.italic": find(true, true) ?? find(false, true) ?? plain };
 }
-// a style's `rr_face` (a face, or ["get", column]) as MapLibre's text-font: the base style's fonts for each face
+// a style's `og_face` (a face, or ["get", column]) as MapLibre's text-font: the base style's fonts for each face
 function faceFont(face) {
   if (typeof face === "string") return FACES[face] ?? FACES.plain;
   return ["match", face, ...["italic", "bold", "bold.italic"].flatMap(k => [k, ["literal", FACES[k]]]), ["literal", FACES.plain]];
@@ -656,7 +656,7 @@ function applyShade(l) {
   $(l.id + "-opval").textContent = v.op + " %";
 }
 // A view's fit: the page's from the layer's own tiles in view (tileFit), in a bundle and where the layer's is "page"
-// (rr_tiles_dem()'s tiles, or `fit = TRUE`); else the server's (the layer's `fit`, a function); it rejects where the
+// (og_tiles_dem()'s tiles, or `fit = TRUE`); else the server's (the layer's `fit`, a function); it rejects where the
 // view has no values
 async function viewFit(l) {
   const b = map.getBounds();
@@ -668,7 +668,7 @@ async function viewFit(l) {
 }
 // A level elevation tile at nodata (the bundle's `fit`'s, 0 by default), in the layer's encoding and size, a PNG (a
 // lossless image, whatever the layer's format), made once a layer: a bundle's answer where it holds no tile, as
-// rr_tiles_dem() answers beyond its grid
+// og_tiles_dem() answers beyond its grid
 const levelTiles = {};
 function levelTile(l) {
   return levelTiles[l.id] ??= (async () => {
@@ -702,7 +702,7 @@ function demTile(l, z, x, y) {
   }
   return demCache.get(key);
 }
-// A fit made in the page, by its rules (rr_bundle()'s `fit`, or a served map's defaults), from the layer's tiles at the
+// A fit made in the page, by its rules (og_bundle()'s `fit`, or a served map's defaults), from the layer's tiles at the
 // map's zoom (to their deepest)
 // under the view, every so many pixels for a million at most: the values are the elevations, or the depths below sea
 // level for a colour `of` depth or contours with a negative multiplier, an elevation of `nodata` left out. Floor and
@@ -1230,7 +1230,7 @@ const healing = new Set();
 function heal(src) {
   if (healing.has(src)) return;
   healing.add(src);
-  console.warn(`rebelrebel: the index of ${src} was lost (a fault of MapLibre 5), its data loaded again`);
+  console.warn(`ogis: the index of ${src} was lost (a fault of MapLibre 5), its data loaded again`);
   try {
     const s = map.getSource(src);
     if (s?.type === "geojson") s.setData(s.serialize().data);
@@ -1514,12 +1514,12 @@ function addLayer(l, meta) {
     // the verdicts' marks and the notes' pins stay over every layer, one whose data come after them included
     const before = later ?? (DEM.has(l.id) ? (G && map.getLayer(G.id) ? G.id : firstSymbol())
                  : CONTOUR.has(l.id) ? firstSymbol()
-                 : map.getLayer("rb-verdict-mark") ? "rb-verdict-mark" : map.getLayer("rb-notes-dot") ? "rb-notes-dot" : undefined);
+                 : map.getLayer("og-verdict-mark") ? "og-verdict-mark" : map.getLayer("og-notes-dot") ? "og-notes-dot" : undefined);
     applyState(l);   // before the styles that read it
     for (const st of l.style) {
-      const { rr_face, ...rest } = st, spec = { ...rest, source: l.id };
+      const { og_face, ...rest } = st, spec = { ...rest, source: l.id };
       if (spec.type === "symbol" && spec.layout?.["text-field"] && !spec.layout["text-font"])
-        spec.layout = { ...spec.layout, "text-font": rr_face ? faceFont(rr_face) : FONT };
+        spec.layout = { ...spec.layout, "text-font": og_face ? faceFont(og_face) : FONT };
       map.addLayer(spec, before);
     }
     applyVariant(l); applyColour(l); applyShade(l); applyChoice(l); showLayer(l); countText(l); layerDone(l);
@@ -1583,7 +1583,7 @@ function addLayer(l, meta) {
     }).catch(() => missing(l));
   }
 }
-// a layer's features known by a property of theirs (rr_layer(key = ); a layer function's rr_row): MapLibre's feature id,
+// a layer's features known by a property of theirs (og_layer(key = ); a layer function's og_row): MapLibre's feature id,
 // by which a style reads a feature's state
 function keyOf(l) { return l.key ? { promoteId: l.key } : {}; }
 function missing(l) {
@@ -1665,7 +1665,7 @@ function choiceFilter(l, st) {
   const parts = [st.filter, ...conds, ...timeFilter(l), ...Object.values(l.extra ?? {})].filter(Boolean);
   return parts.length === 0 ? null : parts.length === 1 ? parts[0] : ["all", ...parts];
 }
-// The time panel's vessel and span on a layer whose features carry them (rr_time()): its pings from the span's
+// The time panel's vessel and span on a layer whose features carry them (og_time()): its pings from the span's
 // first to its last, its lines that overlap the span. Set as a vessel or span is loaded, not as the window moves
 function timeFilter(l) {
   const f = TP?.layers?.find(x => x.id === l.id);
@@ -1833,7 +1833,7 @@ function rowValue(c) {
   if (c.type === "logical") return tr(v ? "rowYes" : "rowNo");
   const t = String(v);
   if (/^https?:\/\//i.test(t)) {
-    if (/\.(jpe?g|png|webp|gif)(\?|#|$)/i.test(t)) return `<a href="${esc(t)}" target="_blank" rel="noopener"><img class="rr-thumb" src="${esc(t)}" alt="" loading="lazy"></a>`;
+    if (/\.(jpe?g|png|webp|gif)(\?|#|$)/i.test(t)) return `<a href="${esc(t)}" target="_blank" rel="noopener"><img class="og-thumb" src="${esc(t)}" alt="" loading="lazy"></a>`;
     if (/\.(mp4|webm)(\?|#|$)/i.test(t) || /(youtube\.com|youtu\.be|vimeo\.com)\//i.test(t)) return `<a href="${esc(t)}" target="_blank" rel="noopener">\u25B6 ${esc(tr("rowVideo"))}</a>`;
     return `<a href="${esc(t)}" target="_blank" rel="noopener">${esc(t)}</a>`;
   }
@@ -1844,15 +1844,15 @@ function rowValue(c) {
 function rowHtml(cols) {
   const th = c => `<th${c.description ? ` title="${esc(c.description)}"` : ""}>${esc(c.label ?? c.name)}${c.unit ? ` (${esc(c.unit)})` : ""}</th>`;
   const td = c => `<td>${rowValue(c)}${c.code ? ` \u00b7 ${esc(c.code)}` : ""}</td>`;
-  return `<table class="rr-row">${cols.map(c => `<tr>${th(c)}${td(c)}</tr>`).join("")}</table>`;
+  return `<table class="og-row">${cols.map(c => `<tr>${th(c)}${td(c)}</tr>`).join("")}</table>`;
 }
 // A feature's row as a table, fetched into `body`: from the server, or in a bundle from the layer's rows file, read on
 // the layer's first click and kept, not read again at every click
 function rowOf(l, p) {
   return BUNDLE ? (bundleRows[l.id] ??= bundleLoad(`data/${l.id}_rows`)).then(d => {
-    const v = d.rows[p.rr_row - 1];                                  // row n at n - 1
+    const v = d.rows[p.og_row - 1];                                  // row n at n - 1
     return v ? { columns: d.cols.map((c, i) => ({ ...c, value: v[i] ?? null, code: c.codes?.[String(v[i])] })) } : null;
-  }) : fetch(`/row/${l.id}/${p.rr_row}`).then(r => r.ok ? r.json() : null);
+  }) : fetch(`/row/${l.id}/${p.og_row}`).then(r => r.ok ? r.json() : null);
 }
 function rowInto(l, p, body) {
   body.innerHTML = esc(tr("rowLoading"));
@@ -1863,21 +1863,21 @@ function rowInto(l, p, body) {
 // A click on a feature: its title and fields. Registered top layer first, so the topmost feature under the click speaks
 function featurePopup(l, e) {
   popup?.remove();
-  const box = document.createElement("div"), p = e.features[0].properties, row = l.popup.row && p.rr_row !== undefined;
+  const box = document.createElement("div"), p = e.features[0].properties, row = l.popup.row && p.og_row !== undefined;
   if (row && !(VERDICTS && l.popup.verdict)) {
-    box.className = "rr-row-popup";
-    box.innerHTML = `${featureHtml(l, p, false)}<div class="rr-row-body"></div>`;
-    rowInto(l, p, box.querySelector(".rr-row-body"));
+    box.className = "og-row-popup";
+    box.innerHTML = `${featureHtml(l, p, false)}<div class="og-row-body"></div>`;
+    rowInto(l, p, box.querySelector(".og-row-body"));
     popup = new maplibregl.Popup({ closeButton: true, maxWidth: l.popup.maxWidth ?? "360px" }).setLngLat(e.lngLat)
       .setDOMContent(box).addTo(map);
     return;
   }
   if (VERDICTS && l.popup.verdict) {                                 // the questions under the title, the fields after
     const title = featureHtml(l, p, false), rest = document.createElement("div");
-    box.className = "rb-verdict-popup";
+    box.className = "og-verdict-popup";
     box.innerHTML = title;
     // a layer function's fields are its row, fetched as without the questions; the others are in the feature
-    if (row) { rest.className = "rr-row-body"; rowInto(l, p, rest); }
+    if (row) { rest.className = "og-row-body"; rowInto(l, p, rest); }
     else rest.innerHTML = featureHtml(l, p).slice(title.length).replace(/^<br>/, "");
     box.append(verdictBlock(l, e.features[0], e.lngLat), rest);
   } else box.innerHTML = featureHtml(l, p);
@@ -1886,7 +1886,7 @@ function featurePopup(l, e) {
     .addTo(map);
 }
 
-// The verdicts (rr_serve(verdicts = )): in a feature's popup its layer's questions, a button for each answer, the
+// The verdicts (og_serve(verdicts = )): in a feature's popup its layer's questions, a button for each answer, the
 // answer given filled in its colour; an answer that names another feature (`other`) opens a box for the name, the
 // names in view offered, sent with Enter or ✓; a question an earlier answer skips is left out; the note last, sent
 // with Enter or ✓. Each is sent with the feature's title and place (its own for a point, else where it was clicked). A
@@ -1903,7 +1903,7 @@ function verdictColour(question, value) {
 }
 async function verdictsCall(method, body = null) {
   const r = await fetch("/verdicts", { method, cache: "no-store", body: body ? JSON.stringify(body) : undefined,
-                                       headers: { "X-RB-Notes": "1", ...(body ? { "Content-Type": "application/json" } : {}) } });
+                                       headers: { "X-OG-Notes": "1", ...(body ? { "Content-Type": "application/json" } : {}) } });
   const t = await r.text();
   if (!r.ok) throw new Error(t || `HTTP ${r.status}`);
   return JSON.parse(t);
@@ -1919,7 +1919,7 @@ function verdictsFrom(r) {
     m[qi === 0 ? "fill" : "ring"] = verdictColour(qs[qi], v.value);
     marks.set(k, m);
   }
-  map.getSource("rb-verdicts")?.setData({ type: "FeatureCollection", features: [...marks.values()]
+  map.getSource("og-verdicts")?.setData({ type: "FeatureCollection", features: [...marks.values()]
     .map(m => ({ type: "Feature", properties: { fill: m.fill ?? "#ffffff", ring: m.ring ?? "#ffffff" },
                  geometry: { type: "Point", coordinates: [m.lon, m.lat] } })) });
 }
@@ -1941,7 +1941,7 @@ function verdictBlock(l, f, at) {
   if (id === undefined || id === null || id === "") return div;      // a feature with no name takes no verdict
   const pt = f.geometry?.type === "Point" ? f.geometry.coordinates : [at.lng, at.lat];
   const now = q => verdicts.get(verdictKey(verdictStore(l), String(id), q));
-  const list = `rb-vnames-${++vListN}`;
+  const list = `og-vnames-${++vListN}`;
   let asking = null, msg = "";                                       // a question whose answer waits for a name
   const skipped = q => Object.entries(q.skip ?? {}).some(([k, vals]) => vals.includes(now(k)?.value));
   const draw = () => {
@@ -1993,20 +1993,20 @@ function verdictBlock(l, f, at) {
   return div;
 }
 function verdictsSetup() {
-  map.addSource("rb-verdicts", { type: "geojson", data: EMPTY });
-  map.addLayer({ id: "rb-verdict-mark", type: "circle", source: "rb-verdicts",
+  map.addSource("og-verdicts", { type: "geojson", data: EMPTY });
+  map.addLayer({ id: "og-verdict-mark", type: "circle", source: "og-verdicts",
                  paint: { "circle-radius": 5, "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "ring"],
                           "circle-stroke-width": 2.2 } },
-               map.getLayer("rb-notes-dot") ? "rb-notes-dot" : undefined);
+               map.getLayer("og-notes-dot") ? "og-notes-dot" : undefined);
   verdictsLoad();
   window.addEventListener("focus", verdictsLoad);
 }
-// The notes' clicks first (rr_serve(notes = )): a click that places a note, or on a note's pin, opens no feature
+// The notes' clicks first (og_serve(notes = )): a click that places a note, or on a note's pin, opens no feature
 if (NOTES) map.on("click", noteClick);
 // One click for every layer that answers one (popup `click`): the topmost feature under it speaks. Its query is guarded
 // (query()), and tried once more when the map is idle if a layer's index was lost and its source loaded again
 const CLICK = new Map(OTHER.flatMap(l => (l.popup?.click ?? []).map(id => [id, l])));
-// a layer whose clicks a page's own script takes (rr.on("click", id, fn)), and the clicks counted, so a row read for
+// a layer whose clicks a page's own script takes (og.on("click", id, fn)), and the clicks counted, so a row read for
 // a click that a newer one has followed is answered null
 const scriptClicks = new Map();
 let clickSeq = 0;
@@ -2021,9 +2021,9 @@ function clickAt(e, again) {
   if (own) {
     popup?.remove();
     const p = f.properties;
-    const row = () => (p.rr_row === undefined ? Promise.resolve(null) : rowOf(l, p))
+    const row = () => (p.og_row === undefined ? Promise.resolve(null) : rowOf(l, p))
       .then(r => seq === clickSeq ? r?.columns ?? null : null).catch(() => null);
-    try { own({ feature: f, lngLat: e.lngLat, point: e.point, row }); } catch (err) { console.error("rebelrebel: a page's click", err); }
+    try { own({ feature: f, lngLat: e.lngLat, point: e.point, row }); } catch (err) { console.error("ogis: a page's click", err); }
     return;
   }
   featurePopup(CLICK.get(f.layer.id), { lngLat: e.lngLat, point: e.point, originalEvent: e.originalEvent, features: [f] });
@@ -2085,7 +2085,7 @@ function findGo({ l, d, i }) {
   // once drawn there: its feature's popup, as a click's; one not drawn (filtered, or a label hidden by another) its text
   map.once("idle", () => {
     const p = map.project(at), ids = l.style.map(s => s.id).filter(id => map.getLayer(id));
-    const f = query([[p.x - 6, p.y - 6], [p.x + 6, p.y + 6]], ids).find(x => x.properties.rr_row === d.r[i]);
+    const f = query([[p.x - 6, p.y - 6], [p.x + 6, p.y + 6]], ids).find(x => x.properties.og_row === d.r[i]);
     const pl = f && CLICK.get(f.layer.id);
     if (pl) featurePopup(pl, { lngLat: at, point: p, originalEvent: {}, features: [f] });
     else popup = new maplibregl.Popup({ closeButton: false }).setLngLat(at).setHTML(`<b>${esc(d.t[i])}</b>`).addTo(map);
@@ -2107,7 +2107,7 @@ map.on("mousemove", e => {
   pointerFrame ||= requestAnimationFrame(() => {
     pointerFrame = 0;
     if (noting) return;
-    const ids = [...CLICK.keys(), ...scriptStyles(), "rb-notes-dot", "rb-time-dot", ...(G ? [G.id] : [])];
+    const ids = [...CLICK.keys(), ...scriptStyles(), "og-notes-dot", "og-time-dot", ...(G ? [G.id] : [])];
     const over = !pointerEvent.originalEvent.buttons && query(pointerEvent.point, ids).length > 0;
     map.getCanvas().style.cursor = over ? "pointer" : "";
   });
@@ -2130,7 +2130,7 @@ function hoverAt(e) {
   const { f, key } = h, l = HOVER.get(f.layer.id);
   if (key === hoverClicked) return hideHover();
   hoverClicked = null;
-  hoverTip ??= new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "rb-hover", offset: 14,
+  hoverTip ??= new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "og-hover", offset: 14,
                                       maxWidth: l.popup.maxWidth ?? "300px" });
   if (key !== hoverKey) hoverTip.setHTML(featureHtml(l, f.properties, !!l.popup.hover_fields));
   hoverKey = key;
@@ -2147,8 +2147,8 @@ if (HOVER.size) {
   map.on("click", e => { hoverClicked = hoverFeature(e.point)?.key ?? null; hideHover(); });
 }
 
-// A page's own script (rr_script()) --------------------------------------------------------------------------------
-// Run once every layer is added (or found missing), each given one object, `rr`: what a page built on the map may use
+// A page's own script (og_script()) --------------------------------------------------------------------------------
+// Run once every layer is added (or found missing), each given one object, `og`: what a page built on the map may use
 // of it, and nothing else of the page's (its DOM, its functions) is promised. Its css goes into the page's head
 let layersLeft = OTHER.length, scriptsRun = false;
 function layerDone(l) {
@@ -2158,13 +2158,13 @@ function layerDone(l) {
 }
 const pendingData = new Map();
 let dataFrame = 0;
-// the states a script set (rr.state()), set again once another base map's style has loaded
+// the states a script set (og.state()), set again once another base map's style has loaded
 const featureStates = new Map();
 map.on("style.load", () => { for (const { f, value } of featureStates.values()) if (map.getSource(f.source)) map.setFeatureState(f, value); });
-const RR = {
+const OG = {
   map,                                                          // MapLibre's map
-  served: !BUNDLE,                                              // false in a bundle: no server, no rr.fetch()
-  // a layer's MapLibre style ids and source (by its id, rr_point(id = ) and the others), or null
+  served: !BUNDLE,                                              // false in a bundle: no server, no og.fetch()
+  // a layer's MapLibre style ids and source (by its id, og_point(id = ) and the others), or null
   layer(id) {
     const l = OTHER.find(x => x.id === id);
     return l ? { id: l.id, styles: l.style.map(st => st.id), source: l.id, kind: l.kind, key: l.key ?? null } : null;
@@ -2174,7 +2174,7 @@ const RR = {
   // clears it; kept through a change of base map
   state(id, key, value) {
     const l = OTHER.find(x => x.id === id);
-    if (!l?.key || !map.getSource(id)) throw new Error(`rr.state(): "${id}" is not a layer whose features have a key`);
+    if (!l?.key || !map.getSource(id)) throw new Error(`og.state(): "${id}" is not a layer whose features have a key`);
     const f = { source: id, id: key, ...(map.getSource(id).type === "vector" ? { sourceLayer: l.style[0]?.["source-layer"] ?? "features" } : {}) };
     const k = `${id}\u001f${key}`;
     if (value === undefined) return map.getFeatureState(f);
@@ -2185,14 +2185,14 @@ const RR = {
   // a click on a layer's features taken by the page: fn({ feature, lngLat, point, row }), row() its row's columns
   // (those `popup` names), null when a newer click has come meanwhile; the layer's own popup is not shown
   on(type, id, fn) {
-    if (type !== "click") throw new Error('rr.on(): "click" is the one event');
-    if (!OTHER.some(l => l.id === id)) throw new Error(`rr.on(): the map has no layer "${id}"`);
+    if (type !== "click") throw new Error('og.on(): "click" is the one event');
+    if (!OTHER.some(l => l.id === id)) throw new Error(`og.on(): the map has no layer "${id}"`);
     scriptClicks.set(id, fn);
   },
   // a whole layer's data sent again (GeoJSON), at most once a frame, its count beside its name kept
   setData(id, data) {
     if (!OTHER.some(l => l.id === id) || map.getSource(id)?.type !== "geojson")
-      throw new Error(`rr.setData(): "${id}" is not a layer sent whole (whole = TRUE)`);
+      throw new Error(`og.setData(): "${id}" is not a layer sent whole (whole = TRUE)`);
     pendingData.set(id, data);
     dataFrame ||= requestAnimationFrame(() => {
       dataFrame = 0;
@@ -2206,7 +2206,7 @@ const RR = {
   // a filter of the page's on a layer, by a key of its own, with the engine's (choose); null removes it
   filter(id, key, expr) {
     const l = OTHER.find(x => x.id === id);
-    if (!l) throw new Error(`rr.filter(): the map has no layer "${id}"`);
+    if (!l) throw new Error(`og.filter(): the map has no layer "${id}"`);
     l.extra ??= {};
     if (expr == null) delete l.extra[key]; else l.extra[key] = expr;
     applyChoice(l);
@@ -2214,21 +2214,21 @@ const RR = {
   // a box in the sidebar, above the base maps, the page's to fill: its body
   panel(title) {
     const d = document.createElement("details");
-    d.className = "group rr-panel"; d.open = true;
+    d.className = "group og-panel"; d.open = true;
     d.innerHTML = '<summary></summary><div class="body"></div>';
     d.querySelector("summary").textContent = title;
     $("groups").insertBefore(d, $("g-base"));
     return d.querySelector(".body");
   },
-  // the page's own route (rr_serve(routes = )), fetched from this page: fetch()'s promise. The route's name, and after
+  // the page's own route (og_serve(routes = )), fetched from this page: fetch()'s promise. The route's name, and after
   // it a path and a query as written ("marks/12?full=1": the route marks, its path "/12", its query full = "1")
   fetch(name, init = {}) {
-    if (BUNDLE) return Promise.reject(new Error("rr.fetch(): a bundle has no server (rr.served is false)"));
+    if (BUNDLE) return Promise.reject(new Error("og.fetch(): a bundle has no server (og.served is false)"));
     const m = /^([a-z][a-z0-9_-]*)([/?].*)?$/.exec(String(name));
-    if (!m) return Promise.reject(new Error(`rr.fetch(): "${name}" is no route: its name (lower-case letters, digits, _ and -), then a path or a query if any`));
+    if (!m) return Promise.reject(new Error(`og.fetch(): "${name}" is no route: its name (lower-case letters, digits, _ and -), then a path or a query if any`));
     const json = typeof init.body === "string" ? { "Content-Type": "application/json" } : {};
     return fetch(`${location.origin}/x/${m[1]}${m[2] ?? ""}`,
-                 { ...init, cache: "no-store", headers: { "X-RB-Notes": "1", ...json, ...(init.headers ?? {}) } });
+                 { ...init, cache: "no-store", headers: { "X-OG-Notes": "1", ...json, ...(init.headers ?? {}) } });
   },
   // a file handed to the reader to save (what a page in a bundle, with no server, keeps)
   save(name, text, type = "text/plain;charset=utf-8") {
@@ -2239,19 +2239,19 @@ const RR = {
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   }
 };
-window.rr = RR;
+window.og = OG;
 function runScripts() {
   if (scriptsRun) return;
   scriptsRun = true;
   for (const sc of CONFIG.scripts ?? []) {
     if (sc.css) { const st = document.createElement("style"); st.textContent = sc.css; document.head.append(st); }
-    try { new Function("rr", sc.js)(RR); } catch (err) { console.error("rebelrebel: a page's script failed", err); }
+    try { new Function("og", sc.js)(OG); } catch (err) { console.error("ogis: a page's script failed", err); }
   }
 }
 
-// The notes (rr_serve(notes = )) -----------------------------------------------------------------------------------
+// The notes (og_serve(notes = )) -----------------------------------------------------------------------------------
 // "Add a note", then a click on the map: a note pinned there, with the features under it and the page's address,
-// written by the server to its file. A reply, from the page or from R (rr_notes_add()), joins the note's thread at
+// written by the server to its file. A reply, from the page or from R (og_notes_add()), joins the note's thread at
 // its place. The notes are asked for again when the page regains the focus and every 30 s, so a reply written in R
 // shows without a reload; a thread shown is drawn again when it has grown, unless a reply is being written in it
 // (functions, not constants: the page's language lists the notes before this part of the page has run)
@@ -2262,7 +2262,7 @@ function noteWho(a) { return a === "reader" ? tr("nReader") : a ?? ""; }
 function noteTime(t) { return String(t ?? "").replace("T", " ").slice(0, 16); }
 async function notesCall(method, path = "/notes", body = null) {
   const r = await fetch(path, { method, cache: "no-store", body: body ? JSON.stringify(body) : undefined,
-                                headers: { "X-RB-Notes": "1", ...(body ? { "Content-Type": "application/json" } : {}) } });
+                                headers: { "X-OG-Notes": "1", ...(body ? { "Content-Type": "application/json" } : {}) } });
   const t = await r.text();
   if (!r.ok) throw new Error(t || `HTTP ${r.status}`);
   return JSON.parse(t);
@@ -2271,7 +2271,7 @@ function notesFrom(fc) {
   const before = noteShown == null ? 0 : noteThread(noteShown).length;
   notes = (fc.features ?? []).map(f => ({ ...f.properties, lon: f.geometry?.coordinates?.[0], lat: f.geometry?.coordinates?.[1] }))
                              .filter(n => Number.isFinite(n.id));
-  map.getSource("rb-notes")?.setData({ type: "FeatureCollection", features: noteRoots()
+  map.getSource("og-notes")?.setData({ type: "FeatureCollection", features: noteRoots()
     .filter(n => Number.isFinite(n.lon) && Number.isFinite(n.lat))
     .map(n => ({ type: "Feature", properties: { id: n.id, waiting: noteWaiting(n.id) },
                  geometry: { type: "Point", coordinates: [n.lon, n.lat] } })) });
@@ -2321,7 +2321,7 @@ function noteClick(e) {
     notePlacing(false);
     return noteForm(e);
   }
-  const f = query(e.point, ["rb-notes-dot"])[0];
+  const f = query(e.point, ["og-notes-dot"])[0];
   if (!f) return;
   e.originalEvent.featureShown = true;
   noteOpen(f.properties.id);
@@ -2392,18 +2392,18 @@ function noteOpen(id, focus = true) {
   if (focus) box.querySelector("textarea").focus({ preventScroll: true });
 }
 function notesSetup() {
-  map.addSource("rb-notes", { type: "geojson", data: EMPTY });
-  map.addLayer({ id: "rb-notes-dot", type: "circle", source: "rb-notes",
+  map.addSource("og-notes", { type: "geojson", data: EMPTY });
+  map.addLayer({ id: "og-notes-dot", type: "circle", source: "og-notes",
                  paint: { "circle-radius": 9, "circle-color": ["case", ["get", "waiting"], N_WAIT, N_DONE],
                           "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
-  map.addLayer({ id: "rb-notes-id", type: "symbol", source: "rb-notes",
+  map.addLayer({ id: "og-notes-id", type: "symbol", source: "og-notes",
                  layout: { "text-field": ["to-string", ["get", "id"]], "text-font": FONT, "text-size": 11,
                            "text-allow-overlap": true, "text-ignore-placement": true },
                  paint: { "text-color": "#fff" } });
   $("n-add").addEventListener("click", () => notePlacing(!noting));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && noting) notePlacing(false); });
   $("n-show").addEventListener("change", () => {
-    for (const id of ["rb-notes-dot", "rb-notes-id"]) map.setLayoutProperty(id, "visibility", $("n-show").checked ? "visible" : "none");
+    for (const id of ["og-notes-dot", "og-notes-id"]) map.setLayoutProperty(id, "visibility", $("n-show").checked ? "visible" : "none");
   });
   $("n-list").addEventListener("click", e => {
     const n = notes.find(x => x.id === +e.target.closest("li")?.dataset.id);
@@ -2508,13 +2508,13 @@ if (G) {
   });
 }
 
-// The time panel (rr_time()) ---------------------------------------------------------------------------------------
+// The time panel (og_time()) ---------------------------------------------------------------------------------------
 // One vessel's span held whole in the page: its columns over time in a chart (uPlot), its marks and lanes, and on the
 // map the window's track and pings. A drag across the chart sets the window, a double click shows the whole span; a
 // hover marks the ping on the map, a click on a ping of the window marks its time on the chart. The map's window is
 // drawn as new data each time: a filter on a big source re-tiles it (0.3 s on 150,000 points, as measured)
 // where new data of a day take 17 ms, so the window's pings are thinned to T_MAX, a marked one always kept.
-// pings drawn at most; a silence that breaks the line (s; rr_time(max_gap_s = ), none by default); a lane's height
+// pings drawn at most; a silence that breaks the line (s; og_time(max_gap_s = ), none by default); a lane's height
 const T_MAX = 5000, T_GAP = TP?.max_gap_s ?? Infinity, LANE_H = 20;
 const T_COLS = ["#2c5d87", "#d95f02", "#1b9e77", "#7570b3", "#e7298a", "#66a61e"];   // the page's blue, then Dark2
 // a mark column's colour, the first red as before; then colours apart from the lines' and from each other on the dark
@@ -2588,8 +2588,8 @@ function timeSetup(q) {
   new ResizeObserver(() => TU?.setSize({ width: $("t-chart").clientWidth, height: $("t-chart").clientHeight })).observe($("t-chart"));
   // a click near a ping of the window (within 8 px: a ping is a small target) marks its time on the chart
   map.on("click", e => {
-    if (!TU || !map.getLayer("rb-time-dot")) return;
-    const { x, y } = e.point, fs = query([[x - 8, y - 8], [x + 8, y + 8]], ["rb-time-dot"]);
+    if (!TU || !map.getLayer("og-time-dot")) return;
+    const { x, y } = e.point, fs = query([[x - 8, y - 8], [x + 8, y + 8]], ["og-time-dot"]);
     let i = null, best = Infinity;
     for (const f of fs) {
       const p = map.project(f.geometry.coordinates), d = (p.x - x) ** 2 + (p.y - y) ** 2;
@@ -2632,24 +2632,24 @@ function timeLang() { tVessels(); tSpans(tVes()); tInfo(); TU?.redraw(false, fal
 // the window's track, its pings (coloured by the first column, a mark ringed) and the ping under the cursor, over every
 // other layer; the line drawn twice, dark under light, so it shows on any base map
 function tLayers() {
-  map.addSource("rb-time-line", { type: "geojson", data: EMPTY });
-  map.addSource("rb-time-pts", { type: "geojson", data: EMPTY });
-  map.addSource("rb-time-hover", { type: "geojson", data: EMPTY });
-  map.addLayer({ id: "rb-time-case", type: "line", source: "rb-time-line",
+  map.addSource("og-time-line", { type: "geojson", data: EMPTY });
+  map.addSource("og-time-pts", { type: "geojson", data: EMPTY });
+  map.addSource("og-time-hover", { type: "geojson", data: EMPTY });
+  map.addLayer({ id: "og-time-case", type: "line", source: "og-time-line",
                  paint: { "line-color": "#000", "line-width": 3.5, "line-opacity": 0.45 } });
-  map.addLayer({ id: "rb-time-line", type: "line", source: "rb-time-line",
+  map.addLayer({ id: "og-time-line", type: "line", source: "og-time-line",
                  paint: { "line-color": "#fff", "line-width": 1.5, "line-opacity": 0.9 } });
-  map.addLayer({ id: "rb-time-dot", type: "circle", source: "rb-time-pts",
+  map.addLayer({ id: "og-time-dot", type: "circle", source: "og-time-pts",
                  paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 1.5, 12, 3.5],
                           "circle-color": "#808080", "circle-stroke-color": "#fff",
                           "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 9, 0, 11, 0.6] } });
   // a marked ping's ring, in the colour of the first mark column that holds it
-  map.addLayer({ id: "rb-time-mark", type: "circle", source: "rb-time-pts", filter: ["has", "mk"],
+  map.addLayer({ id: "og-time-mark", type: "circle", source: "og-time-pts", filter: ["has", "mk"],
                  paint: { "circle-radius": 7, "circle-opacity": 0, "circle-stroke-width": 2,
                           "circle-stroke-color": ["match", ["get", "mkc"], ...T_MARKS.flatMap((col, c) => [c, col]), T_MARKS[0]] } });
-  map.addLayer({ id: "rb-time-hover", type: "circle", source: "rb-time-hover",
+  map.addLayer({ id: "og-time-hover", type: "circle", source: "og-time-hover",
                  paint: { "circle-radius": 9, "circle-opacity": 0, "circle-stroke-color": "#000", "circle-stroke-width": 5 } });
-  map.addLayer({ id: "rb-time-hover-in", type: "circle", source: "rb-time-hover",
+  map.addLayer({ id: "og-time-hover-in", type: "circle", source: "og-time-hover",
                  paint: { "circle-radius": 9, "circle-opacity": 0, "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
 }
 
@@ -2688,7 +2688,7 @@ async function tLoad(win = null) {
   TS.lo = y0[Math.floor(0.01 * (y0.length - 1))] ?? 0;
   TS.hi = y0[Math.floor(0.99 * (y0.length - 1))] ?? 1;
   if (!(TS.hi > TS.lo)) TS.hi = TS.lo + 1;
-  map.setPaintProperty("rb-time-dot", "circle-color", ["case", ["has", "v"],
+  map.setPaintProperty("og-time-dot", "circle-color", ["case", ["has", "v"],
     ["interpolate", ["linear"], ["get", "v"], ...INFERNO9.flatMap((c, j) => [TS.lo + (TS.hi - TS.lo) * j / 8, c])], "#808080"]);
   // the other layers show only this vessel and span
   for (const l of OTHER) applyChoice(l);
@@ -2756,7 +2756,7 @@ function tWindowFromChart() {
   tFrame = requestAnimationFrame(tDrawWindow);
 }
 function tDrawWindow() {
-  if (!TS || !TW || !map.getSource("rb-time-line")) return;
+  if (!TS || !TW || !map.getSource("og-time-line")) return;
   const t = TS.t, i0 = tFind(TW[0]), i1 = tFind(TW[1], true), lines = [];
   const n = i1 - i0, k = Math.max(1, Math.ceil(n / T_MAX)), v = TS.y[TP.cols[0].field], feats = [];
   // the line thinned as the pings are (a long line is most of a window's time to draw), its ends at a silence kept
@@ -2775,8 +2775,8 @@ function tDrawWindow() {
     if (TS.mk[i]) { p.mk = TS.mk[i]; p.mkc = TS.mkc[i]; }
     feats.push({ type: "Feature", geometry: { type: "Point", coordinates: [TS.lon[i], TS.lat[i]] }, properties: p });
   }
-  map.getSource("rb-time-line").setData({ type: "Feature", geometry: { type: "MultiLineString", coordinates: lines }, properties: {} });
-  map.getSource("rb-time-pts").setData({ type: "FeatureCollection", features: feats });
+  map.getSource("og-time-line").setData({ type: "Feature", geometry: { type: "MultiLineString", coordinates: lines }, properties: {} });
+  map.getSource("og-time-pts").setData({ type: "FeatureCollection", features: feats });
   TS.n = n; TS.k = k;
   tInfo();
   if (n) map.fitBounds([[x0, y0], [x1, y1]], { padding: 40, maxZoom: 15, duration: 300 });
@@ -2792,7 +2792,7 @@ function tInfo(i = null) {
       (TS.mk[i] ? ` · ${TS.mk[i]}` : "");
 }
 function tHover(i) {
-  const src = map.getSource("rb-time-hover");
+  const src = map.getSource("og-time-hover");
   if (!src || !TS) return;
   if (i == null || i < 0 || i >= TS.t.length) { src.setData(EMPTY); tInfo(); return; }
   src.setData({ type: "Feature", geometry: { type: "Point", coordinates: [TS.lon[i], TS.lat[i]] }, properties: {} });

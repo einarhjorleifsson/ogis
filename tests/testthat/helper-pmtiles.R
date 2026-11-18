@@ -1,6 +1,6 @@
 # helper-pmtiles.R — a bundle's PMTiles archive read back in R, for the tests: its header, every tile's entry (id,
 # offset, length) from the root and leaf directories, and a tile's bytes by zoom, column and row. Read from the
-# specification (version 3, https://github.com/protomaps/PMTiles/blob/main/spec/v3/spec.md), apart from rr_bundle()'s
+# specification (version 3, https://github.com/protomaps/PMTiles/blob/main/spec/v3/spec.md), apart from og_bundle()'s
 # writer but for the tile id, which is checked against pmtiles.js's own; the page reads with pmtiles.js.
 
 # The archive's bytes, from the script a bundle writes, or a .pmtiles file
@@ -10,7 +10,7 @@ pm_bytes <- function(dir, key = NULL) {
   }
   js <- readLines(file.path(dir, "tiles", paste0(key, ".pmtiles.js")), warn = FALSE)
   stopifnot(length(js) == 1)
-  jsonlite::base64_dec(sub(sprintf('^RB_BUNDLE\\("tiles/%s[.]pmtiles","(.*)"\\);$', key), "\\1", js))
+  jsonlite::base64_dec(sub(sprintf('^OG_BUNDLE\\("tiles/%s[.]pmtiles","(.*)"\\);$', key), "\\1", js))
 }
 
 pm_archive <- function(dir, key = NULL) {
@@ -64,7 +64,7 @@ pm_archive <- function(dir, key = NULL) {
 
 # A tile's bytes, NULL where the archive holds none
 pm_tile <- function(arch, z, x, y) {
-  e <- arch$entries[arch$entries$id == .rr_pmtiles_id(z, x, y), ]
+  e <- arch$entries[arch$entries$id == .og_pmtiles_id(z, x, y), ]
   if (!nrow(e)) {
     return(NULL)
   }

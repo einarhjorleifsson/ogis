@@ -19,7 +19,7 @@ test_that("every layer function takes its arguments in the plan's one order", {
     "name", "id", "info", "section", "visible",
     "minzoom", "maxzoom", "..."
   )
-  for (f in c("rr_point", "rr_line", "rr_segment", "rr_polygon", "rr_text", "rr_path")) {
+  for (f in c("og_point", "og_line", "og_segment", "og_polygon", "og_text", "og_path")) {
     args <- names(formals(get(f)))
     expect_true(all(args %in% order), info = f)
     expect_equal(args, intersect(order, args), info = f)
@@ -28,97 +28,97 @@ test_that("every layer function takes its arguments in the plan's one order", {
 
 test_that("a point layer starts a map from data, or adds to one, in sections", {
   skip_if_no_spatial()
-  d <- rr_example("trawlsurvey")
-  m <- rr_point(d)
-  expect_s3_class(m, "rr_map")
+  d <- og_example("trawlsurvey")
+  m <- og_point(d)
+  expect_s3_class(m, "og_map")
   expect_equal(layer(m)$id, "points")
   expect_equal(paint(m)[["circle-color"]], "#E69F00") # Okabe-Ito's first, for one colour
-  # from rr_map(data), then a second layer in a section of its own; the map's data are the layers'
-  m2 <- rr_map(d, title = "Survey") |>
-    rr_point(colour = behaviour) |>
-    rr_point(colour = speed, name = "Speed", section = "More")
+  # from og_map(data), then a second layer in a section of its own; the map's data are the layers'
+  m2 <- og_map(d, title = "Survey") |>
+    og_point(colour = behaviour) |>
+    og_point(colour = speed, name = "Speed", section = "More")
   expect_equal(vapply(m2$config$layers, `[[`, "", "id"), c("points", "speed"))
   expect_equal(vapply(m2$config$groups, `[[`, "", "title"), c("Layers", "More"))
   expect_equal(m2$config$title, "Survey")
   # a map started from data alone prints as one with no layers yet
-  expect_match(format(rr_map(d))[2], "no layers yet", fixed = TRUE)
+  expect_match(format(og_map(d))[2], "no layers yet", fixed = TRUE)
   # a parquet file's path is data too
-  f <- system.file("extdata", "trawlsurvey.parquet", package = "rebelrebel")
-  expect_equal(attr(layer(rr_point(f))$tiles, "count"), NULL) # the count is the tile function's, not the config's
-  expect_s3_class(rr_point(f), "rr_map")
-  expect_error(rr_point(d, data = d), "once")
-  expect_error(rr_point(d, nonsense = 1), "no argument nonsense")
+  f <- system.file("extdata", "trawlsurvey.parquet", package = "ogis")
+  expect_equal(attr(layer(og_point(f))$tiles, "count"), NULL) # the count is the tile function's, not the config's
+  expect_s3_class(og_point(f), "og_map")
+  expect_error(og_point(d, data = d), "once")
+  expect_error(og_point(d, nonsense = 1), "no argument nonsense")
 })
 
 test_that("a bare name is a column, a string is a value", {
   skip_if_no_spatial()
-  d <- rr_example("trawlsurvey")
-  expect_equal(paint(rr_point(d, colour = "#336699"))[["circle-color"]], "#336699")
-  expect_equal(paint(rr_point(d, color = "red"))[["circle-color"]], "#FF0000")
-  expect_error(rr_point(d, colour = "behaviour"), "write it bare")
-  expect_error(rr_point(d, colour = "nonsense"), "not a colour")
-  expect_error(rr_point(d, colour = nonsense), "colour")
-  m <- rr_point(d, colour = c(behaviour, speed))
+  d <- og_example("trawlsurvey")
+  expect_equal(paint(og_point(d, colour = "#336699"))[["circle-color"]], "#336699")
+  expect_equal(paint(og_point(d, color = "red"))[["circle-color"]], "#FF0000")
+  expect_error(og_point(d, colour = "behaviour"), "write it bare")
+  expect_error(og_point(d, colour = "nonsense"), "not a colour")
+  expect_error(og_point(d, colour = nonsense), "colour")
+  m <- og_point(d, colour = c(behaviour, speed))
   expect_equal(vapply(layer(m)$variants$options, `[[`, "", "value"), c("behaviour", "speed"))
 })
 
 test_that("colours by the data: Okabe-Ito to eight values, Paired to twelve, Glasbey beyond, viridis for numbers", {
   skip_if_no_spatial()
-  con <- .rr_connection()
+  con <- .og_connection()
   vals <- function(n) data.frame(lon = seq_len(n) / 100, lat = 60, k = sprintf("v%02d", seq_len(n)))
   cols_of <- function(m) {
     e <- paint(m)[["circle-color"]]
     unlist(e[seq(4, length(e) - 1, by = 2)])
   }
-  expect_equal(cols_of(rr_point(vals(8), colour = k)), .rr_okabe_ito)
-  expect_equal(cols_of(rr_point(vals(12), colour = k)), .rr_paired)
-  m <- rr_point(vals(40), colour = k)
-  expect_equal(cols_of(m), .rr_glasbey)
+  expect_equal(cols_of(og_point(vals(8), colour = k)), .og_okabe_ito)
+  expect_equal(cols_of(og_point(vals(12), colour = k)), .og_paired)
+  m <- og_point(vals(40), colour = k)
+  expect_equal(cols_of(m), .og_glasbey)
   expect_equal(utils::tail(layer(m)$legend, 1)[[1]]$label, "other") # the 8 past Glasbey's 32
   # the most frequent value takes the first colour
   d <- data.frame(lon = 1:5 / 100, lat = 60, k = c("rare", "common", "common", "common", "mid"))
   d$k[5] <- "common"
-  expect_equal(paint(rr_point(d, colour = k))[["circle-color"]][[3]], "common")
+  expect_equal(paint(og_point(d, colour = k))[["circle-color"]][[3]], "common")
   # numbers: viridis over the 1st to 99th percentile, or the limits given
   n <- data.frame(lon = 1:101 / 100, lat = 60, v = 0:100)
-  e <- paint(rr_point(n, colour = v))[["circle-color"]]
+  e <- paint(og_point(n, colour = v))[["circle-color"]]
   expect_equal(e[[1]], "case")
   stops <- e[[3]]
   expect_equal(stops[[4]], 1)
-  expect_equal(stops[[5]], .rr_viridis[1])
+  expect_equal(stops[[5]], .og_viridis[1])
   expect_equal(stops[[length(stops) - 1]], 99)
-  e2 <- paint(rr_point(n, colour = v, limits = c(10, 50)))[["circle-color"]][[3]]
+  e2 <- paint(og_point(n, colour = v, limits = c(10, 50)))[["circle-color"]][[3]]
   expect_equal(c(e2[[4]], e2[[length(e2) - 1]]), c(10, 50))
-  expect_error(rr_point(n, colour = v, limits = c(5, 1)), "lower first")
-  e3 <- paint(rr_point(n, colour = v, limits = c(1, 100), stretch = "log"))[["circle-color"]][[3]]
+  expect_error(og_point(n, colour = v, limits = c(5, 1)), "lower first")
+  e3 <- paint(og_point(n, colour = v, limits = c(1, 100), stretch = "log"))[["circle-color"]][[3]]
   expect_equal(e3[[6]], exp(log(100) / 8), tolerance = 1e-9)
   # an ordered factor: viridis in the order of its levels
   o <- data.frame(lon = 1:3 / 100, lat = 60, size = factor(c("small", "large", "medium"), c("small", "medium", "large"), ordered = TRUE))
-  e4 <- paint(rr_point(o, colour = size))[["circle-color"]]
+  e4 <- paint(og_point(o, colour = size))[["circle-color"]]
   expect_equal(unlist(e4[c(3, 5, 7)]), c("small", "medium", "large"))
-  expect_equal(e4[[4]], .rr_viridis[1])
+  expect_equal(e4[[4]], .og_viridis[1])
 })
 
 test_that("a call's palette overrides the default: a name written loosely, colours, colours by value, a function", {
   skip_if_no_spatial()
   d <- data.frame(lon = 1:3 / 100, lat = 60, k = c("a", "b", "c"))
   first <- function(m) paint(m)[["circle-color"]][[4]]
-  expect_equal(first(rr_point(d, colour = k, palette = "set1")), "#E41A1C")
-  expect_equal(first(rr_point(d, colour = k, palette = "Set 1")), "#E41A1C")
-  expect_equal(first(rr_point(d, colour = k, palette = c("#111111", "#222222", "#333333"))), "#111111")
-  m <- rr_point(d, colour = k, palette = c(b = "#00FF00"))
+  expect_equal(first(og_point(d, colour = k, palette = "set1")), "#E41A1C")
+  expect_equal(first(og_point(d, colour = k, palette = "Set 1")), "#E41A1C")
+  expect_equal(first(og_point(d, colour = k, palette = c("#111111", "#222222", "#333333"))), "#111111")
+  m <- og_point(d, colour = k, palette = c(b = "#00FF00"))
   e <- paint(m)[["circle-color"]]
   expect_equal(e[[3]], "b")
   expect_equal(e[[4]], "#00FF00")
-  expect_equal(e[[length(e)]], .rr_other) # the rest grey
-  expect_equal(first(rr_point(d, colour = k, palette = function(n) rep("#ABCDEF", n))), "#ABCDEF")
-  expect_error(rr_point(d, colour = k, palette = "no such palette"), "No palette called")
+  expect_equal(e[[length(e)]], .og_other) # the rest grey
+  expect_equal(first(og_point(d, colour = k, palette = function(n) rep("#ABCDEF", n))), "#ABCDEF")
+  expect_error(og_point(d, colour = k, palette = "no such palette"), "No palette called")
 })
 
 test_that("popup, hover and the sidebar", {
   skip_if_no_spatial()
-  d <- rr_example("trawlsurvey")
-  m <- rr_point(d, popup = c(vid, speed), hover = vid, name = "Survey pings", info = "Each ping.", visible = FALSE,
+  d <- og_example("trawlsurvey")
+  m <- og_point(d, popup = c(vid, speed), hover = vid, name = "Survey pings", info = "Each ping.", visible = FALSE,
                 minzoom = 6)
   l <- layer(m)
   expect_equal(l$id, "survey_pings")
@@ -132,36 +132,36 @@ test_that("popup, hover and the sidebar", {
   expect_equal(vapply(m$layers$survey_pings$row(1)$cols, `[[`, "", "name"), c("vid", "speed"))
   # every column by default, none with FALSE
   expect_setequal(
-    vapply(rr_point(d)$layers$points$row(1)$cols, `[[`, "", "name"),
+    vapply(og_point(d)$layers$points$row(1)$cols, `[[`, "", "name"),
     c("vid", "speed", "heading", "time", "behaviour")
   )
-  expect_null(layer(rr_point(d, popup = FALSE))$popup)
+  expect_null(layer(og_point(d, popup = FALSE))$popup)
   # a variable holding the names, as all_of() it: no warning of tidyselect's, the same columns
   shown <- c("vid", "speed")
-  expect_no_warning(m2 <- rr_point(d, popup = shown))
+  expect_no_warning(m2 <- og_point(d, popup = shown))
   expect_equal(vapply(m2$layers$points$row(1)$cols, `[[`, "", "name"), c("vid", "speed"))
-  expect_no_warning(m3 <- rr_text(d, label = vid, popup = shown))
+  expect_no_warning(m3 <- og_text(d, label = vid, popup = shown))
   expect_equal(vapply(m3$layers$text$row(1)$cols, `[[`, "", "name"), c("vid", "speed"))
   # a column of the same name as a variable is the column
   vid <- c("speed")
-  expect_equal(vapply(rr_point(d, popup = vid)$layers$points$row(1)$cols, `[[`, "", "name"), "vid")
-  expect_error(rr_point(d, popup = c("nope")), "popup")
+  expect_equal(vapply(og_point(d, popup = vid)$layers$points$row(1)$cols, `[[`, "", "name"), "vid")
+  expect_error(og_point(d, popup = c("nope")), "popup")
 })
 
-test_that("rr_map(data, choose = ) names the columns the reader picks", {
+test_that("og_map(data, choose = ) names the columns the reader picks", {
   skip_if_no_spatial()
-  m <- rr_map(rr_example("trawlsurvey"), choose = vid) |> rr_point(colour = behaviour)
+  m <- og_map(og_example("trawlsurvey"), choose = vid) |> og_point(colour = behaviour)
   expect_equal(vapply(m$config$choose$fields, `[[`, "", "field"), "vid")
   expect_equal(m$config$choose$fields[[1]]$layers, list("points"))
   # a grouping is not read
-  g <- dplyr::group_by(dplyr::collect(rr_example("trawlsurvey")), vid)
-  expect_null(rr_point(g)$config$choose)
+  g <- dplyr::group_by(dplyr::collect(og_example("trawlsurvey")), vid)
+  expect_null(og_point(g)$config$choose)
 })
 
 test_that("two lists are linked by the combinations the data hold, with their rows", {
   skip_if_no_spatial()
-  x <- rr_example("trawlsurvey") |> dplyr::mutate(day = as.character(as.Date(time)))
-  ch <- (rr_map(x, choose = c(vid, day)) |> rr_point())$config$choose
+  x <- og_example("trawlsurvey") |> dplyr::mutate(day = as.character(as.Date(time)))
+  ch <- (og_map(x, choose = c(vid, day)) |> og_point())$config$choose
   rows <- dplyr::pull(dplyr::count(x), n)
   # each option's value alone, for the page's counts as the lists narrow
   expect_equal(ch$fields[[1]]$options[[1]]$text, ch$fields[[1]]$options[[1]]$value)
@@ -177,14 +177,14 @@ test_that("two lists are linked by the combinations the data hold, with their ro
 
 test_that("an id or a code is a list, a measure a range: as declared, else as stored", {
   skip_if_no_spatial()
-  kind <- function(m) vapply(m$config$choose$fields, function(f) .rr_or(f$range, "list"), "")
+  kind <- function(m) vapply(m$config$choose$fields, function(f) .og_or(f$range, "list"), "")
   # the survey's vid: an integer, and its dictionary's number(id)
-  m <- rr_map(rr_example("trawlsurvey"), choose = c(vid, speed)) |> rr_point()
+  m <- og_map(og_example("trawlsurvey"), choose = c(vid, speed)) |> og_point()
   expect_equal(kind(m), c("list", "number"))
   expect_equal(m$config$choose$fields[[1]]$options[[1]]$label, "1131 (2,164)")
   # stored: a whole number a list, a fraction a range
   d <- data.frame(id = 1:3, n = c(2.5, 3, 4), lon = c(-20, -21, -22), lat = c(64, 65, 66))
-  expect_equal(kind(rr_map(d, choose = c(id, n)) |> rr_point()), c("list", "number"))
+  expect_equal(kind(og_map(d, choose = c(id, n)) |> og_point()), c("list", "number"))
   # a double the file's dictionary declares an id: a list, written whole, and coloured as categories
   f <- tempfile(fileext = ".parquet")
   con <- DBI::dbConnect(duckdb::duckdb())
@@ -193,7 +193,7 @@ test_that("an id or a code is a list, a measure a range: as declared, else as st
     "COPY (SELECT CAST(i AS DOUBLE) AS id, i * 1.5 AS n, -20 - i AS lon, 64 + i / 10 AS lat FROM range(1, 4) t(i))
      TO '%s' (FORMAT parquet, KV_METADATA {'x.data_dict': '%s'})", f, dict))
   DBI::dbDisconnect(con, shutdown = TRUE)
-  m <- rr_map(f, choose = c(id, n)) |> rr_point(colour = id)
+  m <- og_map(f, choose = c(id, n)) |> og_point(colour = id)
   expect_equal(kind(m), c("list", "number"))
   expect_equal(vapply(m$config$choose$fields[[1]]$options, `[[`, "", "value"), c("1", "2", "3"))
   expect_equal(paint(m)[["circle-color"]][[1]], "match")
@@ -202,9 +202,9 @@ test_that("an id or a code is a list, a measure a range: as declared, else as st
 
 test_that("a number, a date or a time is a range of bins, linked as the lists are", {
   skip_if_no_spatial()
-  x <- rr_example("trawlsurvey") |> dplyr::mutate(day = as.Date(time))
+  x <- og_example("trawlsurvey") |> dplyr::mutate(day = as.Date(time))
   rows <- dplyr::pull(dplyr::count(x), n)
-  ch <- (rr_map(x, choose = c(vid, day, speed, time)) |> rr_point())$config$choose
+  ch <- (og_map(x, choose = c(vid, day, speed, time)) |> og_point())$config$choose
   f <- stats::setNames(ch$fields, vapply(ch$fields, `[[`, "", "field"))
   expect_null(f$vid$range)
   expect_equal(c(f$day$range, f$speed$range, f$time$range), c("date", "number", "time"))
@@ -229,7 +229,7 @@ test_that("a number, a date or a time is a range of bins, linked as the lists ar
   expect_match(parts[2:4], "^[0-9]+$")
   expect_equal(sum(vapply(ch$extents, `[[`, 0, "n")), rows)
   # a path is split by a range's bins, each run carrying its bin's start, which the page's range compares
-  m <- rr_map(x, choose = c(vid, speed)) |> rr_path(group = vid, time = time, whole = FALSE)
+  m <- og_map(x, choose = c(vid, speed)) |> og_path(group = vid, time = time, whole = FALSE)
   tb <- attr(m, "tables")[[1]]
   starts <- DBI::dbGetQuery(tb$con, sprintf("SELECT DISTINCT speed FROM %s", tb$name))$speed
   expect_true(all(starts %in% lo))
@@ -238,8 +238,8 @@ test_that("a number, a date or a time is a range of bins, linked as the lists ar
 
 test_that("a layer's own choose: its lists, over it alone", {
   skip_if_no_spatial()
-  x <- rr_example("trawlsurvey") |> dplyr::mutate(day = as.character(as.Date(time)))
-  m <- rr_map(x) |> rr_path(group = vid, time = time, choose = day, whole = FALSE) |> rr_point(choose = c(vid, day))
+  x <- og_example("trawlsurvey") |> dplyr::mutate(day = as.character(as.Date(time)))
+  m <- og_map(x) |> og_path(group = vid, time = time, choose = day, whole = FALSE) |> og_point(choose = c(vid, day))
   expect_null(m$config$choose)
   ls <- m$config$layers
   expect_equal(vapply(ls[[1]]$choose$fields, `[[`, "", "field"), "day")
@@ -250,22 +250,22 @@ test_that("a layer's own choose: its lists, over it alone", {
   tb <- attr(m, "tables")[[1]]
   expect_true("day" %in% DBI::dbListFields(tb$con, tb$name))
   # shapes: each value's extent from its shapes, a list's and a range's
-  tows <- rr_example("trawlsurveytows") |> dplyr::mutate(tow = as.character(as.integer(id.lgs)))
-  o <- (tows |> rr_line(choose = tow))$config$layers[[1]]$choose$fields[[1]]$options
+  tows <- og_example("trawlsurveytows") |> dplyr::mutate(tow = as.character(as.integer(id.lgs)))
+  o <- (tows |> og_line(choose = tow))$config$layers[[1]]$choose$fields[[1]]$options
   expect_length(o, 581)
   expect_true(all(lengths(lapply(o, `[[`, "bbox")) == 4))
-  r <- (tows |> dplyr::mutate(half = id.lgs / 2) |> rr_line(choose = half))$config$layers[[1]]$choose$fields[[1]]
+  r <- (tows |> dplyr::mutate(half = id.lgs / 2) |> og_line(choose = half))$config$layers[[1]]$choose$fields[[1]]
   expect_equal(r$range, "number")
   expect_true(all(lengths(lapply(Filter(function(b) b$n > 0, r$bins), `[[`, "bbox")) == 4))
-  expect_error(rr_point(x, choose = nope), "No column nope")
+  expect_error(og_point(x, choose = nope), "No column nope")
 })
 
 test_that("points thinned in a tile: one a pixel and class, and at the deepest zoom one a spot", {
   skip_if_no_spatial()
-  x <- dplyr::mutate(rr_example("dansk"), colour = behaviour)
-  whole <- rr_tiles_table(x, lon = "lon", lat = "lat", properties = "colour")
-  one <- rr_tiles_table(x, lon = "lon", lat = "lat", properties = "colour", thin = list(px = 1, until = 14))
-  by <- rr_tiles_table(x, lon = "lon", lat = "lat", properties = "colour", thin = list(px = 1, by = "colour", until = 14))
+  x <- dplyr::mutate(og_example("dansk"), colour = behaviour)
+  whole <- og_tiles_table(x, lon = "lon", lat = "lat", properties = "colour")
+  one <- og_tiles_table(x, lon = "lon", lat = "lat", properties = "colour", thin = list(px = 1, until = 14))
+  by <- og_tiles_table(x, lon = "lon", lat = "lat", properties = "colour", thin = list(px = 1, by = "colour", until = 14))
   n <- function(f, z, x, y) unname(mvt_count(f(z, x, y))["features"])
   # the busiest tile at zoom 6: 140,734 points in it, 141,036 with its margin
   # (each tile holds the features within 64 of its 4,096 units past its edge); 3,528 a pixel and colour
@@ -276,12 +276,12 @@ test_that("points thinned in a tile: one a pixel and class, and at the deepest z
   # at the deepest zoom, a harbour's 14,579 points (with the margin) on 857 spots of the tile's own grid
   expect_equal(n(whole, 14, 8712, 4910), 14579)
   expect_equal(n(by, 14, 8712, 4910), 857)
-  expect_error(rr_tiles_table(x, lon = "lon", lat = "lat", thin = list(px = 1)), "`thin` is a list")
+  expect_error(og_tiles_table(x, lon = "lon", lat = "lat", thin = list(px = 1)), "`thin` is a list")
 })
 
 test_that("whole: a layer sent to the page as one GeoJSON file", {
   skip_if_no_spatial()
-  m <- rr_point(rr_example("trawlsurvey"), colour = behaviour, popup = c(vid, speed), whole = TRUE)
+  m <- og_point(og_example("trawlsurvey"), colour = behaviour, popup = c(vid, speed), whole = TRUE)
   l <- layer(m)
   expect_equal(l$kind, "geojson")
   expect_equal(l$features, 8918) # its count, so the page need not read the file
@@ -289,19 +289,19 @@ test_that("whole: a layer sent to the page as one GeoJSON file", {
   g <- jsonlite::fromJSON(m$layers[[1]]$data(), simplifyVector = FALSE)
   expect_length(g$features, 8918)
   # the properties the tiles would carry, and coordinates to six decimals
-  t <- rr_point(rr_example("trawlsurvey"), colour = behaviour, popup = c(vid, speed), whole = FALSE)
-  expect_setequal(names(g$features[[1]]$properties), c("rr_c1", "rr_row", "vid", "rr_t"))
+  t <- og_point(og_example("trawlsurvey"), colour = behaviour, popup = c(vid, speed), whole = FALSE)
+  expect_setequal(names(g$features[[1]]$properties), c("og_c1", "og_row", "vid", "og_t"))
   expect_true(all(abs(unlist(g$features[[1]]$geometry$coordinates) * 1e6 - round(unlist(g$features[[1]]$geometry$coordinates) * 1e6)) < 1e-6))
   expect_equal(layer(t)$kind, "vector")
   # paths, lines and areas too
-  p <- rr_map(rr_example("trawlsurvey")) |> rr_path(group = vid, time = time, whole = TRUE)
+  p <- og_map(og_example("trawlsurvey")) |> og_path(group = vid, time = time, whole = TRUE)
   expect_equal(layer(p)$kind, "geojson")
   expect_equal(attr(p$layers[[1]]$data, "count"), layer(p)$features)
-  h <- rr_polygon(rr_example("dansk_harbours"), whole = TRUE)
+  h <- og_polygon(og_example("dansk_harbours"), whole = TRUE)
   expect_equal(layer(h)$features, 942)
   # a bundle writes the file, and no tiles for the layer
   dir <- tempfile()
-  suppressMessages(rr_bundle(m, dir))
+  suppressMessages(og_bundle(m, dir))
   expect_true(file.exists(file.path(dir, "data", paste0(l$id, ".js"))))
   expect_false(file.exists(file.path(dir, "tiles", paste0(l$id, ".pmtiles.js"))))
   unlink(dir, recursive = TRUE)
@@ -310,26 +310,26 @@ test_that("whole: a layer sent to the page as one GeoJSON file", {
 test_that("whole by default when the GeoJSON is at most 5 MB, else tiles", {
   skip_if_no_spatial()
   # small: the survey's 8,918 points (about 1.4 MB), its tows, the harbours, and its paths
-  m <- rr_point(rr_example("trawlsurvey"), colour = behaviour, popup = c(vid, speed))
+  m <- og_point(og_example("trawlsurvey"), colour = behaviour, popup = c(vid, speed))
   expect_equal(layer(m)$kind, "geojson")
   expect_equal(layer(m)$features, 8918)
   expect_length(attr(m, "tables"), 0) # nothing for a server to keep, or drop
-  expect_equal(layer(rr_line(rr_example("trawlsurveytows")))$kind, "geojson")
-  expect_equal(layer(rr_polygon(rr_example("dansk_harbours")))$kind, "geojson")
-  expect_equal(layer(rr_map(rr_example("trawlsurvey")) |> rr_path(group = vid, time = time))$kind, "geojson")
+  expect_equal(layer(og_line(og_example("trawlsurveytows")))$kind, "geojson")
+  expect_equal(layer(og_polygon(og_example("dansk_harbours")))$kind, "geojson")
+  expect_equal(layer(og_map(og_example("trawlsurvey")) |> og_path(group = vid, time = time))$kind, "geojson")
   # more than 50,000 rows: tiles, the GeoJSON not tried
-  d <- rr_point(rr_example("dansk"), colour = behaviour)
+  d <- og_point(og_example("dansk"), colour = behaviour)
   expect_equal(layer(d)$kind, "vector")
   expect_equal(features(d), 395558)
   # 45,000 rows, but their labels make more than 5 MB: tiles
   long <- data.frame(lon = -20 + (1:45000) / 1e4, lat = 64, name = strrep("x", 150))
-  tx <- rr_text(long, label = name)
+  tx <- og_text(long, label = name)
   expect_equal(layer(tx)$kind, "vector")
   expect_equal(features(tx), 45000)
   # `whole` decides where given, and is TRUE, FALSE or NULL
-  expect_equal(layer(rr_point(rr_example("trawlsurvey"), whole = FALSE))$kind, "vector")
-  expect_error(rr_point(rr_example("trawlsurvey"), whole = "yes"), "TRUE, FALSE or NULL")
-  expect_error(rr_path(rr_example("trawlsurvey"), group = vid, time = time, whole = NA), "TRUE, FALSE or NULL")
+  expect_equal(layer(og_point(og_example("trawlsurvey"), whole = FALSE))$kind, "vector")
+  expect_error(og_point(og_example("trawlsurvey"), whole = "yes"), "TRUE, FALSE or NULL")
+  expect_error(og_path(og_example("trawlsurvey"), group = vid, time = time, whole = NA), "TRUE, FALSE or NULL")
 })
 
 test_that("a tile holds the features in its margin: a point just past its edge is drawn by one tile", {
@@ -337,7 +337,7 @@ test_that("a tile holds the features in its margin: a point just past its edge i
   # 61 m north of a zoom-5 tile edge (66.51326 N): the tile above rounds it onto its bottom edge, where MapLibre does
   # not draw a point, and the tile below has it in its margin, within its extent once rounded
   d <- data.frame(lon = -21.56479, lat = 66.51381)
-  tl <- rr_tiles_table(d, lon = "lon", lat = "lat")
+  tl <- og_tiles_table(d, lon = "lon", lat = "lat")
   n <- function(z, x, y) sum(mvt_count(tl(z, x, y)))
   expect_equal(n(5, 14, 7), 1)
   expect_equal(n(5, 14, 8), 1)
@@ -347,85 +347,85 @@ test_that("a tile holds the features in its margin: a point just past its edge i
 
 test_that("a point layer: thinned by default, its size following the zoom", {
   skip_if_no_spatial()
-  d <- rr_example("dansk")
-  m <- rr_point(d, colour = behaviour)
+  d <- og_example("dansk")
+  m <- og_point(d, colour = behaviour)
   r <- paint(m)[["circle-radius"]]
   expect_equal(r[1:3], list("interpolate", list("exponential", 2), list("zoom")))
   expect_equal(c(r[[5]], r[[7]]), c(1, 4)) # 2 to 8 pixels across
   expect_equal(r[[6]] - r[[4]], 2) # doubling with each zoom in
   expect_equal(r[[4]], 12) # dansk's pings lie two pixels apart at zoom 12
-  expect_equal(paint(rr_point(d, size = 6))[["circle-radius"]], 3)
-  expect_equal(paint(rr_point(d, size = 6))[["circle-stroke-width"]], 0.5)
-  b <- paint(rr_point(rr_example("trawlsurvey"), size = c(1, 12)))[["circle-radius"]]
+  expect_equal(paint(og_point(d, size = 6))[["circle-radius"]], 3)
+  expect_equal(paint(og_point(d, size = 6))[["circle-stroke-width"]], 0.5)
+  b <- paint(og_point(og_example("trawlsurvey"), size = c(1, 12)))[["circle-radius"]]
   expect_equal(c(b[[5]], b[[7]]), c(0.5, 6))
-  expect_error(rr_point(d, size = c(8, 2)), "the least first")
-  expect_error(rr_point(d, thin = "yes"), "`thin` is TRUE")
+  expect_error(og_point(d, size = c(8, 2)), "the least first")
+  expect_error(og_point(d, thin = "yes"), "`thin` is TRUE")
   # the busiest tile at zoom 6 thinned, and whole with thin = FALSE
   n <- function(m) unname(mvt_count(m$layers[[1]]$tiles(6, 33, 19))["features"])
   expect_equal(n(m), 3528)
-  expect_equal(n(rr_point(d, colour = behaviour, thin = FALSE)), 141036)
+  expect_equal(n(og_point(d, colour = behaviour, thin = FALSE)), 141036)
   # a choose list keeps its values apart: a vessel chosen loses none of its points to another's
-  expect_gt(n(rr_point(d, colour = behaviour, choose = vessel_id)), 3528)
+  expect_gt(n(og_point(d, colour = behaviour, choose = vessel_id)), 3528)
 })
 
 test_that("lines, segments, areas and text: their style, legend and data", {
   skip_if_no_spatial()
-  m <- rr_map(rr_example("trawlsurveytows")) |> rr_line(name = "Tows", hover = id.lgs, linewidth = 3)
+  m <- og_map(og_example("trawlsurveytows")) |> og_line(name = "Tows", hover = id.lgs, linewidth = 3)
   l <- layer(m)
   expect_equal(l$style[[1]]$type, "line")
   expect_equal(l$style[[1]]$paint[["line-width"]], 3)
   expect_equal(unlist(l$popup$hover), "tows-line")
   expect_equal(l$legend[[1]]$swatch, list(fill = "#E69F00", stroke = "#E69F00"))
-  expect_error(rr_line(rr_example("trawlsurvey")), "geometry column")
+  expect_error(og_line(og_example("trawlsurvey")), "geometry column")
   # areas: the fill by a column or a colour, the outline one colour
-  h <- rr_polygon(rr_example("dansk_harbours"), fill = "#d9822b", colour = "black", popup = SI_HARB)
+  h <- og_polygon(og_example("dansk_harbours"), fill = "#d9822b", colour = "black", popup = SI_HARB)
   st <- layer(h)$style
   expect_equal(vapply(st, `[[`, "", "type"), c("fill", "line"))
   expect_equal(st[[2]]$paint[["line-color"]], "#000000")
-  expect_error(rr_polygon(rr_example("dansk_harbours"), colour = SI_HARB), "outline")
+  expect_error(og_polygon(og_example("dansk_harbours"), colour = SI_HARB), "outline")
   # an sf object's areas
   sfp <- sf::st_as_sf(
     data.frame(id = c("a", "b"), wkt = c("POLYGON((-22 64, -21 64, -21 64.5, -22 64))", "POLYGON((-20 64, -19 64, -19 64.5, -20 64))")),
     wkt = "wkt", crs = 4326
   )
-  p <- rr_polygon(sfp, fill = id)
+  p <- og_polygon(sfp, fill = id)
   expect_equal(vapply(layer(p)$legend, `[[`, "", "label"), c("a", "b"))
   expect_equal(features(p), 2L)
   # a segment from each row's start to its end
   seg <- data.frame(lon = c(-22, -21), lat = c(64, 64.2), lon2 = c(-21.9, -20.8), lat2 = c(64.05, 64.3))
-  s <- rr_segment(seg, lon_end = lon2, lat_end = lat2)
+  s <- og_segment(seg, lon_end = lon2, lat_end = lat2)
   expect_equal(layer(s)$style[[1]]$type, "line")
   expect_equal(features(s), 2L)
-  expect_error(rr_segment(seg, lon_end = nope, lat_end = lat2), "No column nope")
+  expect_error(og_segment(seg, lon_end = nope, lat_end = lat2), "No column nope")
   # text: a column's values, with a halo
-  tx <- rr_text(rr_example("trawlsurvey"), label = vid, size = 15)
+  tx <- og_text(og_example("trawlsurvey"), label = vid, size = 15)
   ts <- layer(tx)$style[[1]]
   expect_equal(ts$type, "symbol")
   expect_equal(ts$layout[["text-field"]], list("to-string", list("get", "vid")))
   expect_equal(ts$layout[["text-size"]], 15)
   expect_true(ts$paint[["text-halo-width"]] > 0)
-  expect_error(rr_text(rr_example("trawlsurvey")), "label")
+  expect_error(og_text(og_example("trawlsurvey")), "label")
 })
 
 test_that("paths: rows joined in time, a line per group, broken at silences and where the colour's value changes", {
   skip_if_no_spatial()
-  d <- rr_example("dansk")
-  m <- rr_map(d) |> rr_path(group = vessel_id, time = time_stamp, colour = behaviour, max_gap_s = 3600)
+  d <- og_example("dansk")
+  m <- og_map(d) |> og_path(group = vessel_id, time = time_stamp, colour = behaviour, max_gap_s = 3600)
   l <- layer(m)
   expect_equal(l$style[[1]]$type, "line")
   expect_match(l$info, "each vessel_id joined in order of time_stamp, broken where two are more than 1 hour apart")
   # the lines of ramb's track on the same rows, as counted when the two shared the query (2026-11-10)
   expect_equal(features(m), 1209L)
   # several columns make a line's group
-  t <- dplyr::mutate(dplyr::collect(rr_example("trawlsurvey")), day = format(time, "%Y-%m-%d"))
-  n_vid <- features(rr_path(t, group = vid, time = time))
-  n_day <- features(rr_path(t, group = c(vid, day), time = time))
+  t <- dplyr::mutate(dplyr::collect(og_example("trawlsurvey")), day = format(time, "%Y-%m-%d"))
+  n_vid <- features(og_path(t, group = vid, time = time))
+  n_day <- features(og_path(t, group = c(vid, day), time = time))
   expect_equal(n_vid, 4L)
   expect_gt(n_day, n_vid)
-  expect_error(rr_path(d, group = vessel_id), "`time`")
-  expect_error(rr_path(d, time = nope), "no column nope")
-  expect_error(rr_path(rr_example("trawlsurveytows"), time = id.lgs), "rr_line")
-  expect_error(rr_path(d, time = time_stamp, colour = c(behaviour, speed)), "one column")
+  expect_error(og_path(d, group = vessel_id), "`time`")
+  expect_error(og_path(d, time = nope), "no column nope")
+  expect_error(og_path(og_example("trawlsurveytows"), time = id.lgs), "og_line")
+  expect_error(og_path(d, time = time_stamp, colour = c(behaviour, speed)), "one column")
 })
 
 test_that("a click shows the row: read from the server by its number, or from a bundle's rows file", {
@@ -435,14 +435,14 @@ test_that("a click shows the row: read from the server by its number, or from a 
     when = as.POSIXct(c("2019-03-01 10:00:00", "2019-03-02 11:30:00"), tz = "UTC"), ok = c(TRUE, FALSE),
     photo = c("https://example.org/a.jpg", NA), n = c(3L, 4L)
   )
-  m <- rr_point(d, popup = c(station, depth, when, ok, photo, n))
+  m <- og_point(d, popup = c(station, depth, when, ok, photo, n))
   l <- layer(m)
   expect_true(l$popup$row)
   expect_equal(l$popup$title, "station")
   expect_null(l$popup$fields)
   # the tiles carry the number and the title, not the other columns
   expect_true(is.function(m$layers$points$row))
-  app <- .rr_map_app(m)
+  app <- .og_map_app(m)
   get <- function(path) app$call(list(REQUEST_METHOD = "GET", PATH_INFO = path, QUERY_STRING = ""))
   r <- get("/row/points/2")
   expect_equal(r$status, 200L)
@@ -456,13 +456,13 @@ test_that("a click shows the row: read from the server by its number, or from a 
   expect_equal(get("/row/points/9")$status, 404L)
   expect_equal(get("/row/nope/1")$status, 404L)
   # no popup, no rows
-  expect_null(rr_point(d, popup = FALSE)$layers$points$row)
+  expect_null(og_point(d, popup = FALSE)$layers$points$row)
   # a bundle writes the rows beside its tiles
   dir <- tempfile()
-  rr_bundle(m, dir, maxzoom = 2)
+  og_bundle(m, dir, maxzoom = 2)
   js <- readLines(file.path(dir, "data", "points_rows.js"), encoding = "UTF-8")
-  expect_match(js[1], '^RB_BUNDLE\\("data/points_rows",')
-  b <- jsonlite::fromJSON(sub('^RB_BUNDLE\\("data/points_rows",(.*)\\);$', "\\1", paste(js, collapse = "")), simplifyVector = FALSE)
+  expect_match(js[1], '^OG_BUNDLE\\("data/points_rows",')
+  b <- jsonlite::fromJSON(sub('^OG_BUNDLE\\("data/points_rows",(.*)\\);$', "\\1", paste(js, collapse = "")), simplifyVector = FALSE)
   # an array, row n at n - 1 (an object keyed by number took Chrome a minute to read)
   expect_length(b$rows, 2)
   expect_equal(b$rows[[1]][[1]], "A1")
@@ -470,10 +470,10 @@ test_that("a click shows the row: read from the server by its number, or from a 
   expect_equal(b$rows[[2]][[1]], "B2")
   expect_null(b$rows[[2]][[2]]) # missing
   # the page has the table's code and texts
-  page <- .rr_map_page("{}")
+  page <- .og_map_page("{}")
   expect_match(page, "function rowHtml(cols)", fixed = TRUE)
-  expect_match(page, "fetch(`/row/${l.id}/${p.rr_row}`)", fixed = TRUE)
-  expect_match(page, "d.rows[p.rr_row - 1]", fixed = TRUE)
+  expect_match(page, "fetch(`/row/${l.id}/${p.og_row}`)", fixed = TRUE)
+  expect_match(page, "d.rows[p.og_row - 1]", fixed = TRUE)
 })
 
 test_that("a bundle of a layer function: its tiles to the page's zoom 14 by default, its rows by number past 99,999", {
@@ -481,20 +481,20 @@ test_that("a bundle of a layer function: its tiles to the page's zoom 14 by defa
   # a row's number written as R prints it would be "1e+05", and the row lost to a click
   n <- 100001L
   d <- data.frame(lon = 10 + (seq_len(n) %% 1000) / 1000, lat = 56 + (seq_len(n) %/% 1000) / 1000, k = seq_len(n))
-  m <- rr_point(d, popup = k)
+  m <- og_point(d, popup = k)
   dir <- tempfile()
-  rr_bundle(m, dir, maxzoom = 0)
+  og_bundle(m, dir, maxzoom = 0)
   js <- paste(readLines(file.path(dir, "data", "points_rows.js"), encoding = "UTF-8"), collapse = "")
-  b <- jsonlite::fromJSON(sub('^RB_BUNDLE\\("data/points_rows",(.*)\\);$', "\\1", js), simplifyVector = FALSE)
+  b <- jsonlite::fromJSON(sub('^OG_BUNDLE\\("data/points_rows",(.*)\\);$', "\\1", js), simplifyVector = FALSE)
   expect_length(b$rows, n)
   rows_k <- vapply(b$rows[c(1, 99999, 100000, 100001)], function(r) r[[1]], 0)
   # the reader's numbering is the table's: row n holds the k of the nth row as the layer numbered them
   expect_equal(rows_k, m$layers$points$row()$rows$k[c(1, 99999, 100000, 100001)])
   expect_false(grepl("e+0", js, fixed = TRUE))
   # no maxzoom given: a vector layer's tiles to 14, as the page has them, not an error
-  m2 <- rr_point(data.frame(lon = c(10, 10.5), lat = c(56, 56.5), k = 1:2), popup = k, whole = FALSE)
+  m2 <- og_point(data.frame(lon = c(10, 10.5), lat = c(56, 56.5), k = 1:2), popup = k, whole = FALSE)
   dir2 <- tempfile()
-  rr_bundle(m2, dir2)
+  og_bundle(m2, dir2)
   a <- pm_archive(dir2, "points")
   expect_equal(a$header$maxzoom, 14L)
   expect_true(length(pm_ids_at(a, 14)) > 0)
@@ -503,7 +503,7 @@ test_that("a bundle of a layer function: its tiles to the page's zoom 14 by defa
 test_that("a click's row: names, units and descriptions from the data's dictionary or the call, codes with their labels", {
   skip_if_no_spatial()
   # a parquet file's own dictionary: the survey's speed in knots, its time described
-  m <- rr_point(rr_example("trawlsurvey"), popup = c(vid, speed, time))
+  m <- og_point(og_example("trawlsurvey"), popup = c(vid, speed, time))
   cols <- m$layers$points$row(1)$cols
   speed <- Filter(function(x) x$name == "speed", cols)[[1]]
   expect_equal(speed$unit, "knots")
@@ -513,36 +513,36 @@ test_that("a click's row: names, units and descriptions from the data's dictiona
   d <- data.frame(lon = c(-22, -21), lat = c(64, 64.1), gear = c(6L, 9L), depth = c(120, 85))
   attr(d$depth, "label") <- "Bottom depth"
   attr(d$depth, "units") <- "m"
-  m2 <- rr_point(d, popup = c(gear, depth), codes = list(gear = data.frame(code = c(6, 9), label = c("bottom trawl", "longline"))))
-  app <- .rr_map_app(m2)
+  m2 <- og_point(d, popup = c(gear, depth), codes = list(gear = data.frame(code = c(6, 9), label = c("bottom trawl", "longline"))))
+  app <- .og_map_app(m2)
   v <- jsonlite::fromJSON(app$call(list(REQUEST_METHOD = "GET", PATH_INFO = "/row/points/2", QUERY_STRING = ""))$body,
                           simplifyVector = FALSE)$columns
   expect_equal(v[[1]]$code, "longline")
   expect_equal(c(v[[2]]$label, v[[2]]$unit), c("Bottom depth", "m"))
-  m3 <- rr_point(d, popup = c(gear, depth), labels = c(depth = "Depth of the haul (m)"), codes = list(gear = c("6" = "bottom trawl")))
+  m3 <- og_point(d, popup = c(gear, depth), labels = c(depth = "Depth of the haul (m)"), codes = list(gear = c("6" = "bottom trawl")))
   r3 <- m3$layers$points$row(1)$cols
   expect_equal(r3[[2]]$label, "Depth of the haul (m)")
   expect_null(r3[[2]]$unit) # the call's label says it all
   expect_equal(r3[[1]]$codes[["6"]], "bottom trawl")
-  expect_error(rr_point(d, labels = "Depth"), "named character")
-  expect_error(rr_point(d, codes = c(gear = "x")), "named list")
+  expect_error(og_point(d, labels = "Depth"), "named character")
+  expect_error(og_point(d, codes = c(gear = "x")), "named list")
   # a path's popup fields take the labels and the codes as the field lookup
   p <- data.frame(lon = c(-22, -21.9, -21.8), lat = 64, t = 1:3, boat = c(1L, 1L, 1L))
   attr(p$boat, "label") <- "Boat"
-  f <- layer(rr_path(p, group = boat, time = t, popup = boat, hover = NULL, codes = list(boat = c("1" = "Bjarni"))))$popup
+  f <- layer(og_path(p, group = boat, time = t, popup = boat, hover = NULL, codes = list(boat = c("1" = "Bjarni"))))$popup
   expect_equal(f$title, "boat")
   # the page shows the label, the unit and the code
-  page <- .rr_map_page("{}")
+  page <- .og_map_page("{}")
   expect_match(page, "esc(c.label ?? c.name)", fixed = TRUE)
   expect_match(page, "c.code ?", fixed = TRUE)
 })
 
 test_that("a layer's id may be given, and MapLibre's own paint and layout go to its styles", {
   skip_if_no_spatial()
-  pings <- rr_example("trawlsurvey")
-  m <- rr_map(pings) |>
-    rr_path(group = vid, time = time, colour = "#999999", id = "tracks", "line-dasharray" = list("literal", c(2, 1))) |>
-    rr_point(id = "cases", "circle-stroke-width" = 3, "circle-stroke-color" = "cyan", "circle-radius" = 11,
+  pings <- og_example("trawlsurvey")
+  m <- og_map(pings) |>
+    og_path(group = vid, time = time, colour = "#999999", id = "tracks", "line-dasharray" = list("literal", c(2, 1))) |>
+    og_point(id = "cases", "circle-stroke-width" = 3, "circle-stroke-color" = "cyan", "circle-radius" = 11,
              "circle-sort-key" = list("get", "speed"))
   ids <- vapply(m$config$layers, `[[`, "", "id")
   expect_identical(ids, c("tracks", "cases"))
@@ -553,17 +553,17 @@ test_that("a layer's id may be given, and MapLibre's own paint and layout go to 
   expect_identical(dot$layout[["circle-sort-key"]], list("get", "speed")) # MapLibre's layout, not paint
   expect_identical(m$config$layers[[1]]$style[[1]]$paint[["line-dasharray"]], list("literal", c(2, 1)))
   # an area's outline alone
-  a <- rr_example("dansk_harbours") |> rr_polygon("fill-opacity" = 0, "line-width" = 3)
+  a <- og_example("dansk_harbours") |> og_polygon("fill-opacity" = 0, "line-width" = 3)
   st <- a$config$layers[[1]]$style
   expect_identical(st[[1]]$paint[["fill-opacity"]], 0)
   expect_identical(st[[2]]$paint[["line-width"]], 3)
   # a text's halo off, its letters spaced (layout)
-  t <- rr_example("dansk_harbours") |> rr_text(label = SI_HARB, "text-halo-width" = 0, "text-letter-spacing" = 0.15)
+  t <- og_example("dansk_harbours") |> og_text(label = SI_HARB, "text-halo-width" = 0, "text-letter-spacing" = 0.15)
   expect_identical(t$config$layers[[1]]$style[[1]]$paint[["text-halo-width"]], 0)
   expect_identical(t$config$layers[[1]]$style[[1]]$layout[["text-letter-spacing"]], 0.15)
   # mistakes
-  expect_error(rr_map(pings) |> rr_point(id = "Cases"), "lower-case")
-  expect_error(rr_map(pings) |> rr_point(id = "a") |> rr_point(id = "a"), "taken")
-  expect_error(rr_map(pings) |> rr_point("fill-color" = "red"), "circle")
-  expect_error(rr_map(pings) |> rr_point(colr = "red"), "has no argument colr")
+  expect_error(og_map(pings) |> og_point(id = "Cases"), "lower-case")
+  expect_error(og_map(pings) |> og_point(id = "a") |> og_point(id = "a"), "taken")
+  expect_error(og_map(pings) |> og_point("fill-color" = "red"), "circle")
+  expect_error(og_map(pings) |> og_point(colr = "red"), "has no argument colr")
 })

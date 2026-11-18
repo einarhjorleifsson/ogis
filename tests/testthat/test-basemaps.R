@@ -22,11 +22,11 @@ test_that("a page opens on a base map given as a tile address, switches to a WMS
                         "&BBOX={bbox-epsg-3857}")),
     list(id = "none", label = "None")
   )
-  pos <- rr_example("trawlsurvey")
-  m <- rr_map(pos, basemaps = bases) |>
-    rr_point(id = "positions") |>
-    rr_text(label = vid, id = "ids")
-  rr_bundle(m, dir, overwrite = TRUE)
+  pos <- og_example("trawlsurvey")
+  m <- og_map(pos, basemaps = bases) |>
+    og_point(id = "positions") |>
+    og_text(label = vid, id = "ids")
+  og_bundle(m, dir, overwrite = TRUE)
   one_tile(file.path(dir, "tile.png"))
   b <- open_page(paste0(url, "index.html"))
   asked <- function(re) {

@@ -5,7 +5,7 @@
 
 # A tile's id: the count of the tiles of the zooms before it, then its place along the Hilbert curve at its zoom, as
 # the reference implementation's zxyToTileId() makes it
-.rr_pmtiles_id <- function(z, x, y) {
+.og_pmtiles_id <- function(z, x, y) {
   vapply(seq_along(z), function(i) {
     n <- 2^z[i]
     px <- x[i]
@@ -32,7 +32,7 @@
 }
 
 # Unsigned LEB128 varints of whole numbers below 2^53
-.rr_varint <- function(v) {
+.og_varint <- function(v) {
   out <- vector("list", length(v))
   for (i in seq_along(v)) {
     x <- v[i]
@@ -54,20 +54,20 @@
 
 # A directory: the count of entries, then each column (tile ids as differences, run lengths, lengths, offsets as 0
 # where a tile follows the one before it, else one more than the offset)
-.rr_pmtiles_dir <- function(id, offset, length, run) {
+.og_pmtiles_dir <- function(id, offset, length, run) {
   k <- length(id)
   follows <- c(FALSE, offset[-1] == offset[-k] + length[-k])
   c(
-    .rr_varint(k),
-    .rr_varint(diff(c(0, id))),
-    .rr_varint(run),
-    .rr_varint(length),
-    .rr_varint(ifelse(follows, 0, offset + 1))
+    .og_varint(k),
+    .og_varint(diff(c(0, id))),
+    .og_varint(run),
+    .og_varint(length),
+    .og_varint(ifelse(follows, 0, offset + 1))
   )
 }
 
-.rr_u64 <- function(x) as.raw(floor(x / 256^(0:7)) %% 256)
-.rr_i32 <- function(x) {
+.og_u64 <- function(x) as.raw(floor(x / 256^(0:7)) %% 256)
+.og_i32 <- function(x) {
   x <- round(x)
   as.raw(floor((if (x < 0) x + 2^32 else x) / 256^(0:3)) %% 256)
 }
@@ -75,27 +75,27 @@
 # The archive of tiles given by zoom, column, row and bytes, of one `type` (vector tiles, "mvt", or images, "png" or
 # "webp", "jpg"), written to `path`: a header, the root directory, the metadata, the leaf directories where the root alone
 # would pass its limit (16 kB with the header), the tiles
-.rr_pmtiles_write <- function(z, x, y, data, path, bounds, type = "mvt", name = "tiles", root_max = 16384 - 127) {
+.og_pmtiles_write <- function(z, x, y, data, path, bounds, type = "mvt", name = "tiles", root_max = 16384 - 127) {
   type_code <- unname(c(mvt = 1, png = 2, jpg = 3, jpeg = 3, webp = 4)[type]) # another, the spec's "unknown"
   if (is.na(type_code)) type_code <- 0
-  id <- .rr_pmtiles_id(z, x, y)
+  id <- .og_pmtiles_id(z, x, y)
   o <- order(id)
   id <- id[o]
   data <- data[o]
   z <- z[o]
   len <- as.numeric(lengths(data))
   off <- c(0, cumsum(len))[seq_along(len)]
-  root <- .rr_pmtiles_dir(id, off, len, rep(1, length(id)))
+  root <- .og_pmtiles_dir(id, off, len, rep(1, length(id)))
   leaves <- raw(0)
   size <- 4096
   # leaves of 4,096 entries, then 8,192 and on, until the root of their pointers fits (a root of one pointer is the
   # least it can be)
   while (length(root) > root_max && (size == 4096 || length(groups) > 1)) {
     groups <- split(seq_along(id), ceiling(seq_along(id) / size))
-    parts <- lapply(groups, function(g) .rr_pmtiles_dir(id[g], off[g], len[g], rep(1, length(g))))
+    parts <- lapply(groups, function(g) .og_pmtiles_dir(id[g], off[g], len[g], rep(1, length(g))))
     plen <- as.numeric(lengths(parts))
     leaves <- unlist(parts, use.names = FALSE)
-    root <- .rr_pmtiles_dir(vapply(groups, function(g) id[g[1]], 0), c(0, cumsum(plen))[seq_along(plen)], plen, rep(0, length(plen)))
+    root <- .og_pmtiles_dir(vapply(groups, function(g) id[g[1]], 0), c(0, cumsum(plen))[seq_along(plen)], plen, rep(0, length(plen)))
     size <- size * 2
   }
   meta <- charToRaw(enc2utf8(as.character(jsonlite::toJSON(c(
@@ -108,15 +108,15 @@
   at_data <- at_leaves + length(leaves)
   header <- c(
     charToRaw("PMTiles"), as.raw(3),
-    .rr_u64(at_root), .rr_u64(length(root)), .rr_u64(at_meta), .rr_u64(length(meta)),
-    .rr_u64(at_leaves), .rr_u64(length(leaves)), .rr_u64(at_data), .rr_u64(sum(len)),
-    .rr_u64(length(id)), .rr_u64(length(id)), .rr_u64(length(id)),
+    .og_u64(at_root), .og_u64(length(root)), .og_u64(at_meta), .og_u64(length(meta)),
+    .og_u64(at_leaves), .og_u64(length(leaves)), .og_u64(at_data), .og_u64(sum(len)),
+    .og_u64(length(id)), .og_u64(length(id)), .og_u64(length(id)),
     as.raw(1), # clustered: the tiles in the order of their ids
     as.raw(1), as.raw(1), # no compression, of the directories and of the tiles
     as.raw(type_code),
     as.raw(min(z)), as.raw(max(z)),
-    .rr_i32(bounds[1] * 1e7), .rr_i32(bounds[2] * 1e7), .rr_i32(bounds[3] * 1e7), .rr_i32(bounds[4] * 1e7),
-    as.raw(min(z)), .rr_i32((bounds[1] + bounds[3]) / 2 * 1e7), .rr_i32((bounds[2] + bounds[4]) / 2 * 1e7)
+    .og_i32(bounds[1] * 1e7), .og_i32(bounds[2] * 1e7), .og_i32(bounds[3] * 1e7), .og_i32(bounds[4] * 1e7),
+    as.raw(min(z)), .og_i32((bounds[1] + bounds[3]) / 2 * 1e7), .og_i32((bounds[2] + bounds[4]) / 2 * 1e7)
   )
   stopifnot(length(header) == 127)
   con <- file(path, "wb")

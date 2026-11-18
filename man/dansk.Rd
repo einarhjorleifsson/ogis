@@ -30,13 +30,13 @@ Workshop on Geo-Spatial Data for Small-Scale Fisheries." Commit
 Licence: MIT, Copyright (c) 2021 ICES Expert Groups.
 }
 \description{
-Each row is an AIS position of one of 14 Danish fishing vessels with four gears, a median 10 s apart, from December 2012 to October 2020, with an expert's label of fishing or other. Read it with \code{rr_example("dansk")}.
+Each row is an AIS position of one of 14 Danish fishing vessels with four gears, a median 10 s apart, from December 2012 to October 2020, with an expert's label of fishing or other. Read it with \code{og_example("dansk")}.
 }
 \details{
 \code{data-examples/example_data_AIS.csv} of the WKSSFGEO repository, with repeated (vessel_id, time_stamp) rows dropped and \code{.rowid} added (\code{data-raw/DATASET.R}).
 }
 \seealso{
-\code{\link[=rr_example]{rr_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
+\code{\link[=og_example]{og_example()}}; the data dictionary \code{data-dict.yaml} in the package's \code{extdata} folder.
 
 Other example data:
 \code{\link{dansk_harbours}},

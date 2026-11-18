@@ -22,7 +22,7 @@ open_page <- function(url, width = 1100, height = 900, env = parent.frame()) {
   b <- tryCatch(chromote::ChromoteSession$new(width = width, height = height),
                 error = function(e) testthat::skip(paste("Chrome did not start:", conditionMessage(e))))
   withr::defer(b$close(), envir = env)
-  # navigated without chromote's own wait, which turns a private event loop: a map served by this R (rr_serve())
+  # navigated without chromote's own wait, which turns a private event loop: a map served by this R (og_serve())
   # answers only in the global one, which wait_until() turns
   promises::catch(b$Page$navigate(url, wait_ = FALSE), function(e) NULL) # its answer may come after the page
   if (!wait_until(function() identical(page_eval(b, "location.href !== 'about:blank' && document.readyState"), "complete"), 60)) {
@@ -43,7 +43,7 @@ wait_until <- function(f, seconds = 30) {
   t0 <- Sys.time()
   while (as.numeric(Sys.time() - t0, units = "secs") < seconds) {
     if (isTRUE(tryCatch(f(), error = function(e) FALSE))) return(TRUE)
-    later::run_now(0.25) # a map served by this R (rr_serve()) answers meanwhile
+    later::run_now(0.25) # a map served by this R (og_serve()) answers meanwhile
   }
   FALSE
 }

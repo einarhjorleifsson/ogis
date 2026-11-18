@@ -3,7 +3,7 @@
 
 #' Notes pinned on a served map
 #'
-#' A map served with `rr_serve(notes = )` takes notes: in its Notes group the reader presses "Add a note", clicks
+#' A map served with `og_serve(notes = )` takes notes: in its Notes group the reader presses "Add a note", clicks
 #' the map and writes, and the server writes the note to the file, a GeoJSON FeatureCollection with a point for each
 #' note. A note keeps its `id`, its `time` (UTC), its `author` (`"reader"` from the page), its `text`, the map's `zoom`
 #' and the page's `address` (its query and position: the view and layers as the reader saw them), and `under`, the
@@ -12,7 +12,7 @@
 #' the reader's and blue once answered, with the thread and a box to reply in on a click, and asks for the notes again
 #' when it regains the focus and every 30 s.
 #'
-#' `rr_notes()` reads the notes, `rr_notes_add()` adds a note or a reply from R: a dialogue about places on a
+#' `og_notes()` reads the notes, `og_notes_add()` adds a note or a reply from R: a dialogue about places on a
 #' map, between a reader in the page and someone at R (or an assistant reading the file). Both may run while the map is
 #' served, in this R session or another: each write replaces the file whole, by a rename. The file is plain GeoJSON, a
 #' note a line, and opens in any GIS. Notes are written only by R in a UTF-8 locale, where letters outside ASCII are
@@ -23,25 +23,25 @@
 #' @param lon,lat Where it is pinned. A reply's place is its thread's.
 #' @param author Who wrote it.
 #' @param reply_to The `id` of the note it answers; a reply to a reply joins the same thread.
-#' @return `rr_notes()`: a data frame, a row for each note in the order written: `id`, `thread` (the `id` of its
+#' @return `og_notes()`: a data frame, a row for each note in the order written: `id`, `thread` (the `id` of its
 #'   thread's first note), `reply_to`, `time` (POSIXct, UTC), `author`, `text`, `lon`, `lat`, `zoom`, `under` (the
-#'   features under it, separated by "; ") and `address`; no rows when there is no file. `rr_notes_add()`: the
+#'   features under it, separated by "; ") and `address`; no rows when there is no file. `og_notes_add()`: the
 #'   new note's `id`, invisibly.
-#' @seealso [rr_serve()]
+#' @seealso [og_serve()]
 #' @export
 #' @examples
 #' f <- tempfile(fileext = ".geojson")
-#' rr_notes_add(f, "Is the bank's edge here?", lon = -14.6, lat = 64.0, author = "reader")
-#' rr_notes_add(f, "Yes, at the 200 m contour.", reply_to = 1, author = "analyst")
-#' rr_notes(f)[, c("id", "thread", "author", "text")]
-#' # a map served with them: rr_serve(m, notes = f)
-rr_notes <- function(path) {
-  path <- .rr_notes_path(path, folder = FALSE)
-  fs <- .rr_notes_read(path)
+#' og_notes_add(f, "Is the bank's edge here?", lon = -14.6, lat = 64.0, author = "reader")
+#' og_notes_add(f, "Yes, at the 200 m contour.", reply_to = 1, author = "analyst")
+#' og_notes(f)[, c("id", "thread", "author", "text")]
+#' # a map served with them: og_serve(m, notes = f)
+og_notes <- function(path) {
+  path <- .og_notes_path(path, folder = FALSE)
+  fs <- .og_notes_read(path)
   p <- lapply(fs, `[[`, "properties")
   chr <- function(k) vapply(p, function(x) if (is.null(x[[k]])) NA_character_ else as.character(x[[k]]), "")
   num <- function(k) vapply(p, function(x) if (is.null(x[[k]])) NA_real_ else as.numeric(x[[k]]), 0)
-  xy <- function(i) vapply(fs, function(f) as.numeric(.rr_or(f$geometry$coordinates[[i]], NA)), 0)
+  xy <- function(i) vapply(fs, function(f) as.numeric(.og_or(f$geometry$coordinates[[i]], NA)), 0)
   id <- as.integer(num("id"))
   reply_to <- as.integer(num("reply_to"))
   thread <- id
@@ -62,24 +62,24 @@ rr_notes <- function(path) {
   )
 }
 
-#' @rdname rr_notes
+#' @rdname og_notes
 #' @export
-rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst", reply_to = NULL) {
-  path <- .rr_notes_path(path)
-  .rr_notes_utf8()
+og_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst", reply_to = NULL) {
+  path <- .og_notes_path(path)
+  .og_notes_utf8()
   if (!is.character(author) || length(author) != 1 || is.na(author) || !nzchar(trimws(author))) {
     stop("`author` is a name.", call. = FALSE)
   }
-  why <- .rr_notes_check(list(text = text, lon = lon, lat = lat, reply_to = reply_to), .rr_notes_read(path))
+  why <- .og_notes_check(list(text = text, lon = lon, lat = lat, reply_to = reply_to), .og_notes_read(path))
   if (!is.null(why)) {
     stop(why, call. = FALSE)
   }
-  invisible(.rr_notes_add(path, list(text = text, lon = lon, lat = lat, reply_to = reply_to), trimws(author)))
+  invisible(.og_notes_add(path, list(text = text, lon = lon, lat = lat, reply_to = reply_to), trimws(author)))
 }
 
 # Notes are written only by an R in a UTF-8 locale: in another (C, as Rscript may start), R's strings and jsonlite write
 # a letter outside ASCII as "<c3><b3>", which would stay in the file
-.rr_notes_utf8 <- function() {
+.og_notes_utf8 <- function() {
   if (!isTRUE(l10n_info()[["UTF-8"]])) {
     stop(
       "Notes are written by R in a UTF-8 locale (this one is ", Sys.getlocale("LC_CTYPE"), "): start R with ",
@@ -90,7 +90,7 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 }
 
 # The notes' file: one path, a .geojson or .json file whose folder exists (when it is to be written)
-.rr_notes_path <- function(path, folder = TRUE) {
+.og_notes_path <- function(path, folder = TRUE) {
   if (!is.character(path) || length(path) != 1 || is.na(path) || !grepl("[.](geo)?json$", path, ignore.case = TRUE)) {
     stop("The notes' file is one path to a .geojson file.", call. = FALSE)
   }
@@ -103,7 +103,7 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 
 # The notes as features, none when there is no file; a file that is not a FeatureCollection of numbered notes stops
 # whatever would read or write it, so it is never overwritten
-.rr_notes_read <- function(path) {
+.og_notes_read <- function(path) {
   if (!file.exists(path)) {
     return(list())
   }
@@ -122,13 +122,13 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 }
 
 # The highest id given, deleted notes' included: a number is never given to two notes
-.rr_notes_last_id <- function(features) {
+.og_notes_last_id <- function(features) {
   max(c(0, attr(features, "last_id"), vapply(features, function(f) as.numeric(f$properties$id), 0)))
 }
 
 # Each note on a line of its own, and the last id given (a foreign member, which GeoJSON readers pass over), written to
 # a file beside it and renamed over it
-.rr_notes_write <- function(path, features, last_id) {
+.og_notes_write <- function(path, features, last_id) {
   one <- function(f) as.character(jsonlite::toJSON(f, auto_unbox = TRUE, null = "null", na = "null", digits = NA))
   body <- if (length(features)) paste0("\n", paste(vapply(features, one, ""), collapse = ",\n"), "\n") else ""
   tmp <- paste0(path, ".tmp")
@@ -142,7 +142,7 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 }
 
 # A note's fields checked against the notes there: NULL, or why it is refused
-.rr_notes_check <- function(n, features) {
+.og_notes_check <- function(n, features) {
   one_num <- function(x) is.numeric(x) && length(x) == 1 && is.finite(x)
   if (!is.character(n$text) || length(n$text) != 1 || is.na(n$text) || !nzchar(trimws(n$text))) {
     return("A note has a `text`.")
@@ -175,8 +175,8 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 }
 
 # A note added, checked before: a reply at its thread's first note, which it names; its id, one more than the last
-.rr_notes_add <- function(path, n, author) {
-  fs <- .rr_notes_read(path)
+.og_notes_add <- function(path, n, author) {
+  fs <- .og_notes_read(path)
   ids <- vapply(fs, function(f) as.numeric(f$properties$id), 0)
   reply_to <- NULL
   if (!is.null(n$reply_to)) {
@@ -188,7 +188,7 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
     n$lon <- root$geometry$coordinates[[1]]
     n$lat <- root$geometry$coordinates[[2]]
   }
-  id <- as.integer(.rr_notes_last_id(fs) + 1)
+  id <- as.integer(.og_notes_last_id(fs) + 1)
   fs[[length(fs) + 1]] <- list(
     type = "Feature",
     geometry = list(type = "Point", coordinates = list(round(n$lon, 6), round(n$lat, 6))),
@@ -203,34 +203,34 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
       address = n$address
     )
   )
-  .rr_notes_write(path, fs, id)
+  .og_notes_write(path, fs, id)
   id
 }
 
 # A note deleted, and with the first note of a thread its replies
-.rr_notes_delete <- function(path, id) {
-  fs <- .rr_notes_read(path)
+.og_notes_delete <- function(path, id) {
+  fs <- .og_notes_read(path)
   ids <- vapply(fs, function(f) as.numeric(f$properties$id), 0)
-  to <- vapply(fs, function(f) as.numeric(.rr_or(f$properties$reply_to, NA)), 0)
+  to <- vapply(fs, function(f) as.numeric(.og_or(f$properties$reply_to, NA)), 0)
   if (!id %in% ids) {
     return(FALSE)
   }
-  .rr_notes_write(path, fs[!(ids == id | to %in% id)], .rr_notes_last_id(fs))
+  .og_notes_write(path, fs[!(ids == id | to %in% id)], .og_notes_last_id(fs))
   TRUE
 }
 
 # The routes of the notes: GET /notes, POST /notes (a note or a reply), DELETE /notes/<id>, each answered with the notes
 # (a new note's id in `added`). Only for a page opened from this computer (its Host, against DNS rebinding); a write
 # only from the page itself (its header, which a page elsewhere may not send without the server's leave, and its Origin)
-.rr_map_notes_reply <- function(req, notes, hosts, reply, json) {
-  refused <- .rr_map_local_only(req, hosts, reply, "the notes", "a note")
+.og_map_notes_reply <- function(req, notes, hosts, reply, json) {
+  refused <- .og_map_local_only(req, hosts, reply, "the notes", "a note")
   if (!is.null(refused)) {
     return(refused)
   }
   method <- req$REQUEST_METHOD
   answer <- function(added = NULL) {
     force(added) # a note added before the notes are read
-    fc <- list(type = "FeatureCollection", features = .rr_notes_read(notes))
+    fc <- list(type = "FeatureCollection", features = .og_notes_read(notes))
     fc$added <- added
     reply(200L, json(fc), "application/geo+json; charset=utf-8", list(`Cache-Control` = "no-store"))
   }
@@ -241,7 +241,7 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
         return(answer())
       }
       if (path == "/notes" && method == "POST") {
-        if (suppressWarnings(as.numeric(.rr_or(req$CONTENT_LENGTH, "0"))) > 65536) {
+        if (suppressWarnings(as.numeric(.og_or(req$CONTENT_LENGTH, "0"))) > 65536) {
           return(reply(413L, "a note is at most 64 kB"))
         }
         b <- req$rook.input$read()
@@ -257,15 +257,15 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
         if (is.list(n$under)) {
           n$under <- lapply(n$under, function(u) if (is.character(u)) u else NA)
         }
-        why <- .rr_notes_check(n, .rr_notes_read(notes))
+        why <- .og_notes_check(n, .og_notes_read(notes))
         if (!is.null(why)) {
           return(reply(400L, why))
         }
-        return(answer(.rr_notes_add(notes, n, "reader")))
+        return(answer(.og_notes_add(notes, n, "reader")))
       }
       d <- regmatches(path, regexec("^/notes/([0-9]+)$", path))[[1]]
       if (length(d) == 2 && method == "DELETE") {
-        if (!.rr_notes_delete(notes, as.numeric(d[2]))) {
+        if (!.og_notes_delete(notes, as.numeric(d[2]))) {
           return(reply(404L, "no such note"))
         }
         return(answer())
@@ -279,12 +279,12 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 # A request for what the server keeps (the notes, the verdicts), checked: only from a page opened from this computer
 # (its Host, against DNS rebinding), and a write only from the page itself (its header, which a page elsewhere may not
 # send without the server's leave, and its Origin). NULL, or the refusal
-.rr_map_local_only <- function(req, hosts, reply, what, one) {
-  host <- tolower(sub(":[0-9]+$", "", .rr_or(req$HTTP_HOST, "")))
+.og_map_local_only <- function(req, hosts, reply, what, one) {
+  host <- tolower(sub(":[0-9]+$", "", .og_or(req$HTTP_HOST, "")))
   if (!host %in% hosts) {
     return(reply(403L, sprintf("%s are kept for a page opened from this computer", what)))
   }
-  if (req$REQUEST_METHOD != "GET" && (!identical(req$HTTP_X_RB_NOTES, "1") ||
+  if (req$REQUEST_METHOD != "GET" && (!identical(req$HTTP_X_OG_NOTES, "1") ||
                                         (!is.null(req$HTTP_ORIGIN) &&
                                            !identical(req$HTTP_ORIGIN, paste0("http://", req$HTTP_HOST))))) {
     return(reply(403L, sprintf("%s comes from the map's page", one)))
@@ -294,8 +294,8 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 
 #' Verdicts given on a served map
 #'
-#' A map served with `rr_serve(verdicts = )` takes the reader's verdict on the features of a layer whose popup has
-#' a `verdict` ([rr_layer()]): its questions in a feature's popup, a button for each answer, a box for the name an
+#' A map served with `og_serve(verdicts = )` takes the reader's verdict on the features of a layer whose popup has
+#' a `verdict` ([og_layer()]): its questions in a feature's popup, a button for each answer, a box for the name an
 #' answer points at (`other`, with the names in view offered), and the feature's note where the verdict asks for one.
 #' Each answer is a row added to a `.csv` file, never a row changed: when, the layer, the feature (its value of the
 #' verdict's `field`), the question, the answer, the other feature's name, the note, the feature's title, its place
@@ -317,11 +317,11 @@ rr_notes_add <- function(path, text, lon = NULL, lat = NULL, author = "analyst",
 #' #              verdict = list(field = "SI_HARB", text = TRUE,
 #' #                             options = list(list(value = "right", label = "right"),
 #' #                                            list(value = "wrong", label = "wrong"))))
-#' # rr_serve(m, verdicts = "harbour_verdicts.csv")
+#' # og_serve(m, verdicts = "harbour_verdicts.csv")
 #' f <- tempfile(fileext = ".csv")
-#' rr_verdicts(f) # none yet
-rr_verdicts <- function(path, all = FALSE) {
-  v <- .rr_verdicts_read(.rr_verdicts_path(path, folder = FALSE))
+#' og_verdicts(f) # none yet
+og_verdicts <- function(path, all = FALSE) {
+  v <- .og_verdicts_read(.og_verdicts_path(path, folder = FALSE))
   if (isTRUE(all) || !nrow(v)) {
     return(v)
   }
@@ -332,12 +332,12 @@ rr_verdicts <- function(path, all = FALSE) {
   v
 }
 
-.rr_verdict_cols <- c("time", "layer", "id", "question", "value", "other", "text", "title", "lon", "lat", "zoom")
+.og_verdict_cols <- c("time", "layer", "id", "question", "value", "other", "text", "title", "lon", "lat", "zoom")
 
-.rr_verdict_cols_v1 <- c("time", "layer", "id", "value", "text", "title", "lon", "lat", "zoom") # 2026.11.09
+.og_verdict_cols_v1 <- c("time", "layer", "id", "value", "text", "title", "lon", "lat", "zoom") # 2026.11.09
 
 # The verdicts' file: one path, a .csv file whose folder exists (when it is to be written)
-.rr_verdicts_path <- function(path, folder = TRUE) {
+.og_verdicts_path <- function(path, folder = TRUE) {
   if (!is.character(path) || length(path) != 1 || is.na(path) || !grepl("[.]csv$", path, ignore.case = TRUE)) {
     stop("The verdicts' file is one path to a .csv file.", call. = FALSE)
   }
@@ -350,9 +350,9 @@ rr_verdicts <- function(path, all = FALSE) {
 
 # The verdicts as rows, none when there is no file; a file without the verdicts' columns stops whatever would read or
 # write it, so it is never overwritten
-.rr_verdicts_read <- function(path) {
-  empty <- as.data.frame(stats::setNames(replicate(length(.rr_verdict_cols), character(), simplify = FALSE),
-                                         .rr_verdict_cols), stringsAsFactors = FALSE)
+.og_verdicts_read <- function(path) {
+  empty <- as.data.frame(stats::setNames(replicate(length(.og_verdict_cols), character(), simplify = FALSE),
+                                         .og_verdict_cols), stringsAsFactors = FALSE)
   num <- function(v) {
     for (k in c("lon", "lat", "zoom")) v[[k]] <- suppressWarnings(as.numeric(v[[k]]))
     v
@@ -363,14 +363,14 @@ rr_verdicts <- function(path, all = FALSE) {
   v <- tryCatch(utils::read.csv(path, colClasses = "character", na.strings = character(), encoding = "UTF-8",
                                 check.names = FALSE),
                 error = function(e) NULL)
-  if (is.data.frame(v) && identical(names(v), .rr_verdict_cols_v1)) { # one question, before the questions
+  if (is.data.frame(v) && identical(names(v), .og_verdict_cols_v1)) { # one question, before the questions
     v$question <- rep("verdict", nrow(v))
     v$other <- rep("", nrow(v))
-    v <- v[, .rr_verdict_cols]
+    v <- v[, .og_verdict_cols]
   }
-  if (!is.data.frame(v) || !identical(names(v), .rr_verdict_cols)) {
+  if (!is.data.frame(v) || !identical(names(v), .og_verdict_cols)) {
     stop(sprintf("%s is not a verdicts file (a .csv with the columns %s): left as it is.", path,
-                 paste(.rr_verdict_cols, collapse = ", ")), call. = FALSE)
+                 paste(.og_verdict_cols, collapse = ", ")), call. = FALSE)
   }
   num(v)
 }
@@ -378,7 +378,7 @@ rr_verdicts <- function(path, all = FALSE) {
 # A verdict's fields checked against the layers that take one: NULL, or why it is refused. An answer to a question is
 # one of its options, with the other feature's name where the option names one and none where it does not, or empty
 # to withdraw it; a note ("note") has a text, empty to clear it
-.rr_verdicts_check <- function(n, specs) {
+.og_verdicts_check <- function(n, specs) {
   one <- function(x) is.character(x) && length(x) == 1 && !is.na(x)
   one_num <- function(x) is.numeric(x) && length(x) == 1 && is.finite(x)
   if (!one(n$layer) || is.null(specs[[n$layer]])) {
@@ -389,7 +389,7 @@ rr_verdicts <- function(path, all = FALSE) {
   }
   qs <- specs[[n$layer]]$questions
   ids <- vapply(qs, `[[`, "", "id")
-  question <- .rr_or(n$question, if (length(qs) == 1) ids[1])
+  question <- .og_or(n$question, if (length(qs) == 1) ids[1])
   if (!one(question) || !question %in% c(ids, if (specs[[n$layer]]$text) "note")) {
     return(sprintf("A verdict's `question` is one of %s.", paste(c(ids, if (specs[[n$layer]]$text) "note"), collapse = ", ")))
   }
@@ -427,12 +427,12 @@ rr_verdicts <- function(path, all = FALSE) {
 }
 
 # A verdict added, checked before: the file written beside itself and renamed over it
-.rr_verdicts_add <- function(path, n) {
-  v <- .rr_verdicts_read(path)
+.og_verdicts_add <- function(path, n) {
+  v <- .og_verdicts_read(path)
   row <- data.frame(
     time = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"), layer = n$layer, id = as.character(n$id),
-    question = n$question, value = .rr_or(n$value, ""), other = trimws(.rr_or(n$other, "")),
-    text = trimws(.rr_or(n$text, "")), title = .rr_or(n$title, ""),
+    question = n$question, value = .og_or(n$value, ""), other = trimws(.og_or(n$other, "")),
+    text = trimws(.og_or(n$text, "")), title = .og_or(n$title, ""),
     lon = round(n$lon, 6), lat = round(n$lat, 6), zoom = if (is.null(n$zoom)) NA_real_ else round(n$zoom, 2),
     stringsAsFactors = FALSE
   )
@@ -450,13 +450,13 @@ rr_verdicts <- function(path, all = FALSE) {
 
 # The layers of a map that take a verdict, by id: their verdicts' specs. Layers that keep their answers under one id
 # (`store`, another layer's, else their own) share them, so they must ask the same questions with the same answers
-.rr_map_verdict_layers <- function(map) {
+.og_map_verdict_layers <- function(map) {
   specs <- lapply(map$layers, function(l) l$config$popup$verdict)
   names(specs) <- vapply(map$layers, function(l) l$config$id, "")
   specs <- Filter(Negate(is.null), specs)
   shape <- function(v) paste(vapply(v$questions, function(q) paste0(q$id, ":", paste(vapply(q$options, `[[`, "", "value"), collapse = ",")), ""),
                              collapse = ";")
-  store <- vapply(names(specs), function(id) .rr_or(specs[[id]]$store, id), "")
+  store <- vapply(names(specs), function(id) .og_or(specs[[id]]$store, id), "")
   for (k in unique(store)) {
     same <- names(specs)[store == k]
     if (length(unique(vapply(specs[same], shape, ""))) > 1) {
@@ -468,13 +468,13 @@ rr_verdicts <- function(path, all = FALSE) {
 }
 
 # The routes of the verdicts: GET /verdicts, POST /verdicts (given or withdrawn), each answered with the current ones
-.rr_map_verdicts_reply <- function(req, verdicts, specs, hosts, reply, json) {
-  refused <- .rr_map_local_only(req, hosts, reply, "the verdicts", "a verdict")
+.og_map_verdicts_reply <- function(req, verdicts, specs, hosts, reply, json) {
+  refused <- .og_map_local_only(req, hosts, reply, "the verdicts", "a verdict")
   if (!is.null(refused)) {
     return(refused)
   }
   answer <- function() {
-    v <- rr_verdicts(verdicts)
+    v <- og_verdicts(verdicts)
     rows <- lapply(seq_len(nrow(v)), function(i) {
       as.list(v[i, c("layer", "id", "question", "value", "other", "text", "lon", "lat", "time")])
     })
@@ -490,7 +490,7 @@ rr_verdicts <- function(path, all = FALSE) {
         return(answer())
       }
       if (method == "POST") {
-        if (suppressWarnings(as.numeric(.rr_or(req$CONTENT_LENGTH, "0"))) > 16384) {
+        if (suppressWarnings(as.numeric(.og_or(req$CONTENT_LENGTH, "0"))) > 16384) {
           return(reply(413L, "a verdict is at most 16 kB"))
         }
         b <- req$rook.input$read()
@@ -503,16 +503,16 @@ rr_verdicts <- function(path, all = FALSE) {
         if (!is.list(n) || is.null(names(n))) {
           return(reply(400L, "a verdict is a JSON object"))
         }
-        why <- .rr_verdicts_check(n, specs)
+        why <- .og_verdicts_check(n, specs)
         if (!is.null(why)) {
           return(reply(400L, why))
         }
         if (is.null(n$question)) {
           n$question <- specs[[n$layer]]$questions[[1]]$id # a page of one question may leave it out
         }
-        .rr_verdicts_read(verdicts) # a file broken by hand stops here, left as it is
-        n$layer <- .rr_or(specs[[n$layer]]$store, n$layer) # kept under the answers it shares
-        .rr_verdicts_add(verdicts, n)
+        .og_verdicts_read(verdicts) # a file broken by hand stops here, left as it is
+        n$layer <- .og_or(specs[[n$layer]]$store, n$layer) # kept under the answers it shares
+        .og_verdicts_add(verdicts, n)
         return(answer())
       }
       reply(405L, "GET /verdicts or POST /verdicts")

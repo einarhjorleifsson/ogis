@@ -3,7 +3,7 @@
 # Moved from ramb's R/map.R on 2026-11-10.
 
 # The map piped in, if any, and the rows and settings of the layer being added
-.rr_quick <- function(
+.og_quick <- function(
   x,
   data,
   lon,
@@ -15,11 +15,11 @@
   choose_q = rlang::quo(NULL),
   groups = TRUE
 ) {
-  state <- if (inherits(x, "rr_map")) .rr_quick_open(attr(x, "quick"))
-  # a map started from data by rr_map(data): its data the map's, read by the first call that needs them (an
-  # rr_add_layer() before it reads none); its `choose` the map's lists
+  state <- if (inherits(x, "og_map")) .og_quick_open(attr(x, "quick"))
+  # a map started from data by og_map(data): its data the map's, read by the first call that needs them (an
+  # og_add_layer() before it reads none); its `choose` the map's lists
   if (!is.null(state$data)) {
-    state$ctx <- .rr_quick_data(.rr_data(state$data), NULL, NULL, NULL, rlang::quo(NULL), NULL)
+    state$ctx <- .og_quick_data(.og_data(state$data), NULL, NULL, NULL, rlang::quo(NULL), NULL)
     if (!groups) {
       state$ctx$groups <- character()
     }
@@ -28,10 +28,10 @@
   if (rlang::quo_is_null(choose_q) && is.null(state[["choose_fields"]]) && !is.null(state$choose_q)) {
     choose_q <- state$choose_q
   }
-  if (inherits(x, "rr_map") && is.null(state)) {
+  if (inherits(x, "og_map") && is.null(state)) {
     stop(
-      paste0("This map was made of rr_section()s, so it takes no layer function: start it with rr_map() ",
-             "(with data or none) and add each rr_layer() of your own to it with rr_add_layer()."),
+      paste0("This map was made of og_section()s, so it takes no layer function: start it with og_map() ",
+             "(with data or none) and add each og_layer() of your own to it with og_add_layer()."),
       call. = FALSE
     )
   }
@@ -42,7 +42,7 @@
     x
   }
   if (is.null(rows) && is.null(base)) {
-    stop("This layer has no data: give it its own (`data`), or start the map from data, rr_map(data).", call. = FALSE)
+    stop("This layer has no data: give it its own (`data`), or start the map from data, og_map(data).", call. = FALSE)
   }
   ctx <- if (is.null(rows)) {
     if (
@@ -58,10 +58,10 @@
     }
     base
   } else {
-    .rr_quick_data(rows, lon, lat, time, by_q, base)
+    .og_quick_data(rows, lon, lat, time, by_q, base)
   }
   if (!groups) {
-    ctx$groups <- character() # rebelrebel's layer functions read no group_by(): `choose` names the lists
+    ctx$groups <- character() # ogis's layer functions read no group_by(): `choose` names the lists
   }
   if (is.null(state)) {
     state <- list(
@@ -76,13 +76,13 @@
   # the map's choices: the groups of the rows that start it, and the columns `choose` names
   wanted <- unique(c(
     ctx$groups,
-    if (!rlang::quo_is_null(choose_q)) .rr_track_cols(choose_q, ctx$cols)
+    if (!rlang::quo_is_null(choose_q)) .og_track_cols(choose_q, ctx$cols)
   ))
-  # set by the first call that brings rows (an rr_add_layer() before it brings none)
+  # set by the first call that brings rows (an og_add_layer() before it brings none)
   if (is.null(state[["choose_fields"]])) {
-    .rr_quick_need(ctx, wanted)
+    .og_quick_need(ctx, wanted)
     state[["choose_fields"]] <- as.character(wanted)
-    state[["choose"]] <- .rr_quick_choose(ctx, wanted)
+    state[["choose"]] <- .og_quick_choose(ctx, wanted)
     state$choose_q <- NULL
   } else if (length(setdiff(wanted, state[["choose_fields"]]))) {
     warning(
@@ -95,10 +95,10 @@
   list(state = state, ctx_layer = ctx)
 }
 
-# A map's making, opened for a call to add to: a map rr_map() started (pending) turned into one with no layers yet, its
+# A map's making, opened for a call to add to: a map og_map() started (pending) turned into one with no layers yet, its
 # data (if any) kept to be read by the first call that brings rows; a map the pipe made as it is; NULL for one made of
-# rr_section()s
-.rr_quick_open <- function(state) {
+# og_section()s
+.og_quick_open <- function(state) {
   if (is.null(state$pending)) {
     return(state)
   }
@@ -112,54 +112,54 @@
 
 #' A layer of your own on a map the pipe makes
 #'
-#' `rr_add_layer()` adds an [rr_layer()] to a map the pipe makes ([rr_map()], with data or none, and the layer
+#' `og_add_layer()` adds an [og_layer()] to a map the pipe makes ([og_map()], with data or none, and the layer
 #' functions), for what the layer functions do not draw: elevations as relief and colours (`"dem"`), contours made in
 #' the page (`"contour"`), tiles of your own (`"vector"`, `"grid"`), features as GeoJSON with a style of your own. It
 #' sits in the sidebar's box `section` with the others and is drawn in the order added, the later over the earlier,
-#' whatever their boxes (or as [rr_map()]'s `order` says); elevations, contours and a grid go under the base map's
+#' whatever their boxes (or as [og_map()]'s `order` says); elevations, contours and a grid go under the base map's
 #' labels, as in any map.
 #'
 #' The first view covers the rows of the map's layer functions; a map with none fits the layers' tiles (their
-#' `bounds`, which [rr_tiles_dem()] and [rr_tiles_mbtiles()] give), unless `rr_map(view = )` is given. The layer is
+#' `bounds`, which [og_tiles_dem()] and [og_tiles_mbtiles()] give), unless `og_map(view = )` is given. The layer is
 #' served, bundled and knitted as the others are; its `id` must not be another layer's.
 #'
-#' @param map A map the pipe makes: [rr_map()], with data or none, and any layer functions after it. A map made of
-#'   [rr_section()]s takes its layers in them instead.
-#' @param layer An [rr_layer()], or a list of them, added in their order.
+#' @param map A map the pipe makes: [og_map()], with data or none, and any layer functions after it. A map made of
+#'   [og_section()]s takes its layers in them instead.
+#' @param layer An [og_layer()], or a list of them, added in their order.
 #' @param section The sidebar's box the layer sits in, by its title, as the layer functions' `section`; whether it is
-#'   open when the page opens, by [rr_map()]'s `sections`.
+#'   open when the page opens, by [og_map()]'s `sections`.
 #' @return The map, with the layer.
-#' @seealso [rr_layer()]; [rr_section()] and [rr_map()] for a map whose every layer is an [rr_layer()].
+#' @seealso [og_layer()]; [og_section()] and [og_map()] for a map whose every layer is an [og_layer()].
 #' @export
 #' @examples
 #' # the seabed's depth in colour, as tiles made from a grid, under the harbours
 #' \donttest{
 #' if (requireNamespace("png", quietly = TRUE) && requireNamespace("terra", quietly = TRUE)) {
-#'   depth <- rr_layer(
+#'   depth <- og_layer(
 #'     "depth", "dem", label = "Depth",
-#'     tiles = rr_tiles_dem(rr_example("dansk_relief"), maxzoom = 6),
+#'     tiles = og_tiles_dem(og_example("dansk_relief"), maxzoom = 6),
 #'     style = list(list(id = "depth-colour", type = "color-relief")),
 #'     colour = list(palette = "seabed", opacity = 75)
 #'   )
-#'   m <- rr_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
-#'     rr_add_layer(depth, section = "Sea floor") |>
-#'     rr_polygon(rr_example("dansk_harbours"), name = "Harbours")
+#'   m <- og_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
+#'     og_add_layer(depth, section = "Sea floor") |>
+#'     og_polygon(og_example("dansk_harbours"), name = "Harbours")
 #'   m
 #' }
 #' }
-rr_add_layer <- function(map, layer, section = "Layers") {
-  if (!inherits(map, "rr_map")) {
-    stop("`map` is an rr_map(): start it with rr_map(), with data or none.", call. = FALSE)
+og_add_layer <- function(map, layer, section = "Layers") {
+  if (!inherits(map, "og_map")) {
+    stop("`map` is an og_map(): start it with og_map(), with data or none.", call. = FALSE)
   }
-  state <- .rr_quick_open(attr(map, "quick"))
+  state <- .og_quick_open(attr(map, "quick"))
   if (is.null(state)) {
-    stop("This map was made of rr_section()s: give the layer to one of them, rr_section(layers = ).", call. = FALSE)
+    stop("This map was made of og_section()s: give the layer to one of them, og_section(layers = ).", call. = FALSE)
   }
-  if (inherits(layer, "rr_layer")) {
+  if (inherits(layer, "og_layer")) {
     layer <- list(layer)
   }
-  if (!is.list(layer) || !length(layer) || !all(vapply(layer, inherits, NA, "rr_layer"))) {
-    stop("`layer` is an rr_layer(), or a list of them.", call. = FALSE)
+  if (!is.list(layer) || !length(layer) || !all(vapply(layer, inherits, NA, "og_layer"))) {
+    stop("`layer` is an og_layer(), or a list of them.", call. = FALSE)
   }
   if (!is.character(section) || length(section) != 1 || is.na(section) || !nzchar(trimws(section))) {
     stop("`section` is the title of a box in the sidebar.", call. = FALSE)
@@ -171,7 +171,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
       stop(sprintf("Layer id \"%s\" is taken by another layer of the map.", id), call. = FALSE)
     }
     state$layer_section[[id]] <- section
-    m <- .rr_quick_map(list(state = state), l)
+    m <- .og_quick_map(list(state = state), l)
     state <- attr(m, "quick")
   }
   m
@@ -182,7 +182,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 # between pretty() breaks. Where there are several fields, each combination that occurs (a range's by its bin) with its
 # rows and extent, by which the page links the fields and fits the view. A logical is matched as it is, text and
 # factors as the text the tiles carry; a range's ends are numbers, or for a date or a time the text the tiles carry
-.rr_quick_choose <- function(ctx, fields) {
+.og_quick_choose <- function(ctx, fields) {
   if (!length(fields)) {
     return(NULL)
   }
@@ -199,9 +199,9 @@ rr_add_layer <- function(map, layer, section = "Layers") {
     if (!store %in% c("id", "number")) {
       return(store)
     }
-    switch(.rr_declared(ctx$dict[[fields[i]]]$type), list = "id", range = "number", store)
+    switch(.og_declared(ctx$dict[[fields[i]]]$type), list = "id", range = "number", store)
   }, "")
-  b <- .rr_box_sql(con, ctx$src, ctx$lon, ctx$lat, ctx$geometry)
+  b <- .og_box_sql(con, ctx$src, ctx$lon, ctx$lat, ctx$geometry)
   box <- function(r, j) c(r$lon0[j], r$lat0[j], r$lon1[j], r$lat1[j])
   num <- function(x) format(x, scientific = FALSE, trim = TRUE, digits = 15)
   key <- function(v) if (is.na(v)) "<NA>" else if (is.numeric(v)) num(v) else as.character(v)
@@ -323,14 +323,14 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 
 # Pings read for a layer: the lazy table, its columns, the settings (from the arguments, else the map's, else the
 # usual names) and its bounds
-.rr_quick_data <- function(rows, lon, lat, time, by_q, base) {
+.og_quick_data <- function(rows, lon, lat, time, by_q, base) {
   wkt <- FALSE
   if (inherits(rows, "sf")) {
     if (all(as.character(sf::st_geometry_type(rows)) == "POINT")) {
       xy <- sf::st_coordinates(rows)
       rows <- sf::st_drop_geometry(rows)
-      rows[[.rr_or(lon, "lon")]] <- xy[, 1]
-      rows[[.rr_or(lat, "lat")]] <- xy[, 2]
+      rows[[.og_or(lon, "lon")]] <- xy[, 1]
+      rows[[.og_or(lat, "lat")]] <- xy[, 2]
     } else {
       # lines and areas: their shapes as text, made DuckDB's GEOMETRY again on the connection (WGS 84)
       g <- sf::st_geometry(rows)
@@ -338,20 +338,20 @@ rr_add_layer <- function(map, layer, section = "Layers") {
         g <- sf::st_transform(g, 4326)
       }
       rows <- sf::st_drop_geometry(rows)
-      rows$rr_wkt <- sf::st_as_text(g)
+      rows$og_wkt <- sf::st_as_text(g)
       wkt <- TRUE
     }
   }
   groups <- dplyr::group_vars(rows)
   # an ordered factor's order, which DuckDB's ENUM does not keep, and a column's label and units, its attributes
   ordered <- if (is.data.frame(rows)) names(Filter(is.ordered, rows)) else character()
-  dict <- if (is.data.frame(rows)) .rr_dict_attributes(rows) else list()
-  con <- .rr_con_for(rows)
-  x <- dplyr::ungroup(.rr_as_lazy(rows, con))
+  dict <- if (is.data.frame(rows)) .og_dict_attributes(rows) else list()
+  con <- .og_con_for(rows)
+  x <- dplyr::ungroup(.og_as_lazy(rows, con))
   if (wkt) {
-    .rr_extension(con, "spatial")
+    .og_extension(con, "spatial")
     x <- dplyr::tbl(con, dplyr::sql(sprintf(
-      "SELECT * EXCLUDE (rr_wkt), ST_GeomFromText(rr_wkt) AS geometry FROM (%s)", .rr_sql(x)
+      "SELECT * EXCLUDE (og_wkt), ST_GeomFromText(og_wkt) AS geometry FROM (%s)", .og_sql(x)
     )))
   }
   cols <- colnames(x)
@@ -389,8 +389,8 @@ rr_add_layer <- function(map, layer, section = "Layers") {
     con = con,
     groups = groups,
     ordered = ordered,
-    dict = .rr_dict_merge(dict, .rr_dict_parquet(con, .rr_sql(x))),
-    src = .rr_sql(x),
+    dict = .og_dict_merge(dict, .og_dict_parquet(con, .og_sql(x))),
+    src = .og_sql(x),
     cols = cols,
     lon = if (is.null(geometry)) lon,
     lat = if (is.null(geometry)) lat,
@@ -398,8 +398,8 @@ rr_add_layer <- function(map, layer, section = "Layers") {
     time = time,
     by = by
   )
-  .rr_quick_need(ctx, c(if (is.null(geometry)) c(lon, lat), by))
-  b <- .rr_box_sql(con, ctx$src, ctx$lon, ctx$lat, geometry)
+  .og_quick_need(ctx, c(if (is.null(geometry)) c(lon, lat), by))
+  b <- .og_box_sql(con, ctx$src, ctx$lon, ctx$lat, geometry)
   box <- DBI::dbGetQuery(con, sprintf("SELECT %s FROM (%s) WHERE %s", b$select, ctx$src, b$where))
   if (box$n == 0) {
     stop(if (is.null(geometry)) "No row has a position." else "No row has a shape.", call. = FALSE)
@@ -410,7 +410,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 
 # The SQL of rows' count and extent, from lon and lat or from a shape (DuckDB's GEOMETRY or WKB), and of the rows
 # that have one: `select` to aggregate, `where` to keep
-.rr_box_sql <- function(con, src, lon, lat, geometry) {
+.og_box_sql <- function(con, src, lon, lat, geometry) {
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
   if (is.null(geometry)) {
     return(list(
@@ -421,7 +421,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
       where = sprintf("%s IS NOT NULL AND %s IS NOT NULL", q(lon), q(lat))
     ))
   }
-  g <- .rr_geom_sql(con, src, geometry)
+  g <- .og_geom_sql(con, src, geometry)
   list(
     select = sprintf(
       "count(*) AS n, min(ST_XMin(%1$s)) AS lon0, max(ST_XMax(%1$s)) AS lon1, min(ST_YMin(%1$s)) AS lat0, max(ST_YMax(%1$s)) AS lat1",
@@ -432,15 +432,15 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 }
 
 # A shape column as DuckDB's GEOMETRY in SQL: as it is, or read from WKB (a BLOB)
-.rr_geom_sql <- function(con, src, geometry) {
-  .rr_extension(con, "spatial")
+.og_geom_sql <- function(con, src, geometry) {
+  .og_extension(con, "spatial")
   q <- as.character(DBI::dbQuoteIdentifier(con, geometry))
   type <- DBI::dbGetQuery(con, sprintf("SELECT typeof(%s) AS t FROM (%s) LIMIT 1", q, src))$t
   # DuckDB's GEOMETRY may carry its CRS in the type, GEOMETRY('OGC:CRS84')
   if (length(type) && startsWith(type, "GEOMETRY")) q else sprintf("ST_GeomFromWKB(%s)", q)
 }
 
-.rr_quick_need <- function(ctx, need) {
+.og_quick_need <- function(ctx, need) {
   missing <- setdiff(unique(need), ctx$cols)
   if (length(missing)) {
     stop(
@@ -455,8 +455,8 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 }
 
 # A layer's name, numbered only where an earlier layer has the same
-.rr_quick_label <- function(state, label) {
-  taken <- vapply(state$layers, function(l) .rr_or(l$config$label, ""), "")
+.og_quick_label <- function(state, label) {
+  taken <- vapply(state$layers, function(l) .og_or(l$config$label, ""), "")
   if (!label %in% taken) {
     return(label)
   }
@@ -468,11 +468,11 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 }
 
 # The map with the layer added over the others: the first view covers every layer's rows
-.rr_quick_map <- function(s, layer = NULL, table = NULL) {
+.og_quick_map <- function(s, layer = NULL, table = NULL) {
   state <- s$state
   if (!is.null(layer)) {
     state$layer_fields[[layer$config$id]] <- intersect(
-      .rr_or(state[["choose_fields"]], character()),
+      .og_or(state[["choose_fields"]], character()),
       s$ctx_layer$cols
     )
     state$layers <- c(state$layers, list(layer))
@@ -480,7 +480,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
       state$tables <- c(state$tables, list(table))
     }
   }
-  if (!is.null(s$ctx_layer$box)) { # an rr_add_layer()'s layer has no rows
+  if (!is.null(s$ctx_layer$box)) { # an og_add_layer()'s layer has no rows
     state$boxes <- c(state$boxes, list(s$ctx_layer$box))
   }
   # the rows' extent; with no rows, that of the layers' tiles (their `bounds`), else the world
@@ -499,25 +499,25 @@ rr_add_layer <- function(map, layer, section = "Layers") {
   lat0 <- min(vapply(boxes, `[[`, 1, "lat0"))
   lat1 <- max(vapply(boxes, `[[`, 1, "lat1"))
   span <- max(lon1 - lon0, 2 * (lat1 - lat0)) # a degree of latitude draws taller
-  bases <- rr_basemaps()
+  bases <- og_basemaps()
   # the layers by their sections, in the order first named (the quick look's all under "Track")
-  secs <- vapply(state$layers, function(l) .rr_or(state$layer_section[[l$config$id]], "Track"), "")
+  secs <- vapply(state$layers, function(l) .og_or(state$layer_section[[l$config$id]], "Track"), "")
   sections <- lapply(unique(secs), function(sn) {
     spec <- state$sections[[sn]]
-    rr_section(paste0("s_", .rr_slug(sn)), .rr_or(spec$title, sn), state$layers[secs == sn], open = .rr_or(spec$open, TRUE))
+    og_section(paste0("s_", .og_slug(sn)), .og_or(spec$title, sn), state$layers[secs == sn], open = .og_or(spec$open, TRUE))
   })
   if (!length(sections)) {
-    sections <- list(rr_section("track", "Track", list())) # a time panel alone
+    sections <- list(og_section("track", "Track", list())) # a time panel alone
   }
   # drawn in the order added, the later over the earlier, whatever their boxes; those `order` names first. One it
   # names that is not added yet is left for a later call (checked once the map is shown)
   ids <- vapply(state$layers, function(l) l$config$id, "")
-  m <- do.call(rr_map, c(sections, list(
+  m <- do.call(og_map, c(sections, list(
     title = state$title,
     order = c(intersect(state$order, ids), setdiff(ids, state$order)),
     # the rows' extent, which the page fits to the frame it has (a window, an article's iframe); the centre and zoom
     # for a page whose address holds no view and no extent
-    # (a view given to rr_map() wins)
+    # (a view given to og_map() wins)
     view = state$view %||% list(
       center = c((lon0 + lon1) / 2, (lat0 + lat1) / 2),
       zoom = if (span > 0) max(1, min(15, floor(log2(360 / span)) - 1)) else 12,
@@ -536,7 +536,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
     },
     basemaps = state$basemaps %||% bases
   )))
-  # the time panel (rr_time()): its config for the page, its series for the server and its tables
+  # the time panel (og_time()): its config for the page, its series for the server and its tables
   if (!is.null(state$time)) {
     m$config$time <- state$time$config
     # the layers whose features carry a vessel and a time: the page shows on them only the panel's vessel and span
@@ -546,7 +546,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
     m$time <- state$time
   }
   if (length(state$scripts)) {
-    m$config$scripts <- state$scripts # a page's own (rr_script()), whichever came first, it or a layer
+    m$config$scripts <- state$scripts # a page's own (og_script()), whichever came first, it or a layer
   }
   attr(m, "quick") <- state
   attr(m, "tables") <- c(state$tables, state$time$tables)
@@ -555,7 +555,7 @@ rr_add_layer <- function(map, layer, section = "Layers") {
 }
 
 # The columns `col` names: a name, a string, c() of them, or a variable holding strings
-.rr_track_cols <- function(q, cols) {
+.og_track_cols <- function(q, cols) {
   e <- rlang::quo_get_expr(q)
   if (rlang::is_call(e, "c")) {
     return(vapply(

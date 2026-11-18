@@ -9,52 +9,52 @@ test_that("a printed map is an iframe, its bundle a dependency, the libraries on
   skip_if_not_installed("knitr")
   skip_if_not_installed("htmltools")
   skip_if_no_spatial()
-  m <- rr_example("trawlsurveytows") |> rr_line(name = "Tows")
+  m <- og_example("trawlsurveytows") |> og_line(name = "Tows")
   k <- knit_map(m)
   expect_s3_class(k$out, "knit_asis")
-  expect_match(k$html, '^<iframe class="rr-map" data-rr-map="rr-map-[0-9a-f]{12}"')
+  expect_match(k$html, '^<iframe class="og-map" data-rr-map="og-map-[0-9a-f]{12}"')
   expect_match(k$html, "width:100%;height:480px")
   expect_length(k$deps, 2)
   vendor <- k$deps[[1]]
   map <- k$deps[[2]]
-  expect_identical(vendor$name, "rebelrebel-vendor")
-  expect_identical(vendor$version, as.character(utils::packageVersion("rebelrebel")))
+  expect_identical(vendor$name, "ogis-vendor")
+  expect_identical(vendor$version, as.character(utils::packageVersion("ogis")))
   expect_true(file.exists(file.path(vendor$src$file, "maplibre-gl.js")))
-  expect_identical(map$script, "rr-locate.js")
+  expect_identical(map$script, "og-locate.js")
   expect_true(isTRUE(map$all_files))
   # the bundle carries no libraries of its own, and its page reads the shared copy beside it
   expect_false(dir.exists(file.path(map$src$file, "vendor")))
   page <- paste(readLines(file.path(map$src$file, "index.html"), warn = FALSE), collapse = "\n")
-  shared <- sprintf("../rebelrebel-vendor-%s/", vendor$version)
+  shared <- sprintf("../ogis-vendor-%s/", vendor$version)
   expect_match(page, paste0('src="', shared, "maplibre-gl.js"), fixed = TRUE)
   expect_no_match(page, '"vendor/', fixed = TRUE)
   # the locator names its map's iframe
-  expect_match(paste(readLines(file.path(map$src$file, "rr-locate.js")), collapse = "\n"), map$name, fixed = TRUE)
+  expect_match(paste(readLines(file.path(map$src$file, "og-locate.js")), collapse = "\n"), map$name, fixed = TRUE)
 })
 
 test_that("a map's name follows its content, and the chunk's size is the map's", {
   skip_if_not_installed("knitr")
   skip_if_not_installed("htmltools")
   skip_if_no_spatial()
-  a <- knit_map(rr_example("trawlsurveytows") |> rr_line(name = "Tows"))
-  b <- knit_map(rr_example("trawlsurveytows") |> rr_line(name = "Tows"))
-  c <- knit_map(rr_example("trawlsurveytows") |> rr_line(name = "The tows"))
+  a <- knit_map(og_example("trawlsurveytows") |> og_line(name = "Tows"))
+  b <- knit_map(og_example("trawlsurveytows") |> og_line(name = "Tows"))
+  c <- knit_map(og_example("trawlsurveytows") |> og_line(name = "The tows"))
   expect_identical(a$deps[[2]]$name, b$deps[[2]]$name)
   expect_false(identical(a$deps[[2]]$name, c$deps[[2]]$name))
   # knitr's default width (the figures', 7 in at 96 px) is the page's; a size given is kept
-  s <- knit_map(rr_example("trawlsurveytows") |> rr_line(), options = list(fig.width = 7, out.width = 672, out.height = 300))
+  s <- knit_map(og_example("trawlsurveytows") |> og_line(), options = list(fig.width = 7, out.width = 672, out.height = 300))
   expect_match(s$html, "width:100%;height:300px")
-  s <- knit_map(rr_example("trawlsurveytows") |> rr_line(), options = list(fig.width = 7, out.width = "60%", out.height = "20em"))
+  s <- knit_map(og_example("trawlsurveytows") |> og_line(), options = list(fig.width = 7, out.width = "60%", out.height = "20em"))
   expect_match(s$html, "width:60%;height:20em")
 })
 
 test_that("a map started from data opens on its rows' extent, and a view may be an extent", {
   skip_if_no_spatial()
-  m <- rr_example("trawlsurveytows") |> rr_line()
+  m <- og_example("trawlsurveytows") |> og_line()
   b <- unlist(m$config$view$bounds)
   expect_length(b, 4)
   expect_true(b[1] < b[3] && b[2] < b[4])
-  v <- rr_map(rr_section("s", "S", list()), view = list(bounds = c(-25, 63, -13, 67)))$config$view
+  v <- og_map(og_section("s", "S", list()), view = list(bounds = c(-25, 63, -13, 67)))$config$view
   expect_equal(unlist(v$center), c(-19, 65))
   expect_equal(unlist(v$bounds), c(-25, 63, -13, 67))
 })
@@ -62,10 +62,10 @@ test_that("a map started from data opens on its rows' extent, and a view may be 
 render_doc <- function(dir, self_contained = FALSE) {
   writeLines(c(
     "---", "title: Two maps", "output:", "  html_document:", sprintf("    self_contained: %s", tolower(self_contained)), "---",
-    "", "```{r}", "library(rebelrebel)", 'rr_example("trawlsurvey") |> rr_point(colour = behaviour)', "```",
-    "", "```{r, out.height = 300}", 'rr_example("trawlsurveytows") |> rr_line(name = "Tows")', "```"
+    "", "```{r}", "library(ogis)", 'og_example("trawlsurvey") |> og_point(colour = behaviour)', "```",
+    "", "```{r, out.height = 300}", 'og_example("trawlsurveytows") |> og_line(name = "Tows")', "```"
   ), file.path(dir, "doc.Rmd"))
-  # rendered in a fresh R, with this rebelrebel (installed, or the one loaded for the tests)
+  # rendered in a fresh R, with this ogis (installed, or the one loaded for the tests)
   rmarkdown::render(file.path(dir, "doc.Rmd"), quiet = TRUE, envir = new.env())
 }
 
@@ -77,10 +77,10 @@ test_that("a document's maps draw in the rendered page, fitted to their frames",
   dir <- withr::local_tempdir()
   render_doc(dir)
   deps <- list.files(file.path(dir, "doc_files"))
-  expect_true(paste0("rebelrebel-vendor-", utils::packageVersion("rebelrebel")) %in% deps)
-  expect_equal(sum(grepl("^rr-map-[0-9a-f]{12}-1$", deps)), 2)
+  expect_true(paste0("ogis-vendor-", utils::packageVersion("ogis")) %in% deps)
+  expect_equal(sum(grepl("^og-map-[0-9a-f]{12}-1$", deps)), 2)
   b <- open_page(paste0(serve_dir(dir), "doc.html"), height = 1400)
-  js <- '(() => [...document.querySelectorAll("iframe.rr-map")].map(f => { const w = f.contentWindow;
+  js <- '(() => [...document.querySelectorAll("iframe.og-map")].map(f => { const w = f.contentWindow;
     const own = JSON.parse(w.document.getElementById("config").textContent).layers.map(l => l.id);
     const ids = w.eval("map.getStyle().layers.map(l => l.id)").filter(id => own.some(o => id.startsWith(o + "-")));
     return { zoom: w.eval("map.getZoom()"), loaded: w.eval("map.loaded()"),
@@ -106,38 +106,38 @@ test_that("a self-contained document says where its maps went", {
   # file:///C:/... on Windows, file:///tmp/... elsewhere
   b <- open_page(paste0("file:///", sub("^/", "", normalizePath(file.path(dir, "doc.html"), winslash = "/"))))
   expect_true(wait_until(function() {
-    all(grepl("self_contained", unlist(page_eval(b, '[...document.querySelectorAll("iframe.rr-map")].map(f => f.srcdoc)'))))
+    all(grepl("self_contained", unlist(page_eval(b, '[...document.querySelectorAll("iframe.og-map")].map(f => f.srcdoc)'))))
   }, 20))
 })
 
-test_that("rr_map() alone starts a map whose layers bring their own data", {
+test_that("og_map() alone starts a map whose layers bring their own data", {
   skip_if_no_spatial()
-  m <- rr_map() |>
-    rr_line(rr_example("trawlsurveytows"), name = "Tows") |>
-    rr_point(rr_example("trawlsurvey"), colour = behaviour, name = "Positions", visible = FALSE)
+  m <- og_map() |>
+    og_line(og_example("trawlsurveytows"), name = "Tows") |>
+    og_point(og_example("trawlsurvey"), colour = behaviour, name = "Positions", visible = FALSE)
   expect_identical(vapply(m$config$layers, function(l) l$id, ""), c("tows", "positions"))
   expect_length(unlist(m$config$view$bounds), 4)
-  expect_error(rr_map() |> rr_point(), "has no data")
+  expect_error(og_map() |> og_point(), "has no data")
 })
 
 test_that("a Quarto document's maps draw in the rendered page", {
   skip_if_no_spatial()
   skip_if_no_chrome()
   skip_if(!nzchar(Sys.which("quarto")), "no Quarto")
-  # Quarto runs R in a process of its own, which loads the installed rebelrebel: only this one will do
-  installed <- tryCatch(utils::packageDescription("rebelrebel", lib.loc = .libPaths())$Version, error = function(e) "")
-  skip_if(!identical(installed, as.character(utils::packageVersion("rebelrebel"))),
-          "the installed rebelrebel is not the one tested (Quarto's R loads the installed one)")
+  # Quarto runs R in a process of its own, which loads the installed ogis: only this one will do
+  installed <- tryCatch(utils::packageDescription("ogis", lib.loc = .libPaths())$Version, error = function(e) "")
+  skip_if(!identical(installed, as.character(utils::packageVersion("ogis"))),
+          "the installed ogis is not the one tested (Quarto's R loads the installed one)")
   dir <- withr::local_tempdir()
   writeLines(c(
     "---", "title: Two maps", "format: html", "---", "",
-    "```{r}", "library(rebelrebel)", 'rr_example("trawlsurveytows") |> rr_line(name = "Tows")', "```", "",
-    "```{r}", "#| out-height: 300px", 'rr_example("trawlsurvey") |> rr_point(colour = behaviour)', "```"
+    "```{r}", "library(ogis)", 'og_example("trawlsurveytows") |> og_line(name = "Tows")', "```", "",
+    "```{r}", "#| out-height: 300px", 'og_example("trawlsurvey") |> og_point(colour = behaviour)', "```"
   ), file.path(dir, "doc.qmd"))
   res <- system2(Sys.which("quarto"), c("render", shQuote(file.path(dir, "doc.qmd")), "--quiet"), stdout = TRUE, stderr = TRUE)
   expect_true(file.exists(file.path(dir, "doc.html")), info = paste(res, collapse = "\n"))
   b <- open_page(paste0(serve_dir(dir), "doc.html"), height = 1200)
-  js <- '[...document.querySelectorAll("iframe.rr-map")].map(f => f.contentWindow.eval("map.loaded() && map.queryRenderedFeatures().length > 0"))'
+  js <- '[...document.querySelectorAll("iframe.og-map")].map(f => f.contentWindow.eval("map.loaded() && map.queryRenderedFeatures().length > 0"))'
   expect_true(wait_until(function() {
     v <- unlist(page_eval(b, js))
     length(v) == 2 && all(v)

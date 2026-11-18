@@ -12,7 +12,7 @@ places <- function() {
 
 test_that("search = a column: each row's text, place and number, with a text's own start zoom", {
   skip_if_no_spatial()
-  m <- rr_map() |> rr_point(places(), popup = c(name, kind), search = name, id = "p")
+  m <- og_map() |> og_point(places(), popup = c(name, kind), search = name, id = "p")
   l <- m$layers$p
   expect_true(m$config$layers[[1]]$search)
   expect_identical(l$search$column, "name")
@@ -22,28 +22,28 @@ test_that("search = a column: each row's text, place and number, with a text's o
   expect_identical(l$search$r, 1:6)
   expect_null(l$search$z)
   # the rows carry their number, so the page finds the one it went to; a text too, which has no popup
-  m <- rr_map() |> rr_text(places(), label = name, minzoom = z, search = name, id = "t")
+  m <- og_map() |> og_text(places(), label = name, minzoom = z, search = name, id = "t")
   expect_identical(m$layers$t$search$r, 1:6)
   expect_equal(m$layers$t$search$z, c(4, 6.3, 5, 7.5, 3, NA)) # none: drawn at every zoom (MapLibre reads it as 0)
-  expect_match(paste(.rr_map_geojson(m$layers$t), collapse = ""), '"rr_row":1', fixed = TRUE)
+  expect_match(paste(.og_map_geojson(m$layers$t), collapse = ""), '"og_row":1', fixed = TRUE)
   # a shape: a point on it; a number's values as text
-  h <- rr_map() |> rr_polygon(rr_example("dansk_harbours"), search = SI_HARB, id = "h")
+  h <- og_map() |> og_polygon(og_example("dansk_harbours"), search = SI_HARB, id = "h")
   f <- h$layers$h$search
   expect_type(f$t, "character")
   expect_true(all(f$x > -60 & f$x < 40 & f$y > 20 & f$y < 75)) # Greenland to the Black Sea, the Canaries to Svalbard
   expect_length(f$r, h$config$layers[[1]]$features)
   # no search, none
-  expect_null((rr_map() |> rr_point(places()))$config$layers[[1]]$search)
-  expect_error(rr_map() |> rr_point(places(), search = c(name, kind)), "`search` is one column")
-  expect_error(rr_map() |> rr_point(places(), search = nosuch))
+  expect_null((og_map() |> og_point(places()))$config$layers[[1]]$search)
+  expect_error(og_map() |> og_point(places(), search = c(name, kind)), "`search` is one column")
+  expect_error(og_map() |> og_point(places(), search = nosuch))
 })
 
 test_that("a search's index is served at /search/<id> and bundled beside the layer's data", {
   skip_if_no_spatial()
-  m <- rr_map() |>
-    rr_point(places(), search = name, id = "p") |>
-    rr_point(places(), id = "q")
-  app <- .rr_map_app(m)
+  m <- og_map() |>
+    og_point(places(), search = name, id = "p") |>
+    og_point(places(), id = "q")
+  app <- .og_map_app(m)
   r <- app$call(list(REQUEST_METHOD = "GET", PATH_INFO = "/search/p", QUERY_STRING = "", HTTP_HOST = "localhost:8811"))
   expect_identical(r$status, 200L)
   j <- jsonlite::fromJSON(r$body)
@@ -52,10 +52,10 @@ test_that("a search's index is served at /search/<id> and bundled beside the lay
   expect_identical(app$call(list(REQUEST_METHOD = "GET", PATH_INFO = "/search/q", QUERY_STRING = "",
                                  HTTP_HOST = "localhost:8811"))$status, 404L)
   # one row: still arrays
-  one <- rr_map() |> rr_point(places()[1, ], search = name, id = "one")
-  expect_match(.rr_search_json(one$layers$one$search), '"t":["Ey"]', fixed = TRUE)
+  one <- og_map() |> og_point(places()[1, ], search = name, id = "one")
+  expect_match(.og_search_json(one$layers$one$search), '"t":["Ey"]', fixed = TRUE)
   dir <- withr::local_tempdir()
-  rr_bundle(m, dir, overwrite = TRUE)
+  og_bundle(m, dir, overwrite = TRUE)
   expect_true(file.exists(file.path(dir, "data", "p_search.js")))
   expect_false(file.exists(file.path(dir, "data", "q_search.js")))
 })
@@ -64,10 +64,10 @@ test_that("in the page, the Find box ranks whole matches, then beginnings, then 
   skip_if_no_spatial()
   skip_if_no_chrome()
   dir <- withr::local_tempdir()
-  m <- rr_map(view = list(center = c(-20, 64.2), zoom = 5)) |>
-    rr_point(places(), popup = c(name, kind), search = name, id = "p", name = "Places") |>
-    rr_point(places(), id = "plain", name = "Plain", visible = FALSE)
-  rr_bundle(m, dir, overwrite = TRUE)
+  m <- og_map(view = list(center = c(-20, 64.2), zoom = 5)) |>
+    og_point(places(), popup = c(name, kind), search = name, id = "p", name = "Places") |>
+    og_point(places(), id = "plain", name = "Plain", visible = FALSE)
+  og_bundle(m, dir, overwrite = TRUE)
   b <- open_page(paste0(serve_dir(dir), "index.html"))
   expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && map.loaded() && !!map.getLayer('p-dot')")), 40))
   expect_false(page_eval(b, "document.getElementById('find').hidden"))

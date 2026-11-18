@@ -6,12 +6,12 @@ knitr:
     comment: "#>"
 ---
 
-rebelrebel draws maps; it does not edit data. A page that lets a reader do something more (mark features, write a
-verdict of your own, move a label) is yours, built on the map with two calls: `rr_script()` puts your script into the
-page, and `rr_serve(routes = )` gives it routes of its own on the server. The script is given one object, `rr`, the
-whole of what it may use of the page (the help of `rr_script()` lists it):
+ogis draws maps; it does not edit data. A page that lets a reader do something more (mark features, write a
+verdict of your own, move a label) is yours, built on the map with two calls: `og_script()` puts your script into the
+page, and `og_serve(routes = )` gives it routes of its own on the server. The script is given one object, `og`, the
+whole of what it may use of the page (the help of `og_script()` lists it):
 
-| `rr.` | gives |
+| `og.` | gives |
 |---|---|
 | `map` | MapLibre's map |
 | `layer(id)` | a layer's MapLibre style ids, source and key |
@@ -20,7 +20,7 @@ whole of what it may use of the page (the help of `rr_script()` lists it):
 | `setData(id, geojson)` | new data for a layer sent whole |
 | `filter(id, key, expr)` | a filter of your own, kept with the page's choices |
 | `panel(title)` | a box in the sidebar, yours to fill |
-| `fetch(name, init)` | your route `name` on the server, a path and a query after it if any (`"marks/12?full=1"`); `rr.served` is false in a bundle |
+| `fetch(name, init)` | your route `name` on the server, a path and a query after it if any (`"marks/12?full=1"`); `og.served` is false in a bundle |
 | `save(name, text)` | a file handed to the reader |
 
 ## A list of marked positions
@@ -30,20 +30,20 @@ On a server, the list goes to the route `marks`; in a bundle, which has no serve
 handed a file.
 
 The ring is MapLibre's own feature state. Each feature of a layer function is known by its row's number, the
-`feature.id` of a click; `rr.state()` sets a state on it, and the layer's style reads it as `feature-state`, given in
+`feature.id` of a click; `og.state()` sets a state on it, and the layer's style reads it as `feature-state`, given in
 MapLibre's own terms. Nothing is sent again, and the state stays through a change of base map.
 
 ```{r}
-library(rebelrebel)
+library(ogis)
 
 js <- r"(
-  const body = rr.panel("Marked");
+  const body = og.panel("Marked");
   const list = document.createElement("ol"), save = document.createElement("button");
   save.textContent = "Save the list";
   body.append(list, save);
   const marks = [];
-  rr.on("click", "positions", async ({ feature, row }) => {
-    rr.state("positions", feature.id, { marked: true });
+  og.on("click", "positions", async ({ feature, row }) => {
+    og.state("positions", feature.id, { marked: true });
     const r = await row();
     if (!r) return;                       // clicked again meanwhile
     const v = Object.fromEntries(r.map(c => [c.name, c.value]));
@@ -51,20 +51,20 @@ js <- r"(
     list.append(Object.assign(document.createElement("li"),
                               { textContent: `${v.vid} at ${v.time}` }));
   });
-  save.onclick = () => rr.served
-    ? rr.fetch("marks", { method: "POST", body: JSON.stringify(marks) })
-    : rr.save("marks.csv", "vid,time\n" + marks.map(m => `${m.vid},${m.time}`).join("\n"));
+  save.onclick = () => og.served
+    ? og.fetch("marks", { method: "POST", body: JSON.stringify(marks) })
+    : og.save("marks.csv", "vid,time\n" + marks.map(m => `${m.vid},${m.time}`).join("\n"));
 )"
 
 marked <- function(yes, no) {
   list("case", list("boolean", list("feature-state", "marked"), FALSE), yes, no)
 }
-m <- rr_example("trawlsurvey") |>
-  rr_point(colour = behaviour, popup = c(vid, time), id = "positions",
+m <- og_example("trawlsurvey") |>
+  og_point(colour = behaviour, popup = c(vid, time), id = "positions",
            name = "Positions",
            "circle-stroke-width" = marked(3, 0),
            "circle-stroke-color" = marked("#000000", "#ffffff")) |>
-  rr_script(js)
+  og_script(js)
 m
 ```
 
@@ -79,12 +79,12 @@ JSON. Keep it fast: the server answers one request at a time.
 ```{r}
 #| eval: false
 file <- "marks.csv"
-rr_serve(m, routes = list(marks = function(req) {
+og_serve(m, routes = list(marks = function(req) {
   write.table(req$body, file, sep = ",", row.names = FALSE,
               col.names = !file.exists(file), append = file.exists(file))
   list(saved = nrow(req$body))
 }))
 ```
 
-In a script run by `Rscript`, give `rr_serve(..., wait = TRUE)`: it keeps serving until stopped (Ctrl-C). In
+In a script run by `Rscript`, give `og_serve(..., wait = TRUE)`: it keeps serving until stopped (Ctrl-C). In
 RStudio it answers while the console is idle. The page's writes are answered only for a page opened from this computer.
