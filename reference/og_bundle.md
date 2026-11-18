@@ -169,8 +169,9 @@ list.files(d, recursive = TRUE)
 #>  [1] "data/places.js"                      "index.html"                         
 #>  [3] "vendor/LICENSE-maplibre-contour.txt" "vendor/LICENSE-maplibre-gl.txt"     
 #>  [5] "vendor/LICENSE-pmtiles.txt"          "vendor/LICENSE-uplot.txt"           
-#>  [7] "vendor/maplibre-contour.min.js"      "vendor/maplibre-gl.css"             
-#>  [9] "vendor/maplibre-gl.js"               "vendor/pmtiles.js"                  
-#> [11] "vendor/uPlot.iife.min.js"            "vendor/uPlot.min.css"               
+#>  [7] "vendor/maplibre-contour.min.js"      "vendor/maplibre-gl-worker.js"       
+#>  [9] "vendor/maplibre-gl.css"              "vendor/maplibre-gl.js"              
+#> [11] "vendor/pmtiles.js"                   "vendor/uPlot.iife.min.js"           
+#> [13] "vendor/uPlot.min.css"               
 # utils::browseURL(file.path(d, "index.html"))  # opens it in a browser
 ```

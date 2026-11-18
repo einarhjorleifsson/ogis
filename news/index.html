@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,10 +39,17 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2026.11.18.11" id="ogis-2026111811">ogis 2026.11.18.11<a class="anchor" aria-label="anchor" href="#ogis-2026111811"></a></h2>
+<ul><li>MapLibre GL JS 6.19.0 in place of 5.24.1, the last of 5.x. MapLibre 6 is published only as ES modules, which a page opened from its folder cannot load, and a bundle opens by a double click; so its two modules are made classic scripts by <code>tools/vendor-maplibre.R</code> (the npm package checked against the registry’s SHA-512; <code>import.meta.url</code> the script’s own address, the export list the global <code>maplibregl</code>), its worker’s code carried in <code>maplibre-gl-worker.js</code> and handed to MapLibre as a blob, which MapLibre 6.17 and later runs on a page opened from a file. The page loads that script before MapLibre; nothing else in it changed. A bundle is 0.6 MB larger.</li>
+<li>A test opens a bundle from its folder (<code>file://</code>), as a double click does, and checks its outlines, labels and contours (made in the page by maplibre-contour) are drawn; every other page test opens its page over http. <code>tools/firefox-check.R</code> does the same in headless Firefox, by hand at each MapLibre update.</li>
+<li>Checked beside 5.24.1 at the same views: lines that cross, labels past their tiles’ deepest zoom and contours look the same; a map of 8,918 labels opens and zooms as fast. The engine’s guard on queries for MapLibre 5’s lost index stays until a reproduction shows 6 has done with it.</li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2026.11.18.10" id="ogis-2026111810">ogis 2026.11.18.10<a class="anchor" aria-label="anchor" href="#ogis-2026111810"></a></h2>
 <ul><li>rebelrebel is renamed <strong>ogis</strong>, its prefix <code>rr_</code> now <code>og_</code>: every function (<code><a href="../reference/og_map.html">og_map()</a></code>, <code><a href="../reference/og_point.html">og_point()</a></code>, <code><a href="../reference/og_serve.html">og_serve()</a></code>, …) and class (<code>og_map</code>, <code>og_layer</code>, <code>og_section</code>), and in the page what a script of its own sees: the object it is given (<code>og</code>: <code>og.on()</code>, <code>og.state()</code>, <code>og.fetch()</code>, …), the features’ key (<code>og_row</code>) and the classes its styles may name (<code>.og-panel</code>). A map’s own route header is <code>X-OG-Notes</code>. Names the engine kept from ramb (<code>rb</code>) are <code>og</code> too. Nothing else changed: a call made with the <code>rr_</code> names is the same call with <code>og_</code>. The entries below keep the names of their day.</li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
