@@ -7,16 +7,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/einarhjorleifsson/rebelrebel/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/einarhjorleifsson/ogis/blob/main/DESCRIPTION)
 
-Hjörleifsson E (2026). *rebelrebel: Fast Maps on 'MapLibre' for Marine
-Data*. R package version 2026.11.12,
-<https://einarhjorleifsson.github.io/rebelrebel/>.
+Hjörleifsson E (2026). *ogis: Fast Maps on 'MapLibre' for Marine Data*.
+R package version 2026.11.18.10,
+<https://einarhjorleifsson.github.io/ogis/>.
 
     @Manual{,
-      title = {rebelrebel: Fast Maps on 'MapLibre' for Marine Data},
+      title = {ogis: Fast Maps on 'MapLibre' for Marine Data},
       author = {Einar Hjörleifsson},
       year = {2026},
-      note = {R package version 2026.11.12},
-      url = {https://einarhjorleifsson.github.io/rebelrebel/},
+      note = {R package version 2026.11.18.10},
+      url = {https://einarhjorleifsson.github.io/ogis/},
     }

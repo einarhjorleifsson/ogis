@@ -4,7 +4,7 @@ Each row is a cell of a grid of elevations, 30 arc-seconds square, over
 the box of the Danish pings (2.5-13 E, 54.5-58.5 N): the depth of the
 North Sea, the Skagerrak, the Kattegat and the western Baltic, and the
 height of the land around them; 1,260 by 480 cells. Read it with
-`rr_example("dansk_relief")`.
+`og_example("dansk_relief")`.
 
 ## Format
 
@@ -46,11 +46,11 @@ the elevation stored as a 32-bit number (`data-raw/dansk_relief.R`,
 
 ## See also
 
-[`rr_example()`](https://einarhjorleifsson.github.io/rebelrebel/reference/rr_example.md);
+[`og_example()`](https://einarhjorleifsson.github.io/ogis/reference/og_example.md);
 the data dictionary `data-dict.yaml` in the package's `extdata` folder.
 
 Other example data:
-[`dansk`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk.md),
-[`dansk_harbours`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk_harbours.md),
-[`trawlsurvey`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurvey.md),
-[`trawlsurveytows`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurveytows.md)
+[`dansk`](https://einarhjorleifsson.github.io/ogis/reference/dansk.md),
+[`dansk_harbours`](https://einarhjorleifsson.github.io/ogis/reference/dansk_harbours.md),
+[`trawlsurvey`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurvey.md),
+[`trawlsurveytows`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurveytows.md)

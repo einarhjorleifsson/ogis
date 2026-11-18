@@ -1,7 +1,7 @@
 # Icelandic groundfish survey, March 2019, tows
 
 Each row is a tow of the same survey, as a line from its start to its
-end; 581 tows. Read it with `rr_example("trawlsurveytows")`.
+end; 581 tows. Read it with `og_example("trawlsurveytows")`.
 
 ## Format
 
@@ -29,11 +29,11 @@ extracted from MFRI's database (`data-raw/DATASET.R`).
 
 ## See also
 
-[`rr_example()`](https://einarhjorleifsson.github.io/rebelrebel/reference/rr_example.md);
+[`og_example()`](https://einarhjorleifsson.github.io/ogis/reference/og_example.md);
 the data dictionary `data-dict.yaml` in the package's `extdata` folder.
 
 Other example data:
-[`dansk`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk.md),
-[`dansk_harbours`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk_harbours.md),
-[`dansk_relief`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk_relief.md),
-[`trawlsurvey`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurvey.md)
+[`dansk`](https://einarhjorleifsson.github.io/ogis/reference/dansk.md),
+[`dansk_harbours`](https://einarhjorleifsson.github.io/ogis/reference/dansk_harbours.md),
+[`dansk_relief`](https://einarhjorleifsson.github.io/ogis/reference/dansk_relief.md),
+[`trawlsurvey`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurvey.md)

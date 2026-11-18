@@ -1,7 +1,7 @@
 # Harbour polygons for the Danish tracks
 
 Each row is a harbour, as a polygon; 942 harbours, most of them in
-Europe. Read it with `rr_example("dansk_harbours")`.
+Europe. Read it with `og_example("dansk_harbours")`.
 
 ## Format
 
@@ -33,11 +33,11 @@ added (`data-raw/DATASET.R`).
 
 ## See also
 
-[`rr_example()`](https://einarhjorleifsson.github.io/rebelrebel/reference/rr_example.md);
+[`og_example()`](https://einarhjorleifsson.github.io/ogis/reference/og_example.md);
 the data dictionary `data-dict.yaml` in the package's `extdata` folder.
 
 Other example data:
-[`dansk`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk.md),
-[`dansk_relief`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk_relief.md),
-[`trawlsurvey`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurvey.md),
-[`trawlsurveytows`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurveytows.md)
+[`dansk`](https://einarhjorleifsson.github.io/ogis/reference/dansk.md),
+[`dansk_relief`](https://einarhjorleifsson.github.io/ogis/reference/dansk_relief.md),
+[`trawlsurvey`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurvey.md),
+[`trawlsurveytows`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurveytows.md)

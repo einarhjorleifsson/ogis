@@ -3,7 +3,7 @@
 Each row is an AIS position of one of 14 Danish fishing vessels with
 four gears, a median 10 s apart, from December 2012 to October 2020,
 with an expert's label of fishing or other. Read it with
-`rr_example("dansk")`.
+`og_example("dansk")`.
 
 ## Format
 
@@ -53,11 +53,11 @@ repeated (vessel_id, time_stamp) rows dropped and `.rowid` added
 
 ## See also
 
-[`rr_example()`](https://einarhjorleifsson.github.io/rebelrebel/reference/rr_example.md);
+[`og_example()`](https://einarhjorleifsson.github.io/ogis/reference/og_example.md);
 the data dictionary `data-dict.yaml` in the package's `extdata` folder.
 
 Other example data:
-[`dansk_harbours`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk_harbours.md),
-[`dansk_relief`](https://einarhjorleifsson.github.io/rebelrebel/reference/dansk_relief.md),
-[`trawlsurvey`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurvey.md),
-[`trawlsurveytows`](https://einarhjorleifsson.github.io/rebelrebel/reference/trawlsurveytows.md)
+[`dansk_harbours`](https://einarhjorleifsson.github.io/ogis/reference/dansk_harbours.md),
+[`dansk_relief`](https://einarhjorleifsson.github.io/ogis/reference/dansk_relief.md),
+[`trawlsurvey`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurvey.md),
+[`trawlsurveytows`](https://einarhjorleifsson.github.io/ogis/reference/trawlsurveytows.md)

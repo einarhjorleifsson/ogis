@@ -1,0 +1,188 @@
+# Get started
+
+ogis draws maps on [MapLibre](https://maplibre.org) from data that stay
+in DuckDB: a parquet file, a lazy table, a data frame or an sf object. A
+map is built with the pipe, a layer at a time, and every map below is
+live: pan it, zoom it, click a point.
+
+## A first map
+
+The example data are the positions of four vessels on the Icelandic
+groundfish survey in March 2019, one row a position, with whether a tow
+was on.
+
+``` r
+
+library(ogis)
+positions <- og_example("trawlsurvey")
+positions |> og_point(colour = behaviour)
+```
+
+`colour` takes a column written bare. Its values get a colour each and a
+legend; the map opens on the rows’ extent.
+
+## Layers with the pipe
+
+[`og_map()`](https://einarhjorleifsson.github.io/ogis/reference/og_map.md)
+starts a map from data, and each layer function adds a layer over the
+ones before. Here a line per vessel in the order of time, and the
+positions over it: two columns to colour by (the first shown; the other
+is a choice in the page), and a click that shows the row.
+
+``` r
+
+og_map(positions) |>
+  og_path(group = vid, time = time, name = "Tracks") |>
+  og_point(
+    colour = c(behaviour, speed),
+    popup = c(vid, time, speed, behaviour),
+    name = "Positions"
+  )
+```
+
+[`og_map()`](https://einarhjorleifsson.github.io/ogis/reference/og_map.md)
+with no data starts a map whose layers bring their own. The survey’s
+tows are lines, one a row:
+
+``` r
+
+og_map() |>
+  og_line(og_example("trawlsurveytows"), name = "Tows") |>
+  og_point(positions, colour = behaviour, name = "Positions",
+           visible = FALSE)
+```
+
+`visible = FALSE` leaves a layer off when the page opens; its box in the
+sidebar turns it on.
+
+## Rings and outlines
+
+`stroke` draws each point as a ring of its colour, `stroke` pixels wide,
+hollow, `size` across; `fill = NA` an area’s outline alone. A click
+inside either still shows its row. Here the positions faster than 12
+knots ringed over the others:
+
+``` r
+
+fast <- dplyr::filter(positions, speed > 12)
+og_map(positions) |>
+  og_point(colour = behaviour, name = "Positions") |>
+  og_point(fast, colour = "#00a5c8", size = 14, stroke = 2,
+           name = "Over 12 knots")
+```
+
+## In MapLibre’s own terms
+
+Every layer function takes MapLibre’s paint and layout properties by
+their own names, in quotes, for what its own arguments do not reach; and
+`id`, the name a page’s address and a script know the layer by. Here the
+tows dashed:
+
+``` r
+
+og_map() |>
+  og_line(og_example("trawlsurveytows"), colour = "#4a5560", name = "Tows",
+          "line-dasharray" = list(2, 1))
+```
+
+## The order of layers
+
+Each layer is drawn over the ones before it, whatever box of the sidebar
+it sits in (`section`). `order` in
+[`og_map()`](https://einarhjorleifsson.github.io/ogis/reference/og_map.md)
+draws the layers it names first, by their `id`, under the others; the
+sidebar keeps its own order. Here the tows, listed last under
+*Reference*, drawn under the positions:
+
+``` r
+
+og_map(positions, order = "tows") |>
+  og_point(colour = behaviour, name = "Positions") |>
+  og_line(og_example("trawlsurveytows"), colour = "#4a5560", id = "tows",
+          name = "Tows", section = "Reference")
+```
+
+## Finding a row
+
+`search` names a column whose values the page’s *Find* box, above the
+sidebar’s boxes, looks through: whole matches first, then values that
+begin with what is typed, then any that hold it, case and accents aside,
+each kind nearest the view’s centre first. A click on one takes the map
+there and shows its row. Here the tows by their id; type `4906`:
+
+``` r
+
+og_map() |>
+  og_line(og_example("trawlsurveytows"), popup = id.lgs, search = id.lgs,
+          name = "Tows")
+```
+
+## A layer of your own
+
+What the layer functions do not draw, an
+[`og_layer()`](https://einarhjorleifsson.github.io/ogis/reference/og_layer.md)
+does: elevations as colours and relief, contours, tiles of your own.
+[`og_add_layer()`](https://einarhjorleifsson.github.io/ogis/reference/og_add_layer.md)
+puts one into the pipe, in a box of the sidebar of its own. Here the
+depth of the Danish waters in colour, made into tiles from a grid of
+elevations by
+[`og_tiles_dem()`](https://einarhjorleifsson.github.io/ogis/reference/og_tiles_dem.md),
+under the harbours:
+
+``` r
+
+depth <- og_layer(
+  "depth", "dem", label = "Depth",
+  tiles = og_tiles_dem(og_example("dansk_relief"), maxzoom = 6),
+  style = list(list(id = "depth-colour", type = "color-relief")),
+  colour = list(palette = "seabed", opacity = 75)
+)
+og_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
+  og_add_layer(depth, section = "Sea floor") |>
+  og_polygon(og_example("dansk_harbours"), fill = NA, colour = "#b2182b",
+             name = "Harbours")
+```
+
+The harbours, their outlines alone, reach from Greenland to the Black
+Sea, so `view` opens the map on the grid’s box. Elevations and contours
+go under the base map’s place names, whatever their order in the pipe;
+the box *Depth* has the colours’ controls.
+
+## A base map of your own
+
+A base map is a MapLibre style, or a picture’s tiles by address: by zoom
+and place (`{z}/{x}/{y}`), or a WMS’s `GetMap` with each tile’s box
+(`{bbox-epsg-3857}`). The first given is the one the map opens on, the
+others choices under *Base map*. Here GEBCO’s shaded sea floor from its
+WMS, which reaches past Europe’s seas, then ogis’s own:
+
+``` r
+
+gebco <- list(
+  id = "gebco", label = "Sea floor (GEBCO)",
+  attribution = "Imagery reproduced from the GEBCO Grid, GEBCO Compilation Group",
+  tiles = paste0(
+    "https://wms.gebco.net/mapserv?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap",
+    "&LAYERS=GEBCO_LATEST&STYLES=&FORMAT=image/png&CRS=EPSG:3857",
+    "&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}"
+  )
+)
+og_map(positions, basemaps = c(list(gebco), og_basemaps())) |>
+  og_point(colour = behaviour, name = "Positions")
+```
+
+A picture alone has no place names, and the layers’ texts are drawn in
+the browser’s own font. `labels`, a style’s address, puts that style’s
+names over it with its fonts, as on
+[`og_basemaps()`](https://einarhjorleifsson.github.io/ogis/reference/og_palettes.md)’s,
+which take Carto’s.
+
+## Showing and sharing
+
+- **In R**, printing a map serves it on this computer and opens it in
+  RStudio’s Viewer or a browser.
+- **In a document** (Quarto, R Markdown, a pkgdown article like this
+  one), a printed map is drawn live in the page.
+- **As a folder**, `og_bundle(map, "my-map")` writes the map with its
+  data, to open with a double click on any computer, with no R and no
+  server.

@@ -1,0 +1,72 @@
+# Labels
+
+[`og_text()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md)
+writes a column’s values on the map: names, ids, numbers. Each of its
+looks takes a value, or a column written bare, so every row may have its
+own. Where two labels meet, MapLibre draws the first placed and leaves
+out the other; zoom in and they part.
+
+``` r
+
+library(ogis)
+```
+
+## At points, in areas and along lines
+
+The Danish harbours are areas; their ids are written inside them. `view`
+opens the map on Denmark, an extent of west, south, east and north (the
+harbours reach far beyond it).
+
+``` r
+
+harbours <- og_example("dansk_harbours")
+og_map(view = list(bounds = c(8, 54.5, 13, 58))) |>
+  og_polygon(harbours, fill = "#d9822b", name = "Harbours") |>
+  og_text(harbours, label = SI_HARB, fontface = "italic",
+          name = "Harbour ids")
+```
+
+The survey’s tows are lines; their ids are written along them, at their
+middle, where a tow is long enough to hold its id.
+
+``` r
+
+tows <- og_example("trawlsurveytows")
+og_map(view = list(bounds = c(-24.5, 65.2, -21.5, 66.6))) |>
+  og_line(tows, name = "Tows") |>
+  og_text(tows, label = id.lgs, size = 11, offset = c(0, 0.8),
+          name = "Tow ids")
+```
+
+`offset = c(x, y)` moves a label, in text heights: here a little up, so
+it sits on its line rather than across it. `fontface` is `"plain"`,
+`"italic"`, `"bold"` or `"bold.italic"`, as ggplot2’s.
+
+## A label’s own angle, zoom and priority
+
+Columns made in the pipe, with dplyr, before the map. The survey’s
+positions are written as their vessel’s number, turned to the vessel’s
+heading (`angle` is counter-clockwise, as ggplot2’s; a heading is
+clockwise from north). The positions on a tow show from zoom 4, the
+others from zoom 9 (zoom in to see them), and where two meet, the faster
+is placed first.
+
+``` r
+
+positions <- og_example("trawlsurvey") |>
+  dplyr::mutate(
+    turn = 90 - heading,
+    from = dplyr::if_else(behaviour == "hauling", 4, 9)
+  )
+og_map() |>
+  og_text(positions, label = vid, angle = turn, minzoom = from,
+          priority = speed, colour = behaviour, legend = TRUE,
+          name = "Positions")
+```
+
+`minzoom` as a column shows each row from its own zoom, from the first
+whole zoom at or above it: a label due at 7.4 shows from 8, since
+MapLibre judges a zoom in a filter at whole zooms. A turned label keeps
+the upright box round it clear of others, so turned labels leave more
+room around them than level ones. `overlap = TRUE` draws every label,
+words over words where they meet.
