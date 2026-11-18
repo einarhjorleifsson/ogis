@@ -114,7 +114,7 @@ zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filt
 at 7.4 shows from 8.}
 
 \item{...}{MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
-\code{"circle-stroke-width" = 2}, \code{"circle-stroke-color" = "cyan"}, \code{"fill-opacity" = 0} (an outline alone),
+\code{"circle-stroke-color" = "white"} (a ring of another colour round a filled point), \code{"line-dasharray" = list(2, 1)},
 \code{"text-halo-width" = 0}. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
 as paint or layout as MapLibre has it; an expression is a list, \code{list("get", "size")}. \code{color} is taken for
 \code{colour}.}

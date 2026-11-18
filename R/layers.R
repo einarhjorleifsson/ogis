@@ -109,6 +109,8 @@
     e$swatch <- switch(mark,
       line = , segment = list(fill = col, stroke = col),
       polygon = list(fill = col, stroke = .rr_or(outline, col)),
+      outline = list(fill = "transparent", stroke = outline),
+      ring = list(ring = col),
       list(dot = col)
     )
     e
@@ -147,6 +149,10 @@
     .rr_quick_need(ctx, ends)
   }
 
+  # an area's outline alone (`fill = NA`), a point drawn as a ring (`stroke`)
+  hollow <- mark == "polygon" && .rr_is_na_arg(a$fill)
+  if (hollow) a$fill <- rlang::quo(NULL)
+  ring <- if (mark == "point") .rr_ring_arg(a$stroke)
   # the coloured aesthetic: colour (fill for areas), a value or columns carried as properties rr_c<i>
   main <- if (mark == "polygon") "fill" else "colour"
   col <- .rr_aes(a[[main]], ctx$cols, main, colour = TRUE)
@@ -279,33 +285,45 @@
   zoomed <- function(a0, b0, c0) list("interpolate", list("linear"), list("zoom"), 3, a0, 8, b0, 13, c0)
   style <- switch(mark,
     point = list(list(id = sid, type = "circle", "source-layer" = "features",
-      paint = list("circle-color" = colour_expr, "circle-radius" = radius,
-                   "circle-opacity" = a$opacity %||% 0.85,
-                   "circle-stroke-color" = "rgba(255,255,255,0.7)", "circle-stroke-width" = .rr_point_stroke(radius)))),
+      paint = if (is.null(ring)) {
+        list("circle-color" = colour_expr, "circle-radius" = radius,
+             "circle-opacity" = a$opacity %||% 0.85,
+             "circle-stroke-color" = "rgba(255,255,255,0.7)", "circle-stroke-width" = .rr_point_stroke(radius))
+      } else {
+        # a ring: the stroke in the point's colour, the inside drawn clear (and still hit by a click)
+        list("circle-color" = colour_expr, "circle-radius" = radius, "circle-opacity" = 0,
+             "circle-stroke-color" = colour_expr, "circle-stroke-width" = ring,
+             "circle-stroke-opacity" = a$opacity %||% 0.85)
+      })),
     line = , segment = list(list(id = sid, type = "line", "source-layer" = "features",
       layout = list("line-cap" = "round", "line-join" = "round"),
       paint = list("line-color" = colour_expr, "line-width" = linewidth %||% zoomed(1, 2, 4),
                    "line-opacity" = a$opacity %||% 0.9))),
     polygon = list(
+      # an outline alone keeps its fill, drawn clear, so a click inside the area shows its row
       list(id = sid, type = "fill", "source-layer" = "features",
-           paint = list("fill-color" = colour_expr, "fill-opacity" = a$opacity %||% 0.5)),
+           paint = list("fill-color" = colour_expr, "fill-opacity" = if (hollow) 0 else a$opacity %||% 0.5)),
       list(id = paste0(id, "-outline"), type = "line", "source-layer" = "features",
-           paint = list("line-color" = outline, "line-width" = linewidth %||% 1))),
+           paint = c(list("line-color" = outline, "line-width" = linewidth %||% if (hollow) 2 else 1),
+                     if (hollow) list("line-opacity" = a$opacity %||% 0.9)))),
     text = .rr_text_styles(id, sid, lab, tx, !is.null(ctx$geometry), isTRUE(a$overlap),
       paint = list("text-color" = colour_expr, "text-opacity" = a$opacity %||% 1,
                    "text-halo-color" = "rgba(255,255,255,0.9)", "text-halo-width" = 1.5))
   )
   sids <- vapply(style, `[[`, "", "id") # a text's styles: at points, and along lines where the data have them
   if (mark == "polygon") sids <- sid
+  # what the colour paints, and the legend's swatches: a ring's stroke, an outline alone
+  paint_key <- if (!is.null(ring)) "circle-stroke-color" else mk$paint
+  look <- if (!is.null(ring)) "ring" else if (hollow) "outline" else mark
   variants <- if (length(cols) > 1) {
     list(label = "Colour by", options = lapply(seq_along(cols), function(i) {
       list(value = cols[i], label = cols[i],
-           paint = stats::setNames(rep(list(stats::setNames(list(colours[[i]]$colour), mk$paint)), length(sids)), sids),
-           legend = if (isTRUE(a$legend)) .rr_swatches(colours[[i]]$legend, mark, outline))
+           paint = stats::setNames(rep(list(stats::setNames(list(colours[[i]]$colour), paint_key)), length(sids)), sids),
+           legend = if (isTRUE(a$legend)) .rr_swatches(colours[[i]]$legend, look, outline))
     }))
   }
-  leg <- if (!isTRUE(a$legend)) NULL else if (length(cols)) .rr_swatches(colours[[1]]$legend, mark, outline) else
-    .rr_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), mark, outline)
+  leg <- if (!isTRUE(a$legend)) NULL else if (length(cols)) .rr_swatches(colours[[1]]$legend, look, outline) else
+    .rr_swatches(list(list(swatch = list(dot = fixed), label = nm$label)), look, outline)
   what <- switch(mark, point = "point", line = "line", segment = "line from its start to its end",
                  polygon = "area", text = "label")
   style <- .rr_styles_for(.rr_style_props(style, a$props, paste0("rr_", mark)), sent$kind)
@@ -362,6 +380,26 @@
   }
   tiles <- rr_tiles_table(x, geometry = geometry, lon = lon, lat = lat, properties = properties, thin = thin)
   list(kind = "vector", tiles = tiles, data = NULL, table = list(con = .rr_con_for(x), name = attr(tiles, "table")))
+}
+
+# `fill = NA`: an argument written as NA
+.rr_is_na_arg <- function(q) {
+  if (is.null(q) || rlang::quo_is_null(q) || rlang::quo_is_missing(q)) {
+    return(FALSE)
+  }
+  e <- rlang::quo_get_expr(q)
+  is.atomic(e) && length(e) == 1 && is.na(e)
+}
+
+# `stroke` (rr_point()): a ring's width in pixels, or NULL for a filled point
+.rr_ring_arg <- function(stroke) {
+  if (is.null(stroke)) {
+    return(NULL)
+  }
+  if (!is.numeric(stroke) || length(stroke) != 1 || is.na(stroke) || stroke <= 0) {
+    stop("`stroke` is a ring's width, a number of pixels.", call. = FALSE)
+  }
+  stroke
 }
 
 # `whole` as given: NULL (by size), TRUE or FALSE
@@ -548,11 +586,14 @@
 #'   shown. A column's colours by default: Okabe-Ito for up to eight values, Paired for up to twelve, Glasbey's 32
 #'   beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. `color` is the
 #'   same.
-#' @param fill For `rr_polygon()`, the areas' colour, as `colour` is for the other marks.
+#' @param fill For `rr_polygon()`, the areas' colour, as `colour` is for the other marks; `NA`, none: the outline
+#'   alone, in `colour`, 2 pixels wide unless `linewidth` says otherwise, a click inside an area still showing its row.
 #' @param size A point's diameter, a text's size (a number, or for text a column written bare), in pixels. For points, by default, a size that follows the zoom:
 #'   the least, 2 pixels, until the zoom at which most points lie that far apart, then doubling with each zoom in, as
 #'   a size on the ground does, up to the most, 8; `size = c(1, 12)` gives other bounds, one number a size that
 #'   stays.
+#' @param stroke For `rr_point()`, a ring: its width in pixels. Each point is drawn as a ring of its colour, hollow,
+#'   `size` the diameter inside it; a click on it or inside it shows the row.
 #' @param linewidth A line's width (an area's outline), in pixels.
 #' @param opacity The marks' opacity, 0-1.
 #' @param whole How the rows reach the page: `TRUE`, whole, as one GeoJSON file read once (no further fetching as the
@@ -607,7 +648,7 @@
 #'   zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
 #'   at 7.4 shows from 8.
 #' @param ... MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
-#'   `"circle-stroke-width" = 2`, `"circle-stroke-color" = "cyan"`, `"fill-opacity" = 0` (an outline alone),
+#'   `"circle-stroke-color" = "white"` (a ring of another colour round a filled point), `"line-dasharray" = list(2, 1)`,
 #'   `"text-halo-width" = 0`. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
 #'   as paint or layout as MapLibre has it; an expression is a list, `list("get", "size")`. `color` is taken for
 #'   `colour`.
@@ -625,14 +666,15 @@
 #' }
 rr_point <- function(
   map, data = NULL, lon = NULL, lat = NULL,
-  colour = NULL, size = NULL, opacity = NULL, whole = NULL, thin = TRUE,
+  colour = NULL, size = NULL, stroke = NULL, opacity = NULL, whole = NULL, thin = TRUE,
   palette = NULL, limits = NULL, stretch = NULL, legend = TRUE,
   popup = TRUE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
   name = NULL, id = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
   a <- .rr_mark_args(list(
-    lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), opacity = opacity, whole = whole, thin = thin,
+    lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), stroke = stroke, opacity = opacity,
+    whole = whole, thin = thin,
     palette = palette, limits = limits, stretch = stretch, legend = legend, popup = rlang::enquo(popup),
     labels = labels, codes = codes, hover = rlang::enquo(hover), choose = rlang::enquo(choose), name = name, id = id, info = info, section = section,
     visible = visible, minzoom = minzoom, maxzoom = maxzoom

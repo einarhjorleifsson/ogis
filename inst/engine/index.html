@@ -586,6 +586,7 @@ let histVals = [];   // the same, for the histogram, from the last time the map 
 const legendHtml = legend => legend.map(x => `<span>${swatch(x.swatch)}<span data-t="${x.label}"></span></span>`).join("");
 const swatch = w => w.dot
   ? `<i style="width:8px;height:8px;border-radius:50%;background:${w.dot};border:1px solid #fff;box-shadow:0 0 0 .5px ${w.stroke ?? w.dot}"></i>`
+  : w.ring ? `<i style="width:6px;height:6px;border-radius:50%;border:2px solid ${w.ring}"></i>`   // a point drawn as a ring
   : `<i style="background:${w.fill};border:1.2px solid ${w.stroke ?? w.fill}"></i>`;
 // A grid filter: a select of its options (some from /meta), a range of two selects (from /meta), or the metric
 function filterRow(f) {

@@ -15,6 +15,7 @@ rr_point(
   lat = NULL,
   colour = NULL,
   size = NULL,
+  stroke = NULL,
   opacity = NULL,
   whole = NULL,
   thin = TRUE,
@@ -173,6 +174,9 @@ the least, 2 pixels, until the zoom at which most points lie that far apart, the
 a size on the ground does, up to the most, 8; \code{size = c(1, 12)} gives other bounds, one number a size that
 stays.}
 
+\item{stroke}{For \code{rr_point()}, a ring: its width in pixels. Each point is drawn as a ring of its colour, hollow,
+\code{size} the diameter inside it; a click on it or inside it shows the row.}
+
 \item{opacity}{The marks' opacity, 0-1.}
 
 \item{whole}{How the rows reach the page: \code{TRUE}, whole, as one GeoJSON file read once (no further fetching as the
@@ -233,7 +237,7 @@ zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filt
 at 7.4 shows from 8.}
 
 \item{...}{MapLibre's own paint and layout properties for the layer's styles, by MapLibre's names in quotes:
-\code{"circle-stroke-width" = 2}, \code{"circle-stroke-color" = "cyan"}, \code{"fill-opacity" = 0} (an outline alone),
+\code{"circle-stroke-color" = "white"} (a ring of another colour round a filled point), \code{"line-dasharray" = list(2, 1)},
 \code{"text-halo-width" = 0}. Each goes to the styles of its kind (circle, line, fill; text, icon and symbol on a text's),
 as paint or layout as MapLibre has it; an expression is a list, \code{list("get", "size")}. \code{color} is taken for
 \code{colour}.}
@@ -242,7 +246,8 @@ as paint or layout as MapLibre has it; an expression is a list, \code{list("get"
 
 \item{lon_end, lat_end}{For \code{rr_segment()}, the columns of its end.}
 
-\item{fill}{For \code{rr_polygon()}, the areas' colour, as \code{colour} is for the other marks.}
+\item{fill}{For \code{rr_polygon()}, the areas' colour, as \code{colour} is for the other marks; \code{NA}, none: the outline
+alone, in \code{colour}, 2 pixels wide unless \code{linewidth} says otherwise, a click inside an area still showing its row.}
 
 \item{label}{For \code{rr_text()}, the column whose values are written, bare. On a line (data whose shapes are lines), the
 text is written along it, at its middle.}

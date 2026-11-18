@@ -1,3 +1,12 @@
+# rebelrebel 2026.11.18.7
+
+* `rr_point(stroke = )`: each point drawn as a ring of its colour, `stroke` pixels wide, hollow, `size` the diameter
+  inside it; its legend shows rings, and a choice of colour columns paints the rings. Until now a ring took four of
+  MapLibre's properties by hand ("Get started" showed them).
+* `rr_polygon(fill = NA)`: an area's outline alone, in `colour`, 2 pixels wide unless `linewidth` says otherwise. The
+  fill is kept, drawn clear, so a click inside an area still shows its row; its legend shows an outline.
+* "Get started" shows both, and MapLibre's own terms by a dashed line.
+
 # rebelrebel 2026.11.18.6
 
 * `rr_map(order = )`: the order the layers are drawn in, by their ids, from the lowest up; those named first, under

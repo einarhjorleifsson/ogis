@@ -51,19 +51,30 @@ rr_map() |>
 
 `visible = FALSE` leaves a layer off when the page opens; its box in the sidebar turns it on.
 
-## In MapLibre's own terms
+## Rings and outlines
 
-Every layer function takes MapLibre's paint and layout properties by their own names, in quotes, for what its own
-arguments do not reach; and `id`, the name a page's address and a script know the layer by. Here the positions faster
-than 12 knots get a ring of a fixed size over the others:
+`stroke` draws each point as a ring of its colour, `stroke` pixels wide, hollow, `size` across; `fill = NA` an area's
+outline alone. A click inside either still shows its row. Here the positions faster than 12 knots ringed over the
+others:
 
 ```{r}
 fast <- dplyr::filter(positions, speed > 12)
 rr_map(positions) |>
   rr_point(colour = behaviour, name = "Positions") |>
-  rr_point(fast, colour = "#00a5c8", id = "fast", name = "Over 12 knots",
-           "circle-color" = "rgba(0, 0, 0, 0)", "circle-radius" = 7,
-           "circle-stroke-color" = "#00a5c8", "circle-stroke-width" = 2)
+  rr_point(fast, colour = "#00a5c8", size = 14, stroke = 2,
+           name = "Over 12 knots")
+```
+
+## In MapLibre's own terms
+
+Every layer function takes MapLibre's paint and layout properties by their own names, in quotes, for what its own
+arguments do not reach; and `id`, the name a page's address and a script know the layer by. Here the tows dashed:
+
+```{r}
+#| out-height: 400px
+rr_map() |>
+  rr_line(rr_example("trawlsurveytows"), colour = "#4a5560", name = "Tows",
+          "line-dasharray" = list(2, 1))
 ```
 
 ## The order of layers
@@ -94,12 +105,13 @@ depth <- rr_layer(
 )
 rr_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
   rr_add_layer(depth, section = "Sea floor") |>
-  rr_polygon(rr_example("dansk_harbours"), name = "Harbours")
+  rr_polygon(rr_example("dansk_harbours"), fill = NA, colour = "#b2182b",
+             name = "Harbours")
 ```
 
-The harbours reach from Greenland to the Black Sea, so `view` opens the map on the grid's box. Elevations and
-contours go under the base map's place names, whatever their order in the pipe; the box *Depth* has the colours'
-controls.
+The harbours, their outlines alone, reach from Greenland to the Black Sea, so `view` opens the map on the grid's box.
+Elevations and contours go under the base map's place names, whatever their order in the pipe; the box *Depth* has the
+colours' controls.
 
 ## A base map of your own
 
