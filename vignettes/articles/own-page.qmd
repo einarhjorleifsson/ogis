@@ -1,0 +1,78 @@
+---
+title: "A page of your own"
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+---
+
+rebelrebel draws maps; it does not edit data. A page that lets a reader do something more (mark features, write a
+verdict of your own, move a label) is yours, built on the map with two calls: `rr_script()` puts your script into the
+page, and `rr_serve(routes = )` gives it routes of its own on the server. The script is given one object, `rr`, the
+whole of what it may use of the page (the help of `rr_script()` lists it):
+
+| `rr.` | gives |
+|---|---|
+| `map` | MapLibre's map |
+| `layer(id)` | a layer's MapLibre style ids and source |
+| `on("click", id, fn)` | a click on a layer's features, its row as `row()` |
+| `setData(id, geojson)` | new data for a layer sent whole |
+| `filter(id, key, expr)` | a filter of your own, kept with the page's choices |
+| `panel(title)` | a box in the sidebar, yours to fill |
+| `fetch(name, init)` | your route `name` on the server; `rr.served` is false in a bundle |
+| `save(name, text)` | a file handed to the reader |
+
+## A list of marked positions
+
+A click on a position adds its vessel and time to a list in a panel; a button saves the list. On a server, the list
+goes to the route `marks`; in a bundle, which has no server (as on this page), the reader is handed a file.
+
+```{r}
+library(rebelrebel)
+
+js <- r"(
+  const body = rr.panel("Marked");
+  const list = document.createElement("ol"), save = document.createElement("button");
+  save.textContent = "Save the list";
+  body.append(list, save);
+  const marks = [];
+  rr.on("click", "positions", async ({ row }) => {
+    const r = await row();
+    if (!r) return;                       // clicked again meanwhile
+    const v = Object.fromEntries(r.map(c => [c.name, c.value]));
+    marks.push(v);
+    list.append(Object.assign(document.createElement("li"),
+                              { textContent: `${v.vid} at ${v.time}` }));
+  });
+  save.onclick = () => rr.served
+    ? rr.fetch("marks", { method: "POST", body: JSON.stringify(marks) })
+    : rr.save("marks.csv", "vid,time\n" + marks.map(m => `${m.vid},${m.time}`).join("\n"));
+)"
+
+m <- rr_example("trawlsurvey") |>
+  rr_point(colour = behaviour, popup = c(vid, time), id = "positions",
+           name = "Positions") |>
+  rr_script(js)
+m
+```
+
+Click a few positions, then *Save the list*.
+
+## Its route on the server
+
+Served from R, the route writes what the page sends to a file, a row a mark, never rewriting it. A route's function is
+given the request (`method`, `path`, `query`, `body`, a JSON body read into R) and returns what goes back: a list as
+JSON. Keep it fast: the server answers one request at a time.
+
+```{r}
+#| eval: false
+file <- "marks.csv"
+rr_serve(m, routes = list(marks = function(req) {
+  write.table(req$body, file, sep = ",", row.names = FALSE,
+              col.names = !file.exists(file), append = file.exists(file))
+  list(saved = nrow(req$body))
+}))
+```
+
+In a script run by `Rscript`, give `rr_serve(..., wait = TRUE)`: it keeps serving until stopped (Ctrl-C). In
+RStudio it answers while the console is idle. The page's writes are answered only for a page opened from this computer.

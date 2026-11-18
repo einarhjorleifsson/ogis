@@ -1,3 +1,18 @@
+# rebelrebel 2026.11.18.2
+
+* A page of your own on a map: `rr_script()` puts a script (and its styles) into the page, run once the layers are
+  added and given one object, `rr`, the whole of what it may use of the page: the MapLibre map, a layer's style ids,
+  the clicks on a layer (`rr.on("click", id, fn)`, with the clicked row, `null` when a newer click came), new data for
+  a layer sent whole (at most once a frame), a filter of its own kept with the page's choices, a panel in the sidebar,
+  its own routes on the server (`rr.fetch()`) and a file for the reader to save (`rr.save()`). A bundle carries the
+  script, which runs there with no server. rebelrebel itself edits nothing: what a page does more than show is the
+  page's. A new article, "A page of your own".
+* `rr_serve(routes = )`: a map's own routes, each a function answering `/x/<name>` from the page with the request (its
+  method, path, query and JSON body read), its value sent back as JSON or text; answered, as the notes, only for a page
+  opened from this computer. `rr_serve(wait = TRUE)`: the server keeps serving until stopped, so a script run by
+  `Rscript` needs no loop of its own to keep its map up. Not the default: a script, a test or a document that serves
+  a map and goes on would hang (rebelrebel's own tests did, with `wait` on by default when R was not interactive).
+
 # rebelrebel 2026.11.18.1
 
 * Every layer function takes `id`, the layer's id (by default made from its name, as before), which the page's address

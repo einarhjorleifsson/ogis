@@ -12,7 +12,9 @@ rr_serve(
   open = interactive(),
   query = NULL,
   notes = NULL,
-  verdicts = NULL
+  verdicts = NULL,
+  routes = NULL,
+  wait = FALSE
 )
 
 rr_stop(port = NULL)
@@ -42,6 +44,18 @@ the server keeps them, made at the first verdict; \code{NULL}, none. A layer who
 file (when, the layer, the feature's value of the verdict's \code{field}, the option, the reader's line, the feature's
 title and place); a later one for the feature replaces it, and an empty answer withdraws it. \code{\link[=rr_verdicts]{rr_verdicts()}}
 reads them. As the notes, answered only for a page opened from this computer, and never in a bundle.}
+
+\item{routes}{Opt-in, the map's own routes, for a page's own script (\code{\link[=rr_script]{rr_script()}}): a named list of functions,
+each answering \verb{/x/<name>} (and \verb{/x/<name>/...}) from the page by \code{rr.fetch(name, init)}. A function is given one
+request, a list of \code{method} (\code{"GET"}, \code{"POST"}, ...), \code{path} (what follows its name), \code{query} (the address's
+parameters, a named list) and \code{body} (a JSON body read, else its text, else \code{NULL}); it returns a list or a data
+frame, sent as JSON, a string, sent as text, or \code{NULL}, not found; an error is sent as its message. As the notes,
+answered only for a page opened from this computer. Keep each fast: the server answers one request at a time, and
+a slow route holds the tiles behind it (read a file once, and again only when it changes).}
+
+\item{wait}{Whether to keep serving until stopped (Ctrl-C, Esc in RStudio): \code{TRUE} in a script run by \code{Rscript},
+whose map would otherwise go when the script ends. By default \code{FALSE}: the server answers while R is idle (in
+RStudio, while the console waits), and the call returns, so a script, a test or a document goes on.}
 }
 \value{
 The page's address, invisibly.

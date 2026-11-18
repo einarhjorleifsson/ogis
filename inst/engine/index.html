@@ -1404,6 +1404,7 @@ Promise.all([BUNDLE ? BUNDLE.meta : fetch("/meta").then(r => r.json()), styleLoa
     paint();
   }
   for (const l of OTHER) addLayer(l, meta);
+  if (!OTHER.length) runScripts();
   if (TP) timeSetup(q);
   if (NOTES) notesSetup();
   if (VERDICTS) verdictsSetup();
@@ -1500,7 +1501,7 @@ function addLayer(l, meta) {
         spec.layout = { ...spec.layout, "text-font": rr_face ? faceFont(rr_face) : FONT };
       map.addLayer(spec, before);
     }
-    applyVariant(l); applyColour(l); applyShade(l); applyChoice(l); showLayer(l); countText(l);
+    applyVariant(l); applyColour(l); applyShade(l); applyChoice(l); showLayer(l); countText(l); layerDone(l);
     if (shadeFollowing(l)) followShade(l);
     if (following(l)) fitColour(l, true);
     else if (l.colour?.fit && $(`${l.id}-cscale`).value === "equal") fitColour(l, true, true);
@@ -1562,6 +1563,7 @@ function addLayer(l, meta) {
   }
 }
 function missing(l) {
+  layerDone(l);
   $(l.id).disabled = true; $("lyr-" + l.id).classList.add("off");
   counts[l.id] = -1; countText(l);
 }
@@ -1636,7 +1638,7 @@ function choiceFilter(l, st) {
     const cond = ["in", ["get", f.field], ["literal", os.filter(o => o.match !== null).map(o => o.match)]];
     return [os.some(o => o.match === null) ? ["any", ["!", ["has", f.field]], cond] : cond];
   });
-  const parts = [st.filter, ...conds, ...timeFilter(l)].filter(Boolean);
+  const parts = [st.filter, ...conds, ...timeFilter(l), ...Object.values(l.extra ?? {})].filter(Boolean);
   return parts.length === 0 ? null : parts.length === 1 ? parts[0] : ["all", ...parts];
 }
 // The time panel's vessel and span on a layer whose features carry them (rr_time()): its pings from the span's
@@ -1822,12 +1824,15 @@ function rowHtml(cols) {
 }
 // A feature's row as a table, fetched into `body`: from the server, or in a bundle from the layer's rows file, read on
 // the layer's first click and kept, not read again at every click
-function rowInto(l, p, body) {
-  body.innerHTML = esc(tr("rowLoading"));
-  (BUNDLE ? (bundleRows[l.id] ??= bundleLoad(`data/${l.id}_rows`)).then(d => {
+function rowOf(l, p) {
+  return BUNDLE ? (bundleRows[l.id] ??= bundleLoad(`data/${l.id}_rows`)).then(d => {
     const v = d.rows[p.rr_row - 1];                                  // row n at n - 1
     return v ? { columns: d.cols.map((c, i) => ({ ...c, value: v[i] ?? null, code: c.codes?.[String(v[i])] })) } : null;
-  }) : fetch(`/row/${l.id}/${p.rr_row}`).then(r => r.ok ? r.json() : null))
+  }) : fetch(`/row/${l.id}/${p.rr_row}`).then(r => r.ok ? r.json() : null);
+}
+function rowInto(l, p, body) {
+  body.innerHTML = esc(tr("rowLoading"));
+  rowOf(l, p)
     .then(r => { body.innerHTML = r ? rowHtml(r.columns) : esc(tr("rowNone")); })
     .catch(() => { body.innerHTML = esc(tr("rowNone")); });
 }
@@ -1977,14 +1982,29 @@ if (NOTES) map.on("click", noteClick);
 // One click for every layer that answers one (popup `click`): the topmost feature under it speaks. Its query is guarded
 // (query()), and tried once more when the map is idle if a layer's index was lost and its source loaded again
 const CLICK = new Map(OTHER.flatMap(l => (l.popup?.click ?? []).map(id => [id, l])));
+// a layer whose clicks a page's own script takes (rr.on("click", id, fn)), and the clicks counted, so a row read for
+// a click that a newer one has followed is answered null
+const scriptClicks = new Map();
+let clickSeq = 0;
+const styleLayer = sid => OTHER.find(l => l.style.some(s => s.id === sid));
+const scriptStyles = () => [...scriptClicks.keys()].flatMap(id => OTHER.find(l => l.id === id)?.style.map(s => s.id) ?? []);
 function clickAt(e, again) {
   if (e.originalEvent.featureShown) return;                    // a note, or the second try after another took it
-  const f = query(e.point, [...CLICK.keys()], again ? null : () => clickAt(e, true))[0];
+  const f = query(e.point, [...new Set([...CLICK.keys(), ...scriptStyles()])], again ? null : () => clickAt(e, true))[0];
   if (!f) return;
   e.originalEvent.featureShown = true;
+  const seq = ++clickSeq, l = styleLayer(f.layer.id), own = scriptClicks.get(l?.id);
+  if (own) {
+    popup?.remove();
+    const p = f.properties;
+    const row = () => (p.rr_row === undefined ? Promise.resolve(null) : rowOf(l, p))
+      .then(r => seq === clickSeq ? r?.columns ?? null : null).catch(() => null);
+    try { own({ feature: f, lngLat: e.lngLat, point: e.point, row }); } catch (err) { console.error("rebelrebel: a page's click", err); }
+    return;
+  }
   featurePopup(CLICK.get(f.layer.id), { lngLat: e.lngLat, point: e.point, originalEvent: e.originalEvent, features: [f] });
 }
-if (CLICK.size) map.on("click", e => clickAt(e));
+map.on("click", e => clickAt(e));
 // The pointer a hand over what a click answers (the layers', the notes', the grid's, the time panel's): one guarded
 // query a frame, where MapLibre's own mouseenter and mouseleave query unguarded
 let pointerFrame = 0, pointerEvent = null;
@@ -1993,7 +2013,7 @@ map.on("mousemove", e => {
   pointerFrame ||= requestAnimationFrame(() => {
     pointerFrame = 0;
     if (noting) return;
-    const ids = [...CLICK.keys(), "rb-notes-dot", "rb-time-dot", ...(G ? [G.id] : [])];
+    const ids = [...CLICK.keys(), ...scriptStyles(), "rb-notes-dot", "rb-time-dot", ...(G ? [G.id] : [])];
     const over = !pointerEvent.originalEvent.buttons && query(pointerEvent.point, ids).length > 0;
     map.getCanvas().style.cursor = over ? "pointer" : "";
   });
@@ -2031,6 +2051,89 @@ if (HOVER.size) {
   map.on("mouseout", hideHover);
   map.on("dragstart", hideHover);
   map.on("click", e => { hoverClicked = hoverFeature(e.point)?.key ?? null; hideHover(); });
+}
+
+// A page's own script (rr_script()) --------------------------------------------------------------------------------
+// Run once every layer is added (or found missing), each given one object, `rr`: what a page built on the map may use
+// of it, and nothing else of the page's (its DOM, its functions) is promised. Its css goes into the page's head
+let layersLeft = OTHER.length, scriptsRun = false;
+function layerDone(l) {
+  if (l.done) return;
+  l.done = true;
+  if (--layersLeft <= 0) runScripts();
+}
+const pendingData = new Map();
+let dataFrame = 0;
+const RR = {
+  map,                                                          // MapLibre's map
+  served: !BUNDLE,                                              // false in a bundle: no server, no rr.fetch()
+  // a layer's MapLibre style ids and source (by its id, rr_point(id = ) and the others), or null
+  layer(id) {
+    const l = OTHER.find(x => x.id === id);
+    return l ? { id: l.id, styles: l.style.map(st => st.id), source: l.id, kind: l.kind } : null;
+  },
+  // a click on a layer's features taken by the page: fn({ feature, lngLat, point, row }), row() its row's columns
+  // (those `popup` names), null when a newer click has come meanwhile; the layer's own popup is not shown
+  on(type, id, fn) {
+    if (type !== "click") throw new Error('rr.on(): "click" is the one event');
+    if (!OTHER.some(l => l.id === id)) throw new Error(`rr.on(): the map has no layer "${id}"`);
+    scriptClicks.set(id, fn);
+  },
+  // a whole layer's data sent again (GeoJSON), at most once a frame, its count beside its name kept
+  setData(id, data) {
+    if (!OTHER.some(l => l.id === id) || map.getSource(id)?.type !== "geojson")
+      throw new Error(`rr.setData(): "${id}" is not a layer sent whole (whole = TRUE)`);
+    pendingData.set(id, data);
+    dataFrame ||= requestAnimationFrame(() => {
+      dataFrame = 0;
+      for (const [k, d] of pendingData) {
+        map.getSource(k)?.setData(d);
+        if (Array.isArray(d?.features)) { counts[k] = d.features.length; countText(OTHER.find(x => x.id === k)); }
+      }
+      pendingData.clear();
+    });
+  },
+  // a filter of the page's on a layer, by a key of its own, with the engine's (choose); null removes it
+  filter(id, key, expr) {
+    const l = OTHER.find(x => x.id === id);
+    if (!l) throw new Error(`rr.filter(): the map has no layer "${id}"`);
+    l.extra ??= {};
+    if (expr == null) delete l.extra[key]; else l.extra[key] = expr;
+    applyChoice(l);
+  },
+  // a box in the sidebar, above the base maps, the page's to fill: its body
+  panel(title) {
+    const d = document.createElement("details");
+    d.className = "group rr-panel"; d.open = true;
+    d.innerHTML = '<summary></summary><div class="body"></div>';
+    d.querySelector("summary").textContent = title;
+    $("groups").insertBefore(d, $("g-base"));
+    return d.querySelector(".body");
+  },
+  // the page's own route (rr_serve(routes = )), fetched from this page: fetch()'s promise
+  fetch(name, init = {}) {
+    if (BUNDLE) return Promise.reject(new Error("rr.fetch(): a bundle has no server (rr.served is false)"));
+    const json = typeof init.body === "string" ? { "Content-Type": "application/json" } : {};
+    return fetch(`${location.origin}/x/${encodeURIComponent(name)}`,
+                 { ...init, cache: "no-store", headers: { "X-RB-Notes": "1", ...json, ...(init.headers ?? {}) } });
+  },
+  // a file handed to the reader to save (what a page in a bundle, with no server, keeps)
+  save(name, text, type = "text/plain;charset=utf-8") {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name;
+    document.body.append(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+};
+window.rr = RR;
+function runScripts() {
+  if (scriptsRun) return;
+  scriptsRun = true;
+  for (const sc of CONFIG.scripts ?? []) {
+    if (sc.css) { const st = document.createElement("style"); st.textContent = sc.css; document.head.append(st); }
+    try { new Function("rr", sc.js)(RR); } catch (err) { console.error("rebelrebel: a page's script failed", err); }
+  }
 }
 
 // The notes (rr_serve(notes = )) -----------------------------------------------------------------------------------

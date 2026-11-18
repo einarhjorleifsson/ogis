@@ -1,0 +1,139 @@
+# The seam: a page's own script (rr_script()) and its own routes (rr_serve(routes = ))
+
+# a request to a map's app as httpuv makes it, from the map's page opened on this computer
+route_call <- function(app, method, path, query = "", body = NULL, host = "localhost:8811", page = TRUE, json = TRUE) {
+  req <- list(REQUEST_METHOD = method, PATH_INFO = path, QUERY_STRING = query, HTTP_HOST = host)
+  if (page) req$HTTP_X_RB_NOTES <- "1"
+  if (!is.null(body)) {
+    req$rook.input <- list(read = function(...) charToRaw(enc2utf8(body)))
+    if (json) req$CONTENT_TYPE <- "application/json"
+  }
+  app$call(req)
+}
+
+test_that("rr_script() puts a script and its styles on the map, before or after its layers", {
+  skip_if_no_spatial()
+  pos <- rr_example("trawlsurvey")
+  f <- withr::local_tempfile(fileext = ".js")
+  writeLines("rr.panel('From a file');", f)
+  a <- rr_map(pos) |> rr_script("rr.panel('Text');", css = ".rr-panel { color: red; }") |> rr_point(id = "positions")
+  expect_identical(a$config$scripts[[1]]$js, "rr.panel('Text');")
+  expect_identical(a$config$scripts[[1]]$css, ".rr-panel { color: red; }")
+  b <- rr_map(pos) |> rr_point(id = "positions") |> rr_script(f) |> rr_path(group = vid, time = time)
+  expect_identical(b$config$scripts[[1]]$js, "rr.panel('From a file');")
+  expect_length(b$config$layers, 2)
+  expect_error(rr_script(b, "missing.js"), "No such file")
+  expect_error(rr_script(list(), "x"), "rr_map")
+  # a bundle carries it
+  dir <- withr::local_tempdir()
+  rr_bundle(b, dir, overwrite = TRUE)
+  expect_match(paste(readLines(file.path(dir, "index.html"), warn = FALSE), collapse = "\n"), "From a file", fixed = TRUE)
+})
+
+test_that("a map's own routes answer from its page, as the function returns", {
+  skip_if_no_spatial()
+  m <- rr_example("trawlsurvey") |> rr_point()
+  seen <- NULL
+  app <- .rr_map_app(m, routes = list(
+    echo = function(req) { seen <<- req; list(method = req$method, path = req$path, a = req$query$a, body = req$body) },
+    text = function(req) "plain text",
+    none = function(req) NULL,
+    fail = function(req) stop("no such feature\nmore")
+  ))
+  r <- route_call(app, "GET", "/x/echo/one/two", query = "a=1")
+  expect_identical(r$status, 200L)
+  expect_identical(jsonlite::fromJSON(r$body), list(method = "GET", path = "/one/two", a = "1", body = NULL))
+  r <- route_call(app, "POST", "/x/echo", body = '{"vid": 1131, "names": ["a", "b"]}')
+  expect_identical(r$status, 200L)
+  expect_identical(seen$body, list(vid = 1131L, names = c("a", "b")))
+  expect_identical(route_call(app, "GET", "/x/text")$body, "plain text")
+  expect_identical(route_call(app, "GET", "/x/none")$status, 404L)
+  r <- route_call(app, "GET", "/x/fail")
+  expect_identical(r$status, 500L)
+  expect_identical(r$body, "no such feature")
+  expect_identical(route_call(app, "GET", "/x/nosuch")$status, 404L)
+  # from elsewhere, or a write not from the page: refused
+  expect_identical(route_call(app, "GET", "/x/echo", host = "example.org")$status, 403L)
+  expect_identical(route_call(app, "POST", "/x/echo", body = "{}", page = FALSE)$status, 403L)
+  # a map with no routes has none
+  expect_identical(route_call(.rr_map_app(m), "GET", "/x/echo")$status, 404L)
+  expect_error(rr_serve(m, routes = list(function(req) 1), open = FALSE, wait = FALSE), "named list")
+  expect_error(rr_serve(m, routes = list(Bad = function(req) 1), open = FALSE, wait = FALSE), "named list")
+})
+
+test_that("in the page: a script's click reads the row, its route keeps what it sends, its filter and data hold", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  marks <- integer()
+  js <- r"(
+    const body = rr.panel("Marks");
+    rr.on("click", "positions", async ({ row }) => {
+      const r = await row();
+      if (!r) return;
+      const vid = r.find(c => c.name === "vid").value;
+      const res = await rr.fetch("mark", { method: "POST", body: JSON.stringify({ vid }) });
+      const j = await res.json();
+      body.textContent = `marked ${vid}, ${j.n} in all`;
+    });
+    window.SCRIPT_RAN = true;
+  )"
+  m <- rr_example("trawlsurvey") |>
+    rr_point(id = "positions", popup = c(vid, time)) |>
+    rr_script(js)
+  url <- rr_serve(m, open = FALSE, wait = FALSE,
+                  routes = list(mark = function(req) { marks <<- c(marks, as.integer(req$body$vid)); list(n = length(marks)) }))
+  withr::defer(rr_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
+  b <- open_page(url)
+  expect_true(wait_until(function() isTRUE(page_eval(b, "window.SCRIPT_RAN === true && map.loaded() && map.queryRenderedFeatures({ layers: ['positions-dot'] }).length > 0")), 40))
+  expect_identical(page_eval(b, "rr.served"), TRUE)
+  expect_identical(unlist(page_eval(b, 'rr.layer("positions").styles')), "positions-dot")
+  # a click on a position: the script's, not the popup's
+  xy <- unlist(page_eval(b, '(() => { const f = map.queryRenderedFeatures({ layers: ["positions-dot"] })[0], p = map.project(f.geometry.coordinates), r = map.getContainer().getBoundingClientRect(); return [r.left + p.x, r.top + p.y]; })()'))
+  for (type in c("mouseMoved", "mousePressed", "mouseReleased")) {
+    b$Input$dispatchMouseEvent(type = type, x = xy[1], y = xy[2], button = if (type == "mouseMoved") "none" else "left",
+                               clickCount = if (type == "mouseMoved") 0 else 1)
+  }
+  expect_true(wait_until(function() grepl("in all", page_eval(b, 'document.querySelector(".rr-panel .body").textContent')), 20))
+  expect_length(marks, 1)
+  expect_match(page_eval(b, 'document.querySelector(".rr-panel .body").textContent'), sprintf("marked %d, 1 in all", marks))
+  expect_false(page_eval(b, '!!document.querySelector(".maplibregl-popup")'))
+  # a filter of the script's, then none
+  page_eval(b, 'rr.filter("positions", "none", ["==", ["get", "rr_row"], -1]) ?? true')
+  expect_true(wait_until(function() identical(page_eval(b, 'map.queryRenderedFeatures({ layers: ["positions-dot"] }).length'), 0L), 20))
+  page_eval(b, 'rr.filter("positions", "none", null) ?? true')
+  expect_true(wait_until(function() page_eval(b, 'map.queryRenderedFeatures({ layers: ["positions-dot"] }).length') > 0, 20))
+  # new data for a whole layer, its count beside its name kept
+  page_eval(b, 'rr.setData("positions", { type: "FeatureCollection", features: [{ type: "Feature", properties: { rr_row: 1 }, geometry: { type: "Point", coordinates: map.getCenter().toArray() } }] }) ?? true')
+  expect_true(wait_until(function() identical(page_eval(b, 'map.queryRenderedFeatures({ layers: ["positions-dot"] }).length'), 1L), 20))
+  expect_match(page_eval(b, 'document.getElementById("positionsinfo").textContent'), "^1 ")
+  expect_error(page_eval(b, 'rr.on("hover", "positions", () => 0)'), "click")
+  # in a bundle the script runs with no server
+  dir <- withr::local_tempdir()
+  rr_bundle(m, dir, overwrite = TRUE)
+  b2 <- open_page(paste0(serve_dir(dir), "index.html"))
+  expect_true(wait_until(function() isTRUE(page_eval(b2, "window.SCRIPT_RAN === true")), 30))
+  expect_identical(page_eval(b2, "rr.served"), FALSE)
+})
+
+test_that("rr_serve(wait = TRUE) keeps a map served from Rscript up", {
+  skip_on_cran()
+  skip_if_no_spatial()
+  skip_if_not_installed("processx")
+  installed <- tryCatch(utils::packageDescription("rebelrebel", lib.loc = .libPaths())$Version, error = function(e) "")
+  skip_if(!identical(installed, as.character(utils::packageVersion("rebelrebel"))),
+          "the installed rebelrebel is not the one tested (the child R loads the installed one)")
+  port <- httpuv::randomPort()
+  code <- sprintf(paste0("library(rebelrebel); m <- rr_example(\"trawlsurveytows\") |> rr_line(); ",
+                         "rr_serve(m, port = %d, open = FALSE, wait = TRUE); cat(\"returned\\n\")"), port)
+  p <- processx::process$new(file.path(R.home("bin"), "Rscript"), c("-e", code), stdout = "|", stderr = "|")
+  withr::defer(p$kill())
+  got <- NULL
+  for (i in 1:120) {
+    got <- tryCatch(suppressWarnings(readLines(sprintf("http://127.0.0.1:%d/config.json", port), warn = FALSE)),
+                    error = function(e) NULL)
+    if (length(got)) break
+    Sys.sleep(0.5)
+  }
+  expect_match(paste(got, collapse = ""), '"title"')
+  expect_true(p$is_alive()) # still serving, not returned
+})

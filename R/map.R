@@ -22,6 +22,8 @@
 #   /verdicts                        with rr_serve(verdicts = ): the features' current verdicts (GET), a verdict
 #                                    given or withdrawn (POST), answered with them; as the notes, from this computer
 #                                    and the page only
+#   /x/<name>, /x/<name>/...         with rr_serve(routes = ): a page's own route (rr_script()), its function's
+#                                    value; as the notes, from this computer, a write from the page only
 
 
 .rr_map_engine <- 7L # the page's ENGINE: changed together

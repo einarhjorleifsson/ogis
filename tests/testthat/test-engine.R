@@ -51,7 +51,7 @@ test_that("served: a note's pin opens its note, a hover shows a label, the point
   notes <- file.path(withr::local_tempdir(), "notes.geojson")
   rr_notes_add(notes, "a note on the first ping", lon = at$lon[1], lat = at$lat[1])
   m <- pings |> rr_point(popup = c(vid, speed), hover = vid, name = "Points")
-  url <- rr_serve(m, open = FALSE, notes = notes)
+  url <- rr_serve(m, open = FALSE, wait = FALSE, notes = notes)
   withr::defer(rr_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
   b <- open_page(url)
   expect_true(wait_until(function() isTRUE(page_eval(b, 'map.loaded() && !!map.getLayer("rb-notes-dot") && map.queryRenderedFeatures({ layers: ["rb-notes-dot"] }).length > 0')), 30))

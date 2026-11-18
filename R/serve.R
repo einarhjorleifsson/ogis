@@ -25,6 +25,16 @@
 #'   file (when, the layer, the feature's value of the verdict's `field`, the option, the reader's line, the feature's
 #'   title and place); a later one for the feature replaces it, and an empty answer withdraws it. [rr_verdicts()]
 #'   reads them. As the notes, answered only for a page opened from this computer, and never in a bundle.
+#' @param routes Opt-in, the map's own routes, for a page's own script ([rr_script()]): a named list of functions,
+#'   each answering `/x/<name>` (and `/x/<name>/...`) from the page by `rr.fetch(name, init)`. A function is given one
+#'   request, a list of `method` (`"GET"`, `"POST"`, ...), `path` (what follows its name), `query` (the address's
+#'   parameters, a named list) and `body` (a JSON body read, else its text, else `NULL`); it returns a list or a data
+#'   frame, sent as JSON, a string, sent as text, or `NULL`, not found; an error is sent as its message. As the notes,
+#'   answered only for a page opened from this computer. Keep each fast: the server answers one request at a time, and
+#'   a slow route holds the tiles behind it (read a file once, and again only when it changes).
+#' @param wait Whether to keep serving until stopped (Ctrl-C, Esc in RStudio): `TRUE` in a script run by `Rscript`,
+#'   whose map would otherwise go when the script ends. By default `FALSE`: the server answers while R is idle (in
+#'   RStudio, while the console waits), and the call returns, so a script, a test or a document goes on.
 #' @return The page's address, invisibly.
 #' @export
 #' @examples
@@ -53,9 +63,19 @@ rr_serve <- function(
   open = interactive(),
   query = NULL,
   notes = NULL,
-  verdicts = NULL
+  verdicts = NULL,
+  routes = NULL,
+  wait = FALSE
 ) {
   .rr_need("httpuv")
+  if (!is.null(routes) && (!is.list(routes) || !length(routes) || is.null(names(routes)) ||
+                             !all(grepl("^[a-z][a-z0-9_-]*$", names(routes))) || anyDuplicated(names(routes)) ||
+                             !all(vapply(routes, is.function, logical(1))))) {
+    stop("`routes` is a named list of functions, each name lower-case letters, digits, _ or -.", call. = FALSE)
+  }
+  if (!isTRUE(wait) && !isFALSE(wait)) {
+    stop("`wait` is TRUE or FALSE.", call. = FALSE)
+  }
   .rr_need("jsonlite")
   if (!inherits(map, "rr_map")) {
     stop("`map` is an rr_map().", call. = FALSE)
@@ -73,7 +93,7 @@ rr_serve <- function(
     .rr_notes_utf8()
     .rr_verdicts_read(verdicts) # a file that is there must be verdicts: it is never overwritten otherwise
   }
-  app <- .rr_map_app(map, notes = notes, host = host, verdicts = verdicts)
+  app <- .rr_map_app(map, notes = notes, host = host, verdicts = verdicts, routes = routes)
   port <- if (is.null(port)) {
     .rr_serve_free(host, app)
   } else {
@@ -110,6 +130,11 @@ rr_serve <- function(
     } else {
       utils::browseURL(url)
     }
+  }
+  if (wait) {
+    message(sprintf("Serving %s; Ctrl-C (Esc in RStudio) stops it.", url))
+    on.exit(rr_stop(port), add = TRUE)
+    repeat httpuv::service(100)
   }
   invisible(url)
 }
@@ -262,7 +287,7 @@ rr_stop <- function(port = NULL) {
 }
 
 # The app behind rr_serve(), a list with `call(req)` for httpuv: its routes in the header of this file
-.rr_map_app <- function(map, notes = NULL, host = "127.0.0.1", verdicts = NULL) {
+.rr_map_app <- function(map, notes = NULL, host = "127.0.0.1", verdicts = NULL, routes = NULL) {
   json <- .rr_map_json
   if (!is.null(notes)) {
     map$config$notes <- list(file = basename(notes))
@@ -305,6 +330,10 @@ rr_stop <- function(port = NULL) {
     }
     if (!is.null(verdicts) && path == "/verdicts") {
       return(.rr_map_verdicts_reply(req, verdicts, specs, hosts, reply, json))
+    }
+    x <- regmatches(path, regexec("^/x/([a-z][a-z0-9_-]*)(/.*)?$", path))[[1]]
+    if (length(x) == 3 && !is.null(routes)) {
+      return(.rr_map_route_reply(req, routes[[x[2]]], x[3], hosts, reply, json))
     }
     if (req$REQUEST_METHOD != "GET") {
       return(reply(405L, "GET only"))
@@ -476,6 +505,44 @@ rr_stop <- function(port = NULL) {
     }
     .rr_map_tile_reply(function() l$tiles(z, x, y, p), reply)
   })
+}
+
+# A page's own route (rr_serve(routes = )): its function given the request as a list, its value sent back
+.rr_map_route_reply <- function(req, fn, rest, hosts, reply, json) {
+  if (is.null(fn)) {
+    return(reply(404L, "no such route"))
+  }
+  refused <- .rr_map_local_only(req, hosts, reply, "A map's own routes", "A write to a map's own route")
+  if (!is.null(refused)) {
+    return(refused)
+  }
+  body <- NULL
+  if (!is.null(req$rook.input)) {
+    raw <- req$rook.input$read()
+    if (length(raw)) {
+      text <- rawToChar(raw)
+      Encoding(text) <- "UTF-8"
+      body <- if (grepl("json", .rr_or(req$CONTENT_TYPE, ""), fixed = TRUE)) {
+        tryCatch(jsonlite::fromJSON(text), error = function(e) text)
+      } else {
+        text
+      }
+    }
+  }
+  v <- tryCatch(
+    fn(list(method = req$REQUEST_METHOD, path = rest, query = .rr_map_query(req$QUERY_STRING), body = body)),
+    error = function(e) e
+  )
+  if (inherits(v, "error")) {
+    return(reply(500L, sub("\n.*", "", conditionMessage(v))))
+  }
+  if (is.null(v)) {
+    return(reply(404L, "not found", headers = list(`Cache-Control` = "no-store")))
+  }
+  if (is.character(v) && length(v) == 1) {
+    return(reply(200L, enc2utf8(v), headers = list(`Cache-Control` = "no-store")))
+  }
+  reply(200L, json(v), "application/json; charset=utf-8", list(`Cache-Control` = "no-store"))
 }
 
 # The time panel's series of one vessel's span, its vessel and span checked against the panel's first

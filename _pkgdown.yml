@@ -33,6 +33,11 @@ reference:
 - title: "Colours and base maps"
   contents:
   - rr_palettes
+- title: "A page of your own"
+  desc: >
+    A script of your own on the map, and routes of its own on the server: for a page that does more than show.
+  contents:
+  - rr_script
 - title: "Show and share"
   desc: >
     A map served from R on this machine, or written as a folder that opens with no R.

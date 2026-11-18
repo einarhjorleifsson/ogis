@@ -23,7 +23,7 @@
       # a path read as a table; none for rr_map() with no data, whose layers bring their own
       ctx = if (!is.null(p$data)) .rr_quick_data(.rr_data(p$data), NULL, NULL, NULL, rlang::quo(NULL), NULL),
       layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections,
-      view = p$view, basemaps = p$basemaps
+      view = p$view, basemaps = p$basemaps, scripts = state$scripts
     )
     if (!groups && !is.null(state$ctx)) {
       state$ctx$groups <- character()
@@ -446,6 +446,9 @@
       c(list(id = id), Filter(Negate(is.null), state$panel_fields[[id]]))
     }))
     m$time <- state$time
+  }
+  if (length(state$scripts)) {
+    m$config$scripts <- state$scripts # a page's own (rr_script()), whichever came first, it or a layer
   }
   attr(m, "quick") <- state
   attr(m, "tables") <- c(state$tables, state$time$tables)
