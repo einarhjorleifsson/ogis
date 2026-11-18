@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.11</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.12</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,10 @@
       <small>Source: <a href="https://github.com/einarhjorleifsson/ogis/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2026.11.18.12" id="ogis-2026111812">ogis 2026.11.18.12<a class="anchor" aria-label="anchor" href="#ogis-2026111812"></a></h2>
+<ul><li>The engine’s guard against MapLibre 5’s lost index is gone. In 5.x a tile loaded again while an earlier load of it was still being read lost its index, and every query of that layer then threw “Out of bounds” until its data were sent again; the page caught that, sent the data again and tried a click once more. MapLibre fixed it in 6.0 and 6.3, and the reproduction that found it (data sent during an animated zoom, a filter reading the zoom from MapLibre’s global state) failed 9 times in 200 on 5.24.1 and not once in 200 on 6.19.0. Queries go straight to MapLibre; <code>query()</code> stays as the one place that leaves out layers not on the map.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2026.11.18.11" id="ogis-2026111811">ogis 2026.11.18.11<a class="anchor" aria-label="anchor" href="#ogis-2026111811"></a></h2>
 <ul><li>MapLibre GL JS 6.19.0 in place of 5.24.1, the last of 5.x. MapLibre 6 is published only as ES modules, which a page opened from its folder cannot load, and a bundle opens by a double click; so its two modules are made classic scripts by <code>tools/vendor-maplibre.R</code> (the npm package checked against the registry’s SHA-512; <code>import.meta.url</code> the script’s own address, the export list the global <code>maplibregl</code>), its worker’s code carried in <code>maplibre-gl-worker.js</code> and handed to MapLibre as a blob, which MapLibre 6.17 and later runs on a page opened from a file. The page loads that script before MapLibre; nothing else in it changed. A bundle is 0.6 MB larger.</li>

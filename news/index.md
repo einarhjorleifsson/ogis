@@ -1,5 +1,18 @@
 # Changelog
 
+## ogis 2026.11.18.12
+
+- The engine’s guard against MapLibre 5’s lost index is gone. In 5.x a
+  tile loaded again while an earlier load of it was still being read
+  lost its index, and every query of that layer then threw “Out of
+  bounds” until its data were sent again; the page caught that, sent the
+  data again and tried a click once more. MapLibre fixed it in 6.0 and
+  6.3, and the reproduction that found it (data sent during an animated
+  zoom, a filter reading the zoom from MapLibre’s global state) failed 9
+  times in 200 on 5.24.1 and not once in 200 on 6.19.0. Queries go
+  straight to MapLibre; `query()` stays as the one place that leaves out
+  layers not on the map.
+
 ## ogis 2026.11.18.11
 
 - MapLibre GL JS 6.19.0 in place of 5.24.1, the last of 5.x. MapLibre 6
