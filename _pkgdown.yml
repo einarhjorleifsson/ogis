@@ -23,9 +23,11 @@ reference:
   - rr_time
 - title: "In MapLibre's own terms"
   desc: >
-    A layer, its section and its tiles made by hand, for what the layer functions do not draw.
+    A layer, its section and its tiles made by hand, for what the layer functions do not draw; added to the pipe by
+    rr_add_layer().
   contents:
   - rr_layer
+  - rr_add_layer
   - rr_section
   - rr_tiles_table
   - rr_tiles_dem

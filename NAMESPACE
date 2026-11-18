@@ -3,6 +3,7 @@
 S3method(format,rr_map)
 S3method(knitr::knit_print,rr_map)
 S3method(print,rr_map)
+export(rr_add_layer)
 export(rr_basemaps)
 export(rr_bundle)
 export(rr_example)

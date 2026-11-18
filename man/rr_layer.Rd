@@ -164,7 +164,7 @@ when not given); or no \code{options} and \code{default} \code{TRUE} or \code{FA
 fetched again, and goes into the page's address as \verb{<id>_<name>}. Every one must be read by the style.}
 }
 \value{
-An \code{rr_layer}, for \code{\link[=rr_section]{rr_section()}}.
+An \code{rr_layer}, for \code{\link[=rr_section]{rr_section()}}; or for \code{\link[=rr_add_layer]{rr_add_layer()}}, which puts it into a map the pipe makes.
 }
 \description{
 One layer of an \code{\link[=rr_map]{rr_map()}}: what it shows, how it is drawn, and where its data come from. Five kinds:
@@ -227,5 +227,5 @@ point <- rr_layer(
 names(cells$config)
 }
 \seealso{
-\code{\link[=rr_map]{rr_map()}}, \code{\link[=rr_tiles_table]{rr_tiles_table()}}
+\code{\link[=rr_map]{rr_map()}}, \code{\link[=rr_add_layer]{rr_add_layer()}}, \code{\link[=rr_tiles_table]{rr_tiles_table()}}
 }

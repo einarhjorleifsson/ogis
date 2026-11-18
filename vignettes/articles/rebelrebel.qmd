@@ -66,6 +66,28 @@ rr_map(positions) |>
            "circle-stroke-color" = "#00a5c8", "circle-stroke-width" = 2)
 ```
 
+## A layer of your own
+
+What the layer functions do not draw, an `rr_layer()` does: elevations as colours and relief, contours, tiles of your
+own. `rr_add_layer()` puts one into the pipe, in a box of the sidebar of its own. Here the depth of the Danish waters
+in colour, made into tiles from a grid of elevations by `rr_tiles_dem()`, under the harbours:
+
+```{r}
+depth <- rr_layer(
+  "depth", "dem", label = "Depth",
+  tiles = rr_tiles_dem(rr_example("dansk_relief"), maxzoom = 6),
+  style = list(list(id = "depth-colour", type = "color-relief")),
+  colour = list(palette = "seabed", opacity = 75)
+)
+rr_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
+  rr_add_layer(depth, section = "Sea floor") |>
+  rr_polygon(rr_example("dansk_harbours"), name = "Harbours")
+```
+
+The harbours reach from Greenland to the Black Sea, so `view` opens the map on the grid's box. Elevations and
+contours go under the base map's place names, whatever their order in the pipe; the box *Depth* has the colours'
+controls.
+
 ## Showing and sharing
 
 - **In R**, printing a map serves it on this computer and opens it in RStudio's Viewer or a browser.

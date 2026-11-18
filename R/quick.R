@@ -15,26 +15,23 @@
   choose_q = rlang::quo(NULL),
   groups = TRUE
 ) {
-  state <- if (inherits(x, "rr_map")) attr(x, "quick")
-  # a map started from data by rr_map(data): its data the map's, its `choose` the map's lists
-  if (!is.null(state$pending)) {
-    p <- state$pending
-    state <- list(
-      # a path read as a table; none for rr_map() with no data, whose layers bring their own
-      ctx = if (!is.null(p$data)) .rr_quick_data(.rr_data(p$data), NULL, NULL, NULL, rlang::quo(NULL), NULL),
-      layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections,
-      view = p$view, basemaps = p$basemaps, scripts = state$scripts
-    )
-    if (!groups && !is.null(state$ctx)) {
+  state <- if (inherits(x, "rr_map")) .rr_quick_open(attr(x, "quick"))
+  # a map started from data by rr_map(data): its data the map's, read by the first call that needs them (an
+  # rr_add_layer() before it reads none); its `choose` the map's lists
+  if (!is.null(state$data)) {
+    state$ctx <- .rr_quick_data(.rr_data(state$data), NULL, NULL, NULL, rlang::quo(NULL), NULL)
+    if (!groups) {
       state$ctx$groups <- character()
     }
-    if (rlang::quo_is_null(choose_q)) {
-      choose_q <- p$choose_q
-    }
+    state$data <- NULL
+  }
+  if (rlang::quo_is_null(choose_q) && is.null(state[["choose_fields"]]) && !is.null(state$choose_q)) {
+    choose_q <- state$choose_q
   }
   if (inherits(x, "rr_map") && is.null(state)) {
     stop(
-      "This map was not made by rr_map(data) or a layer function; add its layers to it with rr_layer() and rr_map().",
+      paste0("This map was made of rr_section()s, so it takes no layer function: start it with rr_map() ",
+             "(with data or none) and add each rr_layer() of your own to it with rr_add_layer()."),
       call. = FALSE
     )
   }
@@ -81,10 +78,12 @@
     ctx$groups,
     if (!rlang::quo_is_null(choose_q)) .rr_track_cols(choose_q, ctx$cols)
   ))
-  if (length(state$layers) == 0) {
+  # set by the first call that brings rows (an rr_add_layer() before it brings none)
+  if (is.null(state[["choose_fields"]])) {
     .rr_quick_need(ctx, wanted)
-    state[["choose_fields"]] <- wanted
+    state[["choose_fields"]] <- as.character(wanted)
     state[["choose"]] <- .rr_quick_choose(ctx, wanted)
+    state$choose_q <- NULL
   } else if (length(setdiff(wanted, state[["choose_fields"]]))) {
     warning(
       "The map's choices are set by the call that starts it; ",
@@ -94,6 +93,87 @@
     )
   }
   list(state = state, ctx_layer = ctx)
+}
+
+# A map's making, opened for a call to add to: a map rr_map() started (pending) turned into one with no layers yet, its
+# data (if any) kept to be read by the first call that brings rows; a map the pipe made as it is; NULL for one made of
+# rr_section()s
+.rr_quick_open <- function(state) {
+  if (is.null(state$pending)) {
+    return(state)
+  }
+  p <- state$pending
+  list(
+    data = p$data, choose_q = p$choose_q,
+    layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections,
+    view = p$view, basemaps = p$basemaps, scripts = state$scripts
+  )
+}
+
+#' A layer of your own on a map the pipe makes
+#'
+#' `rr_add_layer()` adds an [rr_layer()] to a map the pipe makes ([rr_map()], with data or none, and the layer
+#' functions), for what the layer functions do not draw: elevations as relief and colours (`"dem"`), contours made in
+#' the page (`"contour"`), tiles of your own (`"vector"`, `"grid"`), features as GeoJSON with a style of your own. It
+#' sits in the sidebar's box `section` with the others and is drawn in the order added, the later over the earlier;
+#' elevations, contours and a grid go under the base map's labels, as in any map.
+#'
+#' The first view covers the rows of the map's layer functions; a map with none fits the layers' tiles (their
+#' `bounds`, which [rr_tiles_dem()] and [rr_tiles_mbtiles()] give), unless `rr_map(view = )` is given. The layer is
+#' served, bundled and knitted as the others are; its `id` must not be another layer's.
+#'
+#' @param map A map the pipe makes: [rr_map()], with data or none, and any layer functions after it. A map made of
+#'   [rr_section()]s takes its layers in them instead.
+#' @param layer An [rr_layer()], or a list of them, added in their order.
+#' @param section The sidebar's box the layer sits in, by its title, as the layer functions' `section`; whether it is
+#'   open when the page opens, by [rr_map()]'s `sections`.
+#' @return The map, with the layer.
+#' @seealso [rr_layer()]; [rr_section()] and [rr_map()] for a map whose every layer is an [rr_layer()].
+#' @export
+#' @examples
+#' # the seabed's depth in colour, as tiles made from a grid, under the harbours
+#' \donttest{
+#' if (requireNamespace("png", quietly = TRUE) && requireNamespace("terra", quietly = TRUE)) {
+#'   depth <- rr_layer(
+#'     "depth", "dem", label = "Depth",
+#'     tiles = rr_tiles_dem(rr_example("dansk_relief"), maxzoom = 6),
+#'     style = list(list(id = "depth-colour", type = "color-relief")),
+#'     colour = list(palette = "seabed", opacity = 75)
+#'   )
+#'   m <- rr_map(view = list(bounds = c(2.5, 54.5, 13, 58.5))) |>
+#'     rr_add_layer(depth, section = "Sea floor") |>
+#'     rr_polygon(rr_example("dansk_harbours"), name = "Harbours")
+#'   m
+#' }
+#' }
+rr_add_layer <- function(map, layer, section = "Layers") {
+  if (!inherits(map, "rr_map")) {
+    stop("`map` is an rr_map(): start it with rr_map(), with data or none.", call. = FALSE)
+  }
+  state <- .rr_quick_open(attr(map, "quick"))
+  if (is.null(state)) {
+    stop("This map was made of rr_section()s: give the layer to one of them, rr_section(layers = ).", call. = FALSE)
+  }
+  if (inherits(layer, "rr_layer")) {
+    layer <- list(layer)
+  }
+  if (!is.list(layer) || !length(layer) || !all(vapply(layer, inherits, NA, "rr_layer"))) {
+    stop("`layer` is an rr_layer(), or a list of them.", call. = FALSE)
+  }
+  if (!is.character(section) || length(section) != 1 || is.na(section) || !nzchar(trimws(section))) {
+    stop("`section` is the title of a box in the sidebar.", call. = FALSE)
+  }
+  m <- map
+  for (l in layer) {
+    id <- l$config$id
+    if (id %in% vapply(state$layers, function(x) x$config$id, "")) {
+      stop(sprintf("Layer id \"%s\" is taken by another layer of the map.", id), call. = FALSE)
+    }
+    state$layer_section[[id]] <- section
+    m <- .rr_quick_map(list(state = state), l)
+    state <- attr(m, "quick")
+  }
+  m
 }
 
 # The values of each field to choose by, each with its rows' count and extent: a list's values (text, a factor or a
@@ -399,11 +479,24 @@
       state$tables <- c(state$tables, list(table))
     }
   }
-  state$boxes <- c(state$boxes, list(s$ctx_layer$box))
-  lon0 <- min(vapply(state$boxes, `[[`, 1, "lon0"))
-  lon1 <- max(vapply(state$boxes, `[[`, 1, "lon1"))
-  lat0 <- min(vapply(state$boxes, `[[`, 1, "lat0"))
-  lat1 <- max(vapply(state$boxes, `[[`, 1, "lat1"))
+  if (!is.null(s$ctx_layer$box)) { # an rr_add_layer()'s layer has no rows
+    state$boxes <- c(state$boxes, list(s$ctx_layer$box))
+  }
+  # the rows' extent; with no rows, that of the layers' tiles (their `bounds`), else the world
+  boxes <- state$boxes
+  if (!length(boxes)) {
+    boxes <- Filter(Negate(is.null), lapply(state$layers, function(l) {
+      b <- as.numeric(unlist(l$config$bounds))
+      if (length(b) == 4) list(lon0 = b[1], lat0 = b[2], lon1 = b[3], lat1 = b[4])
+    }))
+  }
+  if (!length(boxes)) {
+    boxes <- list(list(lon0 = -180, lat0 = -85, lon1 = 180, lat1 = 85))
+  }
+  lon0 <- min(vapply(boxes, `[[`, 1, "lon0"))
+  lon1 <- max(vapply(boxes, `[[`, 1, "lon1"))
+  lat0 <- min(vapply(boxes, `[[`, 1, "lat0"))
+  lat1 <- max(vapply(boxes, `[[`, 1, "lat1"))
   span <- max(lon1 - lon0, 2 * (lat1 - lat0)) # a degree of latitude draws taller
   bases <- rr_basemaps()
   # the layers by their sections, in the order first named (the quick look's all under "Track")

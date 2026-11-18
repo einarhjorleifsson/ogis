@@ -83,7 +83,7 @@ and on a phone the sidebar behind a menu button. \code{\link[=rr_serve]{rr_serve
 }
 \details{
 Given data first, \code{rr_map(data)} starts a map that the layer functions add to (\code{\link[=rr_point]{rr_point()}} and the others), the
-data the layers' unless a layer brings its own.
+data the layers' unless a layer brings its own; \code{\link[=rr_add_layer]{rr_add_layer()}} adds an \code{\link[=rr_layer]{rr_layer()}} of your own to it.
 }
 \examples{
 harbours <- rr_layer(

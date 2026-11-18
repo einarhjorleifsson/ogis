@@ -1,3 +1,14 @@
+# rebelrebel 2026.11.18.3
+
+* `rr_add_layer()` puts an `rr_layer()` of your own into the pipe: `rr_map() |> rr_add_layer(depth, section = "Sea
+  floor") |> rr_text(...)`. Elevations, contours, tiles of your own sit beside the layer functions' layers, in a box of
+  the sidebar of their own, served, bundled and knitted as the others; elevations and contours under the base map's
+  labels, as before. Until now a piped map took no `rr_layer()`, and a map of `rr_section()`s takes no layer function
+  (it still does not: its message now says to start with `rr_map()` and add with `rr_add_layer()`). Found rebuilding a
+  map of place names on the pipe. A map whose only layers are added so fits their tiles' extent; else the rows decide
+  the first view, as before. The map's data (`rr_map(data)`) are read by the first layer function, which also makes
+  the map's choices then, an `rr_add_layer()` before it or not. "Get started" shows it.
+
 # rebelrebel 2026.11.18.2
 
 * A page of your own on a map: `rr_script()` puts a script (and its styles) into the page, run once the layers are

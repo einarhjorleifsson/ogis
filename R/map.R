@@ -162,8 +162,8 @@
 #'   number, text or `TRUE`/`FALSE`, and `label`), a list to choose from, with `default` one of the values (the first
 #'   when not given); or no `options` and `default` `TRUE` or `FALSE`, a checkbox. Each applies as it changes, nothing
 #'   fetched again, and goes into the page's address as `<id>_<name>`. Every one must be read by the style.
-#' @return An `rr_layer`, for [rr_section()].
-#' @seealso [rr_map()], [rr_tiles_table()]
+#' @return An `rr_layer`, for [rr_section()]; or for [rr_add_layer()], which puts it into a map the pipe makes.
+#' @seealso [rr_map()], [rr_add_layer()], [rr_tiles_table()]
 #' @export
 #' @examples
 #' # A vector layer: the harbours as areas, a click shows the harbour's id
@@ -633,7 +633,7 @@ rr_section <- function(id, title = id, layers, open = TRUE) {
 #' and on a phone the sidebar behind a menu button. [rr_serve()] serves it.
 #'
 #' Given data first, `rr_map(data)` starts a map that the layer functions add to ([rr_point()] and the others), the
-#' data the layers' unless a layer brings its own.
+#' data the layers' unless a layer brings its own; [rr_add_layer()] adds an [rr_layer()] of your own to it.
 #'
 #' @param ... [rr_section()]s; or, alone, the data a map starts from (a parquet file, folder or glob, a lazy DuckDB
 #'   table, a data frame or an sf object), which the layer functions ([rr_point()] and the others) draw; or nothing,
