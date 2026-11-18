@@ -714,7 +714,9 @@ rr_map <- function(
     return(structure(
       list(config = list(title = title), layers = list()),
       class = "rr_map",
-      quick = list(pending = list(data = first, choose_q = choose_q, title = title, port = NULL, sections = sections))
+      # the map's own settings kept for its layers: a view given, base maps given
+      quick = list(pending = list(data = first, choose_q = choose_q, title = title, port = NULL, sections = sections,
+                                  view = if (!missing(view)) view, basemaps = if (!missing(basemaps)) basemaps))
     ))
   }
   choose <- rlang::eval_tidy(choose_q)

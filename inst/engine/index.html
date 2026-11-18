@@ -550,6 +550,22 @@ let LANG = LANGS.includes(CONFIG.language) ? CONFIG.language : LANGS.includes("e
 let addressRead = false, userColour = false, addressTimer = 0;
 const counts = {};      // a layer's features, for the text beside it; -1 when the server has none of them
 let FONT = ["Open Sans Regular"];   // the first style's label font, for the layers' labels on any base map
+// a text layer's faces (rr_text(fontface = )): each the fonts the base style itself uses for that face, for a base
+// map's glyphs hold only its own fonts (Carto's: Montserrat Medium, Montserrat Regular Italic, Montserrat SemiBold,
+// Montserrat SemiBold Italic); a face the style lacks takes the plain one
+let FACES = { plain: FONT };
+function facesOf(style) {
+  const stacks = style.layers.map(l => l.type === "symbol" && l.layout?.["text-font"]).filter(f => Array.isArray(f) && f.every(x => typeof x === "string"));
+  const has = (f, re) => re.test(f[0]);
+  const find = (bold, italic) => stacks.find(f => has(f, /bold/i) === bold && has(f, /italic|oblique/i) === italic);
+  const plain = FONT;
+  return { plain, italic: find(false, true) ?? plain, bold: find(true, false) ?? plain, "bold.italic": find(true, true) ?? find(false, true) ?? plain };
+}
+// a style's `rr_face` (a face, or ["get", column]) as MapLibre's text-font: the base style's fonts for each face
+function faceFont(face) {
+  if (typeof face === "string") return FACES[face] ?? FACES.plain;
+  return ["match", face, ...["italic", "bold", "bold.italic"].flatMap(k => [k, ["literal", FACES[k]]]), ["literal", FACES.plain]];
+}
 const tr = (k, ...a) => a.reduce((t, v, i) => t.replaceAll(`{${i + 1}}`, v), T[k]?.[LANG] ?? T[k]?.en ?? k);
 // A language's number format: the first of the config's locales for it that the browser has (a browser may lack one)
 const loc = () => (CONFIG.locales?.[LANG] ?? [LANG]).find(l => Intl.NumberFormat.supportedLocalesOf([l]).length) ?? LANG;
@@ -1377,6 +1393,7 @@ Promise.all([BUNDLE ? BUNDLE.meta : fetch("/meta").then(r => r.json()), styleLoa
     linkChoices(S, -1);
   }
   FONT = map.getStyle().layers.find(l => l.type === "symbol" && l.layout?.["text-font"])?.layout["text-font"] ?? FONT;
+  FACES = facesOf(map.getStyle());
   if (G) {
     const firstSymbol = map.getStyle().layers.find(l => l.type === "symbol")?.id;
     map.addSource(G.id, { type: "vector", tiles: [tileUrl()], minzoom: G.minzoom ?? 2, maxzoom: G.maxzoom ?? 12 });
@@ -1478,8 +1495,9 @@ function addLayer(l, meta) {
                  : map.getLayer("rb-verdict-mark") ? "rb-verdict-mark" : map.getLayer("rb-notes-dot") ? "rb-notes-dot" : undefined;
     applyState(l);   // before the styles that read it
     for (const st of l.style) {
-      const spec = { ...st, source: l.id };
-      if (spec.type === "symbol" && spec.layout?.["text-field"] && !spec.layout["text-font"]) spec.layout = { ...spec.layout, "text-font": FONT };
+      const { rr_face, ...rest } = st, spec = { ...rest, source: l.id };
+      if (spec.type === "symbol" && spec.layout?.["text-field"] && !spec.layout["text-font"])
+        spec.layout = { ...spec.layout, "text-font": rr_face ? faceFont(rr_face) : FONT };
       map.addLayer(spec, before);
     }
     applyVariant(l); applyColour(l); applyShade(l); applyChoice(l); showLayer(l); countText(l);

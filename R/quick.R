@@ -22,7 +22,8 @@
     state <- list(
       # a path read as a table; none for rr_map() with no data, whose layers bring their own
       ctx = if (!is.null(p$data)) .rr_quick_data(.rr_data(p$data), NULL, NULL, NULL, rlang::quo(NULL), NULL),
-      layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections
+      layers = list(), tables = list(), boxes = list(), title = p$title, port = p$port, sections = p$sections,
+      view = p$view, basemaps = p$basemaps
     )
     if (!groups && !is.null(state$ctx)) {
       state$ctx$groups <- character()
@@ -418,7 +419,8 @@
     title = state$title,
     # the rows' extent, which the page fits to the frame it has (a window, an article's iframe); the centre and zoom
     # for a page whose address holds no view and no extent
-    view = list(
+    # (a view given to rr_map() wins)
+    view = state$view %||% list(
       center = c((lon0 + lon1) / 2, (lat0 + lat1) / 2),
       zoom = if (span > 0) max(1, min(15, floor(log2(360 / span)) - 1)) else 12,
       bounds = if (span > 0) c(lon0, lat0, lon1, lat1)
@@ -434,7 +436,7 @@
       })
       cfg
     },
-    basemaps = bases
+    basemaps = state$basemaps %||% bases
   )))
   # the time panel (rr_time()): its config for the page, its series for the server and its tables
   if (!is.null(state$time)) {

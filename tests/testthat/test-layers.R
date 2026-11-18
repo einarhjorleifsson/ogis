@@ -13,6 +13,7 @@ test_that("every layer function takes its arguments in the plan's one order", {
   order <- c(
     "map", "data", "lon", "lat", "lon_end", "lat_end", "group", "time", "max_gap_s", "elevation", "of", "cell", "fun",
     "colour", "fill", "size", "linewidth", "opacity", "whole", "thin", "label",
+    "angle", "priority", "fontface", "offset", "overlap", # a text's own looks
     "palette", "limits", "breaks", "stretch", "legend",
     "popup", "labels", "codes", "hover", "choose",
     "name", "info", "section", "visible",

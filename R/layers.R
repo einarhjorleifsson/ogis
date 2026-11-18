@@ -176,7 +176,7 @@
     if (!is.null(v$value) && (!is.numeric(v$value) || v$value <= 0)) stop(sprintf("`%s` is a number of pixels.", what), call. = FALSE)
     v$value
   }
-  size <- if (mark == "point") .rr_point_size(.rr_aes(a$size, ctx$cols, "size")) else num(a$size, "size")
+  size <- if (mark == "point") .rr_point_size(.rr_aes(a$size, ctx$cols, "size")) else if (mark != "text") num(a$size, "size")
   linewidth <- num(a$linewidth, "linewidth")
   thin_px <- if (mark == "point") .rr_thin_px(a$thin)
 
@@ -186,6 +186,8 @@
     if (length(l) != 1) stop("rr_text(): `label` is the one column whose values are written, bare.", call. = FALSE)
     l
   }
+  # and its angle, priority, start zoom by row, size, face and offset, each a value or a column
+  tx <- if (mark == "text") .rr_text_aes(a, ctx, con, q)
 
   # what the reader can do
   pop <- .rr_select(a$popup, data_cols, "popup")
@@ -223,10 +225,13 @@
   }
   # the rows, numbered and held for the session: a click asks the server for its row (/row/<id>/<n>), so the tiles
   # carry the number and the title, not every column, and stay small however many columns the table has
+  if (length(tx$sql)) {
+    src <- sprintf("SELECT *, %s FROM (%s)", tx$sql, src)
+  }
   rows_nm <- .rr_name(con, "rr_rows_")
   DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT row_number() OVER () AS rr_row, * FROM (%s)", rows_nm, src))
   props <- unique(c(
-    if (length(cols)) paste0("rr_c", seq_along(cols)), if (length(pop)) "rr_row", title, hov, lab,
+    if (length(cols)) paste0("rr_c", seq_along(cols)), if (length(pop)) "rr_row", title, hov, lab, tx$props,
     intersect(.rr_or(s$state[["choose_fields"]], character()), ctx$cols), own$fields,
     if (!is.null(t_s)) c("rr_t", ctx$by)
   ))
@@ -271,16 +276,16 @@
            paint = list("fill-color" = colour_expr, "fill-opacity" = a$opacity %||% 0.5)),
       list(id = paste0(id, "-outline"), type = "line", "source-layer" = "features",
            paint = list("line-color" = outline, "line-width" = linewidth %||% 1))),
-    text = list(list(id = sid, type = "symbol", "source-layer" = "features",
-      layout = list("text-field" = list("to-string", list("get", lab)), "text-size" = size %||% 13,
-                    "text-allow-overlap" = FALSE, "text-anchor" = "center"),
+    text = .rr_text_styles(id, sid, lab, tx, !is.null(ctx$geometry), isTRUE(a$overlap),
       paint = list("text-color" = colour_expr, "text-opacity" = a$opacity %||% 1,
-                   "text-halo-color" = "rgba(255,255,255,0.9)", "text-halo-width" = 1.5)))
+                   "text-halo-color" = "rgba(255,255,255,0.9)", "text-halo-width" = 1.5))
   )
+  sids <- vapply(style, `[[`, "", "id") # a text's styles: at points, and along lines where the data have them
+  if (mark == "polygon") sids <- sid
   variants <- if (length(cols) > 1) {
     list(label = "Colour by", options = lapply(seq_along(cols), function(i) {
       list(value = cols[i], label = cols[i],
-           paint = stats::setNames(list(stats::setNames(list(colours[[i]]$colour), mk$paint)), sid),
+           paint = stats::setNames(rep(list(stats::setNames(list(colours[[i]]$colour), mk$paint)), length(sids)), sids),
            legend = if (isTRUE(a$legend)) .rr_swatches(colours[[i]]$legend, mark, outline))
     }))
   }
@@ -299,13 +304,13 @@
     tiles = sent$tiles,
     data = sent$data,
     count = list(text = paste("{1}", mk$count)),
-    minzoom = a$minzoom,
+    minzoom = if (mark == "text") tx$minzoom else a$minzoom,
     maxzoom = a$maxzoom,
     style = style,
     legend = leg,
     variants = variants,
     popup = if (!is.null(title)) {
-      Filter(Negate(is.null), list(click = sid, title = title, row = if (length(pop)) TRUE,
+      Filter(Negate(is.null), list(click = sids, title = title, row = if (length(pop)) TRUE,
                                    hover = if (length(hov)) TRUE))
     }
   )
@@ -492,7 +497,7 @@
 #'   beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. `color` is the
 #'   same.
 #' @param fill For `rr_polygon()`, the areas' colour, as `colour` is for the other marks.
-#' @param size A point's diameter, a text's size, in pixels. For points, by default, a size that follows the zoom:
+#' @param size A point's diameter, a text's size (a number, or for text a column written bare), in pixels. For points, by default, a size that follows the zoom:
 #'   the least, 2 pixels, until the zoom at which most points lie that far apart, then doubling with each zoom in, as
 #'   a size on the ground does, up to the most, 8; `size = c(1, 12)` gives other bounds, one number a size that
 #'   stays.
@@ -509,7 +514,14 @@
 #'   list picks and each group of a time panel keeping its own), so a tile of millions of rows reaches the page as
 #'   what can be seen of them; a number of pixels for coarser cells; `FALSE` keeps every point. At the layer's
 #'   deepest zoom (`maxzoom`, 14 by default) and beyond, only points that would be drawn on one spot are dropped.
-#' @param label For `rr_text()`, the column whose values are written, bare.
+#' @param label For `rr_text()`, the column whose values are written, bare. On a line (data whose shapes are lines), the
+#'   text is written along it, at its middle.
+#' @param angle,priority,fontface,offset,overlap For `rr_text()`, each a value or a column written bare: `angle`, the
+#'   text turned that many degrees counter-clockwise, as ggplot2's; `priority`, which text is placed first where two
+#'   would meet, the higher (within a tile, as MapLibre places); `fontface`, `"plain"`, `"italic"`, `"bold"` or
+#'   `"bold.italic"`, in the base map's own fonts for that face; `offset`, `c(x, y)` in text heights, x to the right and y
+#'   up (a column takes at most 256 pairs of values); `overlap`, `TRUE` to draw every text where others meet (MapLibre
+#'   leaves out the later). A turned text keeps the upright box round it clear of others.
 #' @param palette The colours for a column, in place of the default: a palette's name (from [rr_palettes()],
 #'   `palette.pals()` or `hcl.pals()`, written loosely: `"set1"` is Set 1), colours, colours named by value
 #'   (`c(Fishing = "#c0392b")`), or a function of n (`viridisLite::mako`).
@@ -536,7 +548,9 @@
 #' @param section The sidebar's box the layer sits in, by its title.
 #' @param visible Whether the layer is on when the page opens.
 #' @param minzoom,maxzoom The zoom the layer is drawn from, and its tiles' deepest (14 by default), past which the map
-#'   draws that zoom's tiles larger.
+#'   draws that zoom's tiles larger. For `rr_text()`, `minzoom` may be a column written bare: each row from its own
+#'   zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
+#'   at 7.4 shows from 8.
 #' @param ... Not used; `color` is taken for `colour`.
 #' @return An [rr_map()] with the layer added.
 #' @seealso [rr_map()]; [rr_layer()] for a layer in MapLibre's own terms.
@@ -636,20 +650,141 @@ rr_polygon <- function(
 rr_text <- function(
   map, data = NULL, lon = NULL, lat = NULL,
   colour = NULL, size = NULL, opacity = NULL, whole = NULL, label,
+  angle = NULL, priority = NULL, fontface = NULL, offset = NULL, overlap = FALSE,
   palette = NULL, limits = NULL, stretch = NULL, legend = FALSE,
   popup = FALSE, labels = NULL, codes = NULL, hover = NULL, choose = NULL,
   name = NULL, info = NULL, section = "Layers", visible = TRUE,
   minzoom = NULL, maxzoom = NULL, ...
 ) {
+  if (!isTRUE(overlap) && !isFALSE(overlap)) stop("rr_text(): `overlap` is TRUE or FALSE.", call. = FALSE)
   a <- .rr_mark_args(list(
     lon = lon, lat = lat, colour = rlang::enquo(colour), size = rlang::enquo(size), opacity = opacity, whole = whole,
-    label = rlang::enquo(label), palette = palette, limits = limits, stretch = stretch, legend = legend,
+    label = rlang::enquo(label), angle = rlang::enquo(angle), priority = rlang::enquo(priority),
+    fontface = rlang::enquo(fontface), offset = rlang::enquo(offset), overlap = overlap,
+    palette = palette, limits = limits, stretch = stretch, legend = legend,
     popup = rlang::enquo(popup), labels = labels, codes = codes, hover = rlang::enquo(hover),
     choose = rlang::enquo(choose), name = name,
-    info = info, section = section, visible = visible, minzoom = minzoom, maxzoom = maxzoom
+    info = info, section = section, visible = visible, minzoom = rlang::enquo(minzoom), maxzoom = maxzoom
   ), rlang::enquos(...), "rr_text")
   .rr_scope()
   .rr_mark("text", map, data, a)
+}
+
+# rr_text()'s faces, ggplot2's words
+.rr_faces <- c("plain", "italic", "bold", "bold.italic")
+
+# rr_text()'s own aesthetics, each a value or one column written bare: the start zoom by row (`minzoom`), `angle`,
+# `priority`, `size`, `fontface` and `offset`. Returns the columns the features carry (`props`), the SQL of the offset's
+# key (`sql`), the layout (`layout`), the styles' filter (`filter`), the face (`face`) and the layer's own minzoom
+.rr_text_aes <- function(a, ctx, con, q) {
+  cols <- ctx$cols
+  one <- function(qq, what, ok, why) {
+    v <- .rr_aes(qq, cols, what)
+    if (is.null(v)) return(NULL)
+    if (length(v$columns) > 1) stop(sprintf("rr_text(): `%s` is one column or one value.", what), call. = FALSE)
+    if (length(v$columns) == 1) return(list(column = v$columns))
+    if (length(v$value) != 1 || !ok(v$value)) {
+      stop(sprintf("rr_text(): `%s` is %s, or a column written bare.", what, why), call. = FALSE)
+    }
+    list(value = v$value)
+  }
+  num <- function(x) is.numeric(x) && is.finite(x)
+  get <- function(col) list("to-number", list("get", col))
+  z0 <- one(a$minzoom, "minzoom", function(x) num(x) && x >= 0 && x <= 24, "a zoom from 0 to 24")
+  angle <- one(a$angle, "angle", num, "an angle in degrees, counter-clockwise")
+  prio <- one(a$priority, "priority", num, "a number (higher placed first)")
+  size <- one(a$size, "size", function(x) num(x) && x > 0, "a size in pixels")
+  face <- one(a$fontface, "fontface", function(x) is.character(x) && x %in% .rr_faces,
+              paste0("one of ", paste0('"', .rr_faces, '"', collapse = ", ")))
+  off <- .rr_offset(a$offset, cols, con, ctx$src, q)
+  layout <- list("text-size" = if (!is.null(size$column)) get(size$column) else size$value %||% 13)
+  if (!is.null(angle)) {
+    # MapLibre turns text clockwise; ggplot2's angle, and this one, counter-clockwise
+    layout[["text-rotate"]] <- if (!is.null(angle$column)) list("*", -1, get(angle$column)) else -angle$value
+    layout[["text-rotation-alignment"]] <- "map"
+  }
+  if (!is.null(prio)) {
+    # MapLibre places the lowest sort key first; a priority, the highest
+    layout[["symbol-sort-key"]] <- if (!is.null(prio$column)) list("*", -1, get(prio$column)) else -prio$value
+  }
+  if (!is.null(off$layout)) layout[["text-offset"]] <- off$layout
+  list(
+    props = unique(c(z0$column, angle$column, prio$column, size$column, face$column, if (!is.null(off$sql)) "rr_off")),
+    sql = off$sql,
+    layout = layout,
+    # a row drawn from the first whole zoom at or above its own: MapLibre judges a filter's zoom at whole zooms
+    filter = if (!is.null(z0$column)) list(">=", list("zoom"), get(z0$column)),
+    face = if (!is.null(face$column)) list("get", face$column) else face$value,
+    minzoom = z0$value
+  )
+}
+
+# A text's offset, `c(x, y)` in text heights (x to the right, y up), each a number or a column written bare. Numbers are
+# MapLibre's text-offset itself; a column's values become a key each row carries (`rr_off`) and a match of the key to
+# its offset, so at most 256 pairs of values (to a thousandth of a text height)
+.rr_offset <- function(qq, cols, con, src, q) {
+  if (is.null(qq) || rlang::quo_is_null(qq) || rlang::quo_is_missing(qq)) return(NULL)
+  e <- rlang::quo_get_expr(qq)
+  parts <- if (is.numeric(e) && length(e) == 2) as.list(e) else if (rlang::is_call(e, "c") && length(rlang::call_args(e)) == 2) {
+    rlang::call_args(e)
+  }
+  bad <- function() {
+    stop("rr_text(): `offset` is c(x, y) in text heights (x to the right, y up), each a number or a column written bare.",
+         call. = FALSE)
+  }
+  if (is.null(parts)) bad()
+  parts <- lapply(parts, function(p) {
+    if (rlang::is_call(p, "-") && length(rlang::call_args(p)) == 1 && is.numeric(rlang::call_args(p)[[1]])) p <- -rlang::call_args(p)[[1]]
+    if (is.numeric(p) && length(p) == 1 && is.finite(p)) return(list(value = p))
+    if (rlang::is_symbol(p) && rlang::as_string(p) %in% cols) return(list(column = rlang::as_string(p)))
+    bad()
+  })
+  if (all(vapply(parts, function(p) !is.null(p$value), logical(1)))) {
+    return(list(layout = c(parts[[1]]$value, -parts[[2]]$value)))
+  }
+  sql <- vapply(parts, function(p) {
+    if (!is.null(p$value)) sprintf("CAST(%.17g AS DOUBLE)", p$value) else sprintf("round(CAST(%s AS DOUBLE), 3)", q(p$column))
+  }, "")
+  pairs <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT coalesce(%s, 0) AS x, coalesce(%s, 0) AS y FROM (%s) LIMIT 257",
+                                        sql[1], sql[2], src))
+  if (nrow(pairs) > 256) {
+    stop("rr_text(): an offset by a column takes at most 256 pairs of values (to a thousandth of a text height).",
+         call. = FALSE)
+  }
+  key <- function(x, y) sprintf("%.3f|%.3f", x, y)
+  list(
+    sql = sprintf("printf('%%.3f|%%.3f', coalesce(%s, 0), coalesce(%s, 0)) AS rr_off", sql[1], sql[2]),
+    layout = c(list("match", list("get", "rr_off")),
+               unlist(lapply(seq_len(nrow(pairs)), function(i) {
+                 list(key(pairs$x[i], pairs$y[i]), list("literal", c(pairs$x[i], -pairs$y[i])))
+               }), recursive = FALSE),
+               list(list("literal", c(0, 0))))
+  )
+}
+
+# A text layer's styles: at points (and in areas), and, where the data have lines, along them (MapLibre's line-center,
+# a long name on a line of its own); each with the start zoom's filter
+.rr_text_styles <- function(id, sid, lab, tx, shapes, overlap, paint) {
+  layout <- c(list("text-field" = list("to-string", list("get", lab)), "text-allow-overlap" = overlap,
+                   "text-anchor" = "center"), tx$layout)
+  lines <- list("in", list("geometry-type"), list("literal", list("LineString", "MultiLineString")))
+  both <- function(...) {
+    f <- Filter(Negate(is.null), list(...))
+    if (!length(f)) NULL else if (length(f) == 1) f[[1]] else c(list("all"), f)
+  }
+  style <- function(st_id, lay, filter) {
+    Filter(Negate(is.null), list(id = st_id, type = "symbol", "source-layer" = "features", filter = filter, layout = lay,
+                                 paint = paint, rr_face = tx$face))
+  }
+  if (!shapes) {
+    return(list(style(sid, layout, tx$filter)))
+  }
+  on_line <- layout[setdiff(names(layout), c("text-rotate", "text-rotation-alignment", "text-offset", "text-anchor"))]
+  on_line[["symbol-placement"]] <- "line-center"
+  list(
+    style(sid, layout, both(list("!", lines), tx$filter)),
+    style(paste0(id, "-text-line"), on_line, both(lines, tx$filter))
+  )
 }
 
 # One column named bare or as a string, for an argument that is always a column (a segment's end)

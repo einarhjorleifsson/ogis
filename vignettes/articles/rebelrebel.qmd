@@ -17,8 +17,8 @@ position, with whether a tow was on.
 
 ```{r}
 library(rebelrebel)
-pings <- rr_example("trawlsurvey")
-pings |> rr_point(colour = behaviour)
+positions <- rr_example("trawlsurvey")
+positions |> rr_point(colour = behaviour)
 ```
 
 `colour` takes a column written bare. Its values get a colour each and a legend; the map opens on the rows' extent.
@@ -30,7 +30,7 @@ in the order of time, and the positions over it: two columns to colour by (the f
 the page), and a click that shows the row.
 
 ```{r}
-rr_map(pings) |>
+rr_map(positions) |>
   rr_path(group = vid, time = time, name = "Tracks") |>
   rr_point(
     colour = c(behaviour, speed),
@@ -45,7 +45,7 @@ rr_map(pings) |>
 #| out-height: 400px
 rr_map() |>
   rr_line(rr_example("trawlsurveytows"), name = "Tows") |>
-  rr_point(pings, colour = behaviour, name = "Positions",
+  rr_point(positions, colour = behaviour, name = "Positions",
            visible = FALSE)
 ```
 

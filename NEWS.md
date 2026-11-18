@@ -1,3 +1,16 @@
+# rebelrebel 2026.11.18
+
+* `rr_text()` writes labels with a look of their own for each row: `minzoom` may be a column, each row drawn from the
+  first whole zoom at or above its own (MapLibre judges a zoom in a filter at whole zooms, so a label due at 7.4 shows
+  from 8: robust, and no two labels of a set placed apart at their own zooms meet); `angle` (counter-clockwise, as
+  ggplot2's), `priority` (the higher placed first where two meet), `size`, `fontface` (`"plain"`, `"italic"`, `"bold"`,
+  `"bold.italic"`, in the base map's own fonts for each face) and `offset` (`c(x, y)` in text heights), each a value or
+  a column; `overlap = TRUE` draws every label. Text on lines is written along them, at their middle. Checked on a real
+  set of 25,880 place names with start zooms, angles and priorities: built in 0.2 s, and MapLibre hid as large a share
+  where they met (10 %) as the names' own page did. A new article, "Labels".
+* A view and base maps given to `rr_map()` hold for a map its layer functions build (`rr_map(view = list(bounds = ))
+  |> rr_polygon(areas)`); the rows' extent and every base map were taken whatever was given.
+
 # rebelrebel 2026.11.17.1
 
 * Clicks, hovers and the pointer survive MapLibre 5's lost index. MapLibre 5.x loses a tile's index when the tile is

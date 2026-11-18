@@ -126,6 +126,11 @@ rr_text(
   opacity = NULL,
   whole = NULL,
   label,
+  angle = NULL,
+  priority = NULL,
+  fontface = NULL,
+  offset = NULL,
+  overlap = FALSE,
   palette = NULL,
   limits = NULL,
   stretch = NULL,
@@ -158,7 +163,7 @@ shown. A column's colours by default: Okabe-Ito for up to eight values, Paired f
 beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. \code{color} is the
 same.}
 
-\item{size}{A point's diameter, a text's size, in pixels. For points, by default, a size that follows the zoom:
+\item{size}{A point's diameter, a text's size (a number, or for text a column written bare), in pixels. For points, by default, a size that follows the zoom:
 the least, 2 pixels, until the zoom at which most points lie that far apart, then doubling with each zoom in, as
 a size on the ground does, up to the most, 8; \code{size = c(1, 12)} gives other bounds, one number a size that
 stays.}
@@ -215,7 +220,9 @@ to \code{\link[=rr_map]{rr_map()}}.}
 \item{visible}{Whether the layer is on when the page opens.}
 
 \item{minzoom, maxzoom}{The zoom the layer is drawn from, and its tiles' deepest (14 by default), past which the map
-draws that zoom's tiles larger.}
+draws that zoom's tiles larger. For \code{rr_text()}, \code{minzoom} may be a column written bare: each row from its own
+zoom, from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms), so a text due
+at 7.4 shows from 8.}
 
 \item{...}{Not used; \code{color} is taken for \code{colour}.}
 
@@ -225,7 +232,15 @@ draws that zoom's tiles larger.}
 
 \item{fill}{For \code{rr_polygon()}, the areas' colour, as \code{colour} is for the other marks.}
 
-\item{label}{For \code{rr_text()}, the column whose values are written, bare.}
+\item{label}{For \code{rr_text()}, the column whose values are written, bare. On a line (data whose shapes are lines), the
+text is written along it, at its middle.}
+
+\item{angle, priority, fontface, offset, overlap}{For \code{rr_text()}, each a value or a column written bare: \code{angle}, the
+text turned that many degrees counter-clockwise, as ggplot2's; \code{priority}, which text is placed first where two
+would meet, the higher (within a tile, as MapLibre places); \code{fontface}, \code{"plain"}, \code{"italic"}, \code{"bold"} or
+\code{"bold.italic"}, in the base map's own fonts for that face; \code{offset}, \code{c(x, y)} in text heights, x to the right and y
+up (a column takes at most 256 pairs of values); \code{overlap}, \code{TRUE} to draw every text where others meet (MapLibre
+leaves out the later). A turned text keeps the upright box round it clear of others.}
 }
 \value{
 An \code{\link[=rr_map]{rr_map()}} with the layer added.
