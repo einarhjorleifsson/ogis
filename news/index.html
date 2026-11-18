@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,12 @@
       <small>Source: <a href="https://github.com/einarhjorleifsson/ogis/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2026.11.18.13" id="ogis-2026111813">ogis 2026.11.18.13<a class="anchor" aria-label="anchor" href="#ogis-2026111813"></a></h2>
+<ul><li>
+<code>og_text(endzoom = )</code>: where a label stops, a number (the styles’ own <code>maxzoom</code>) or a column written bare, each row until its own, hidden from the first whole zoom at or above it (MapLibre judges a zoom in a filter at whole zooms, as for <code>minzoom</code>); a row with no end shows on. With <code>minzoom</code> a label shows in a band of zooms, as the names editor shows its names, and two layers can take turns. A search takes the map to a zoom where its label shows, before its end. Reported by the names session (plan 076 step 6). The Labels article shows it.</li>
+<li>A layer function’s <code>minzoom</code> as a number now holds for a layer sent whole: its styles take it. It reached the page as the layer’s own <code>minzoom</code>, which only a tiled layer’s source uses, so <code>og_point(minzoom = 8)</code> or <code>og_text(minzoom = 10)</code> on a layer small enough to go whole drew at every zoom. Found writing the Labels article’s example of two label layers taking turns.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2026.11.18.12" id="ogis-2026111812">ogis 2026.11.18.12<a class="anchor" aria-label="anchor" href="#ogis-2026111812"></a></h2>
 <ul><li>The engine’s guard against MapLibre 5’s lost index is gone. In 5.x a tile loaded again while an earlier load of it was still being read lost its index, and every query of that layer then threw “Out of bounds” until its data were sent again; the page caught that, sent the data again and tried a click once more. MapLibre fixed it in 6.0 and 6.3, and the reproduction that found it (data sent during an animated zoom, a filter reading the zoom from MapLibre’s global state) failed 9 times in 200 on 5.24.1 and not once in 200 on 6.19.0. Queries go straight to MapLibre; <code>query()</code> stays as the one place that leaves out layers not on the map.</li>

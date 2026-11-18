@@ -1,5 +1,22 @@
 # Changelog
 
+## ogis 2026.11.18.13
+
+- `og_text(endzoom = )`: where a label stops, a number (the styles’ own
+  `maxzoom`) or a column written bare, each row until its own, hidden
+  from the first whole zoom at or above it (MapLibre judges a zoom in a
+  filter at whole zooms, as for `minzoom`); a row with no end shows on.
+  With `minzoom` a label shows in a band of zooms, as the names editor
+  shows its names, and two layers can take turns. A search takes the map
+  to a zoom where its label shows, before its end. Reported by the names
+  session (plan 076 step 6). The Labels article shows it.
+- A layer function’s `minzoom` as a number now holds for a layer sent
+  whole: its styles take it. It reached the page as the layer’s own
+  `minzoom`, which only a tiled layer’s source uses, so
+  `og_point(minzoom = 8)` or `og_text(minzoom = 10)` on a layer small
+  enough to go whole drew at every zoom. Found writing the Labels
+  article’s example of two label layers taking turns.
+
 ## ogis 2026.11.18.12
 
 - The engine’s guard against MapLibre 5’s lost index is gone. In 5.x a

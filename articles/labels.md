@@ -70,3 +70,25 @@ MapLibre judges a zoom in a filter at whole zooms. A turned label keeps
 the upright box round it clear of others, so turned labels leave more
 room around them than level ones. `overlap = TRUE` draws every label,
 words over words where they meet.
+
+## A band of zooms
+
+`endzoom` is where a label stops: from the first whole zoom at or above
+it, as a number or a column, each row its own. With `minzoom`, a label
+shows in a band of zooms, so two layers can take turns. Here each
+position is written as its vessel’s number until zoom 10, and from 10,
+as its speed in knots:
+
+``` r
+
+og_map(view = list(center = c(-18.8, 67), zoom = 9.5)) |>
+  og_point(positions, colour = behaviour, name = "Positions") |>
+  og_text(positions, label = vid, endzoom = 10, offset = c(0, 1),
+          name = "Vessel") |>
+  og_text(dplyr::mutate(positions, knots = round(speed, 1)), label = knots,
+          minzoom = 10, offset = c(0, 1), name = "Speed")
+```
+
+Zoom in past 10 and the numbers change. A row with no end shows on, and
+a search (`search`) takes the map to a zoom where its label shows,
+before its end.

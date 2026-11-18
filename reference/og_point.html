@@ -19,7 +19,7 @@ change in the page."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -211,6 +211,7 @@ change in the page.</p>
 <span>  section <span class="op">=</span> <span class="st">"Layers"</span>,</span>
 <span>  visible <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  minzoom <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  endzoom <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  maxzoom <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -383,6 +384,13 @@ would meet, the higher (within a tile, as MapLibre places); <code>fontface</code
 <code>"bold.italic"</code>, in the base map's own fonts for that face; <code>offset</code>, <code>c(x, y)</code> in text heights, x to the right and y
 up (a column takes at most 256 pairs of values); <code>overlap</code>, <code>TRUE</code> to draw every text where others meet (MapLibre
 leaves out the later). A turned text keeps the upright box round it clear of others.</p></dd>
+
+
+<dt id="arg-endzoom">endzoom<a class="anchor" aria-label="anchor" href="#arg-endzoom"></a></dt>
+<dd><p>For <code>og_text()</code>, the zoom a label stops showing at: a number, or a column written bare, each row
+until its own, hidden from the first whole zoom at or above it (a text due to end at 7.4 shows through zoom 7); a
+row with none shows on. With <code>minzoom</code>, a label shows in a band of zooms, as a name the map has room for only
+between two zooms; a search (<code>search</code>) takes the map to a zoom where its label shows.</p></dd>
 
 </dl></div>
     <div class="section level2">
