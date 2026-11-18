@@ -99,8 +99,9 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
 ## State (2026-11-18)
 
 - **`main`** is at 2026.11.18.17: c6f3bcf fixes vessel ids with a space on a served page and `og_tracks(pings = )`
-  with no map, and this file's commit follows it. `main` is five commits ahead of `origin` (71b9111), not pushed.
-- **Installed**: 2026.11.18.16, from the local tree; not yet 2026.11.18.17.
+  with no map, and this file's commit follows it. `origin` is at 71b9111: nothing after it is pushed.
+- **Installed**: 2026.11.18.17, built from `main` at f2c5aa2 (`pkgbuild::build()`, then `install.packages()`), so
+  `RemoteSha` is empty. The two tests that run only against an installed ogis pass against it.
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's
   values at commas.
 - **Next**: the EM4SSF hackathon in Ancona, 1-4 December 2026. There, `og_tracks()` is a quick visual check of each
