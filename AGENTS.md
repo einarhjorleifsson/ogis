@@ -60,7 +60,8 @@ plans keep the names of their day.
 7. **Commit message**: what changed, with the version in brackets, e.g. `og_cells() and og_names(): ... (2026.11.18.15)`.
    Commit as work lands; push only when asked, since each push to `main` rebuilds the public site.
 8. **Install** from a clone with LFS: `remotes::install_git("https://github.com/einarhjorleifsson/ogis",
-   git = "external")`. `install_github()` installs the LFS pointers instead of the data. `packageDescription("ogis")`
+   git = "external", force = TRUE)`. `install_github()` installs the LFS pointers instead of the data, and over such an
+   install, from the same commit, remotes skips without `force = TRUE`. `packageDescription("ogis")`
    says what is installed; `RemoteSha` is empty after an install from the local tree.
 
 ## Rules
