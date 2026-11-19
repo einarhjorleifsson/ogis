@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.18.17</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -152,13 +152,13 @@
 </ul><p>The studies are under <code>$FISHYDATA/archive/</code> (<code>2026-11-11-rebelrebel-*</code> and others).</p>
 </div>
 <div class="section level2">
-<h2 id="state-2026-11-18">State (2026-11-18)<a class="anchor" aria-label="anchor" href="#state-2026-11-18"></a></h2>
+<h2 id="state-2026-11-19">State (2026-11-19)<a class="anchor" aria-label="anchor" href="#state-2026-11-19"></a></h2>
 <ul><li>
-<strong><code>main</code></strong> is at 2026.11.18.17: c6f3bcf fixes vessel ids with a space on a served page and <code>og_tracks(pings = )</code> with no map, and this file’s commit follows it. <code>origin</code> is at 71b9111: nothing after it is pushed.</li>
+<strong><code>main</code></strong> is at 2026.11.19 and on GitHub, pushed 2026-11-19 (CI on it not yet seen): cf66ca5 is a test only, a served map’s <code>og_cells(filter = )</code> in headless Chrome. The fault reported on fishycode’s plan 078 demo did not reproduce: its screenshots were taken before the page’s first view (NEWS). The whole suite passed on cf66ca5 but for the two tests below. Before it, 2026.11.18.17: c6f3bcf fixes vessel ids with a space on a served page and <code>og_tracks(pings = )</code> with no map; the site’s build installs ramb from a clone so its LFS example data are there (0c4ed35). CI (R CMD check on Ubuntu, Windows and macOS; the site) passed on 0c4ed35. The side sessions that built 2026.11.18.14-17 are closed; their record is fishycode’s decision 330.</li>
 <li>
-<strong>Installed</strong>: 2026.11.18.17, built from <code>main</code> at f2c5aa2 (<code><a href="https://pkgbuild.r-lib.org/reference/build.html" class="external-link">pkgbuild::build()</a></code>, then <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages()</a></code>), so <code>RemoteSha</code> is empty. The two tests that run only against an installed ogis pass against it.</li>
+<strong>Installed</strong>: 2026.11.18.17, built from <code>main</code> at f2c5aa2 (<code><a href="https://pkgbuild.r-lib.org/reference/build.html" class="external-link">pkgbuild::build()</a></code>, then <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages()</a></code>), so <code>RemoteSha</code> is empty. The two tests that run only against an installed ogis pass against it; against 2026.11.19 they skip until it is installed.</li>
 <li>
-<strong>Open</strong>: a vessel id with a comma is still refused by the effort’s cells, since the server splits a filter’s values at commas.</li>
+<strong>Open</strong>: a vessel id with a comma is still refused by the effort’s cells, since the server splits a filter’s values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic depth model (TODO 204).</li>
 <li>
 <strong>Next</strong>: the EM4SSF hackathon in Ancona, 1-4 December 2026. There, <code><a href="reference/og_tracks.html">og_tracks()</a></code> is a quick visual check of each step of a track’s processing, with ramb doing the processing.</li>
 </ul></div>

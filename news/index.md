@@ -1,5 +1,22 @@
 # Changelog
 
+## ogis 2026.11.19
+
+- **A served map’s `og_cells(filter = )` is tested in a browser**, as a
+  bundle’s was: the page opens with the choices given (a gear, a preset,
+  a span of years) set in its controls from `/meta`’s options, draws
+  those cells alone, and writes them into its address; a choice in the
+  address wins. No change to the package. A fault was reported on
+  fishycode’s plan 078 demo (bottom trawl, 2015-2024, on the
+  32-million-row Icelandic effort: “all”, no years, nothing drawn). It
+  did not reproduce in headless Chrome or the app’s browser pane, on
+  public data or the internal file, served alone or beside the other
+  maps. The screenshots had been taken before the page’s first view: the
+  page sets its controls only once `/meta` has come and the map has
+  drawn its first frame, and a map of the depth alone was as blank at
+  that moment. With the layer’s start ignored, the new test fails 6 of
+  its 8 checks.
+
 ## ogis 2026.11.18.17
 
 - **A vessel whose id has a space has its effort’s cells** in a served
