@@ -196,6 +196,44 @@ test_that("in the page (a bundle): the cells drawn with the choices and colours 
   expect_identical(page_eval(b2, "document.getElementById('palette').value"), "magma")
 })
 
+test_that("in the page (served): the cells drawn with the choices given, the address winning", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  # a guard (2026-11-19): a served map's `filter` was reported to open at "all" and no years, drawing nothing; it did
+  # not, but nothing served tested it in a browser
+  m <- og_map(view = list(center = c(-22.98, 65.005), zoom = 9)) |>
+    og_cells(cells_df(), one_of = "preset", filter = list(gear = "longline", preset = "haul", year = c(2021, 2021)))
+  url <- og_serve(m, open = FALSE, wait = FALSE)
+  withr::defer(og_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
+  # hours per km² of one 0.01-degree cell at 65 N, as the tiles compute it
+  per_km2 <- function(h) h / ((10 * 0.001 * 111.32 * cos(65.005 * pi / 180)) * (10 * 0.001 * 110.574))
+  st <- function(b) page_eval(b, paste(
+    "({ gear: document.getElementById('cells_gear').value, preset: document.getElementById('cells_preset').value,",
+    "   from: document.getElementById('cells_year_from').value, to: document.getElementById('cells_year_to').value,",
+    "   years: document.getElementById('cells_year_from').options.length, search: location.search,",
+    "   hours: [...new Set(map.querySourceFeatures('cells', { sourceLayer: 'cells' }).map(f => f.properties.hours_km2))] })"
+  ))
+  drawn <- function(b) {
+    wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && !!map.getLayer('cells') && map.loaded() && map.areTilesLoaded()")), 40) &&
+      wait_until(function() length(st(b)$hours) > 0, 20)
+  }
+  # the choices given: the longline's one cell in 2021, its controls set from the options /meta gave
+  b <- open_page(url)
+  expect_true(drawn(b))
+  s <- st(b)
+  expect_identical(s[c("gear", "preset", "from", "to", "years")],
+                   list(gear = "longline", preset = "haul", from = "2021", to = "2021", years = 2L))
+  expect_equal(unlist(s$hours), per_km2(10), tolerance = 1e-5)
+  expect_match(s$search, "cells_gear=longline")
+  expect_match(s$search, "cells_year_from=2021&cells_year_to=2021")
+  # the address wins over the choices given: trawl in both years, the preset still the one given
+  b2 <- open_page(paste0(url, "?cells_gear=trawl&cells_year_from=2020&cells_year_to=2021"))
+  expect_true(drawn(b2))
+  s2 <- st(b2)
+  expect_identical(s2[c("gear", "preset", "from", "to")], list(gear = "trawl", preset = "haul", from = "2020", to = "2021"))
+  expect_equal(unlist(s2$hours), per_km2(2 + 2), tolerance = 1e-5)
+})
+
 # ten 0.01-degree cells in a row along 65 N, from 23.00 W; vessel A in all, B in the first four, C in the first two
 vessel_cells <- function() {
   d <- expand.grid(ix = seq(-23000, -22910, by = 10), iy = 65000, vid = c("A", "B", "C"), stringsAsFactors = FALSE)
