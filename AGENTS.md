@@ -109,8 +109,10 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
 - **Local `main`** holds 2026.11.19.1, committed, not pushed: `og_names()` turns a name by an `angle` column
   (fishycode's plan 078 ask i), with a test; the whole suite passed on it (1,592, 2 skipped), and with ogisdata
   2026.11.19.3's names installed in an empty library.
-- **Installed**: 2026.11.19, from GitHub at 79017ff (`remotes::install_git(git = "external")`, so `RemoteSha` is
-  79017ff and the LFS example data are whole). The two tests that run only against an installed ogis pass against it.
+- **Installed**: 2026.11.19.1, from the local `main` at fd28f37 (`remotes::install_git("file:///Users/einarhj/R/Pakkar/ogis",
+  git = "external", force = TRUE)`: a bare path loses its leading slash; `RemoteSha` fd28f37, the LFS example data whole,
+  byte for byte the tree's). The tests that run only against an installed ogis (test-knit.R's renders) pass against it,
+  34 of 34. Before it, 2026.11.19 from GitHub at 79017ff.
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's
   values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic
   depth model (TODO 204).
