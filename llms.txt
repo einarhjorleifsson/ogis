@@ -59,18 +59,20 @@ network but the base map’s.
 ## Installation
 
 The example data are Git LFS objects, so install from a clone that
-fetches them, with Git and Git LFS on the machine:
+fetches them, with Git and Git LFS on the machine (Git for Windows has
+both; in R, `Sys.which("git")` should give a path):
 
 ``` r
 
 # install.packages("remotes")
-remotes::install_git("https://github.com/einarhjorleifsson/ogis", git = "external")
+remotes::install_git("https://github.com/einarhjorleifsson/ogis", git = "external", force = TRUE)
 ```
 
 `remotes::install_github()` would install the LFS pointers instead of
 the data;
 [`og_example()`](https://einarhjorleifsson.github.io/ogis/reference/og_example.md)
-then stops and says so.
+then stops and says so. `force = TRUE` installs over such an install:
+without it remotes sees the same commit and skips the install.
 
 ## Status
 

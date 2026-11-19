@@ -118,6 +118,12 @@ Its columns, all but `name` optional:
 - `min_zoom`: the zoom the name shows from (every zoom where it is
   missing);
 
+- `angle`: how far the name is turned, in degrees counter-clockwise from
+  level, as
+  [`og_text()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md)'s
+  `angle` (level where it is missing), the name then turning with the
+  map;
+
 - `level`: its rank, 1 to 4, 1 the largest: the text's size, and the
   order names are placed in where they meet;
 

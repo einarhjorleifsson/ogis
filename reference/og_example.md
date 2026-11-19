@@ -64,7 +64,7 @@ og_example()
 #> 5 trawlsurveytows Icelandic groundfish … Each row i…    581 MFRI d… "Mar… "@Mis…
 og_example("dansk_harbours")
 #> # A query:  ?? x 2
-#> # Database: DuckDB 2.0.0 [unknown@Linux 7.0.0-1019-azure:R 4.6.2/:memory:]
+#> # Database: DuckDB 2.0.0 [unknown@Linux 7.0.0-1020-azure:R 4.6.2/:memory:]
 #>    SI_HARB geometry   
 #>      <int> <list>     
 #>  1       1 <raw [93]> 

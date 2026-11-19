@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,11 +85,11 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>The example data are Git LFS objects, so install from a clone that fetches them, with Git and Git LFS on the machine:</p>
+<p>The example data are Git LFS objects, so install from a clone that fetches them, with Git and Git LFS on the machine (Git for Windows has both; in R, <code>Sys.which("git")</code> should give a path):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_git</span><span class="op">(</span><span class="st">"https://github.com/einarhjorleifsson/ogis"</span>, git <span class="op">=</span> <span class="st">"external"</span><span class="op">)</span></span></code></pre></div>
-<p><code>remotes::install_github()</code> would install the LFS pointers instead of the data; <code><a href="reference/og_example.html">og_example()</a></code> then stops and says so.</p>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_git</span><span class="op">(</span><span class="st">"https://github.com/einarhjorleifsson/ogis"</span>, git <span class="op">=</span> <span class="st">"external"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><code>remotes::install_github()</code> would install the LFS pointers instead of the data; <code><a href="reference/og_example.html">og_example()</a></code> then stops and says so. <code>force = TRUE</code> installs over such an install: without it remotes sees the same commit and skips the install.</p>
 </div>
 <div class="section level2">
 <h2 id="status">Status<a class="anchor" aria-label="anchor" href="#status"></a>

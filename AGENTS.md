@@ -90,10 +90,12 @@ entries and fishycode’s plans keep the names of their day.
     work lands; push only when asked, since each push to `main` rebuilds
     the public site.
 8.  **Install** from a clone with LFS:
-    `remotes::install_git("https://github.com/einarhjorleifsson/ogis", git = "external")`.
-    `install_github()` installs the LFS pointers instead of the data.
-    `packageDescription("ogis")` says what is installed; `RemoteSha` is
-    empty after an install from the local tree.
+    `remotes::install_git("https://github.com/einarhjorleifsson/ogis", git = "external", force = TRUE)`.
+    `install_github()` installs the LFS pointers instead of the data,
+    and over such an install, from the same commit, remotes skips
+    without `force = TRUE`. `packageDescription("ogis")` says what is
+    installed; `RemoteSha` is empty after an install from the local
+    tree.
 
 ## Rules
 
@@ -161,13 +163,17 @@ and others).
   on Ubuntu, Windows and macOS; the site) passed on 0c4ed35. The side
   sessions that built 2026.11.18.14-17 are closed; their record is
   fishycode’s decision 330.
-- **Installed**: 2026.11.18.17, built from `main` at f2c5aa2
-  ([`pkgbuild::build()`](https://pkgbuild.r-lib.org/reference/build.html),
-  then
-  [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)),
-  so `RemoteSha` is empty. The two tests that run only against an
-  installed ogis pass against it; against 2026.11.19 they skip until it
-  is installed.
+- **Local `main`** holds 2026.11.19.1, committed, not pushed:
+  [`og_names()`](https://einarhjorleifsson.github.io/ogis/reference/og_names.md)
+  turns a name by an `angle` column (fishycode’s plan 078 ask i), with a
+  test; the whole suite passed on it (1,592, 2 skipped), and with
+  ogisdata 2026.11.19.3’s names installed in an empty library.
+- **Installed**: 2026.11.19.1, from the local `main` at fd28f37
+  (`remotes::install_git("file:///Users/einarhj/R/Pakkar/ogis", git = "external", force = TRUE)`:
+  a bare path loses its leading slash; `RemoteSha` fd28f37, the LFS
+  example data whole, byte for byte the tree’s). The tests that run only
+  against an installed ogis (test-knit.R’s renders) pass against it, 34
+  of 34. Before it, 2026.11.19 from GitHub at 79017ff.
 - **Open**: a vessel id with a comma is still refused by the effort’s
   cells, since the server splits a filter’s values at commas (fishycode
   TODO 203); a tile address for dem and contour layers, the S3 route for

@@ -13,7 +13,7 @@ showing the same."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -143,6 +143,8 @@ each), one of:</p><ul><li><p>nothing (<code>NULL</code>): the file named by the 
 <li><p><code>label_lon</code>, <code>label_lat</code> (or <code>lon</code>, <code>lat</code>): where the name is written; else on its area;</p></li>
 <li><p>a geometry column (<code>geometry</code>, <code>geom</code>): the name's area, a line or a point, drawn as the layer <code>&lt;id&gt;_areas</code>;</p></li>
 <li><p><code>min_zoom</code>: the zoom the name shows from (every zoom where it is missing);</p></li>
+<li><p><code>angle</code>: how far the name is turned, in degrees counter-clockwise from level, as <code><a href="og_point.html">og_text()</a></code>'s <code>angle</code>
+(level where it is missing), the name then turning with the map;</p></li>
 <li><p><code>level</code>: its rank, 1 to 4, 1 the largest: the text's size, and the order names are placed in where they meet;</p></li>
 <li><p><code>n</code>: within a rank, the larger placed first (how often a name is used, say);</p></li>
 <li><p>the others: what a click shows, labelled by the file's data dictionary (data-dict.tidyverse.org's, in the

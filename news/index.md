@@ -1,5 +1,17 @@
 # Changelog
 
+## ogis 2026.11.19.1
+
+- **[`og_names()`](https://einarhjorleifsson.github.io/ogis/reference/og_names.md)
+  turns a name by its `angle`**, a column of the names in degrees
+  counter-clockwise from level, as
+  [`og_text()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md)’s
+  `angle` (a missing angle level), the name turning with the map. A list
+  of names lettered along their features (a trough, a long ground) no
+  longer lies level. The column is how a name is drawn, not what a click
+  shows. Asked by fishycode’s plan 078 (ask i), for MFRI’s place names
+  carried by its internal package.
+
 ## ogis 2026.11.19
 
 - **A served map’s `og_cells(filter = )` is tested in a browser**, as a
