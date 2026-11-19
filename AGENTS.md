@@ -105,9 +105,8 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
   with no map; the site's build installs ramb from a clone so its LFS example data are there (0c4ed35). CI (R CMD
   check on Ubuntu, Windows and macOS; the site) passed on 0c4ed35. The side sessions that built 2026.11.18.14-17 are
   closed; their record is fishycode's decision 330.
-- **Installed**: 2026.11.18.17, built from `main` at f2c5aa2 (`pkgbuild::build()`, then `install.packages()`), so
-  `RemoteSha` is empty. The two tests that run only against an installed ogis pass against it; against 2026.11.19
-  they skip until it is installed.
+- **Installed**: 2026.11.19, from GitHub at 79017ff (`remotes::install_git(git = "external")`, so `RemoteSha` is
+  79017ff and the LFS example data are whole). The two tests that run only against an installed ogis pass against it.
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's
   values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic
   depth model (TODO 204).
