@@ -75,6 +75,8 @@ Its columns, all but \code{name} optional:
 \item \code{label_lon}, \code{label_lat} (or \code{lon}, \code{lat}): where the name is written; else on its area;
 \item a geometry column (\code{geometry}, \code{geom}): the name's area, a line or a point, drawn as the layer \verb{<id>_areas};
 \item \code{min_zoom}: the zoom the name shows from (every zoom where it is missing);
+\item \code{angle}: how far the name is turned, in degrees counter-clockwise from level, as \code{\link[=og_text]{og_text()}}'s \code{angle}
+(level where it is missing), the name then turning with the map;
 \item \code{level}: its rank, 1 to 4, 1 the largest: the text's size, and the order names are placed in where they meet;
 \item \code{n}: within a rank, the larger placed first (how often a name is used, say);
 \item the others: what a click shows, labelled by the file's data dictionary (data-dict.tidyverse.org's, in the

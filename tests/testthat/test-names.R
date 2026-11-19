@@ -88,6 +88,22 @@ test_that("og_names(): the names from their own zoom, by rank, found and shown o
   expect_identical(vapply(l3$state, `[[`, "", "id"), "colour")
 })
 
+test_that("og_names(): a name turned by its `angle`, counter-clockwise as og_text()'s, a missing one level", {
+  skip_if_no_spatial()
+  x <- names_df()
+  x$angle <- c(30, NA, -45, 0)
+  m <- og_names(x)
+  st <- m$config$layers[[1]]$style[[1]]
+  expect_identical(st$layout[["text-rotate"]], list("*", -1, list("to-number", list("get", "angle"))))
+  expect_identical(st$layout[["text-rotation-alignment"]], "map")
+  p <- jsonlite::fromJSON(paste(.og_map_geojson(m$layers$names), collapse = ""))$features$properties
+  expect_identical(p$angle, c(30, 0, -45, 0))
+  # the angle is how the name is drawn, not what a click shows
+  expect_false("angle" %in% popup_cols(m$layers$names))
+  # and none without the column
+  expect_null(og_names(names_df())$config$layers[[1]]$style[[1]]$layout[["text-rotate"]])
+})
+
 test_that("a file of names: their areas a layer of their own, off when the page opens, labelled by its dictionary", {
   skip_if_no_spatial()
   f <- names_parquet()

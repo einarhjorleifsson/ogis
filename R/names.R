@@ -25,6 +25,8 @@
 #'   * `label_lon`, `label_lat` (or `lon`, `lat`): where the name is written; else on its area;
 #'   * a geometry column (`geometry`, `geom`): the name's area, a line or a point, drawn as the layer `<id>_areas`;
 #'   * `min_zoom`: the zoom the name shows from (every zoom where it is missing);
+#'   * `angle`: how far the name is turned, in degrees counter-clockwise from level, as [og_text()]'s `angle`
+#'     (level where it is missing), the name then turning with the map;
 #'   * `level`: its rank, 1 to 4, 1 the largest: the text's size, and the order names are placed in where they meet;
 #'   * `n`: within a rank, the larger placed first (how often a name is used, say);
 #'   * the others: what a click shows, labelled by the file's data dictionary (data-dict.tidyverse.org's, in the
@@ -88,7 +90,8 @@ og_names <- function(
          call. = FALSE)
   }
   zoomed <- "min_zoom" %in% cols
-  inner <- c("label_lon", "label_lat", "lon", "lat", "min_zoom", "level", "n", if (!is.na(geom)) geom)
+  turned <- "angle" %in% cols
+  inner <- c("label_lon", "label_lat", "lon", "lat", "min_zoom", "level", "n", "angle", if (!is.na(geom)) geom)
   if (is.null(popup)) {
     popup <- setdiff(cols, inner)
   } else if (!is.character(popup) || !all(popup %in% cols)) {
@@ -116,6 +119,8 @@ og_names <- function(
   }
   lv <- dplyr::mutate(lv, og_priority = !!(if ("n" %in% cols) quote(dplyr::coalesce(as.numeric(n), 0)) else 0) -
                         100000 * !!(if ("level" %in% cols) quote(dplyr::coalesce(as.numeric(level), 4)) else 4))
+  # a name turned on the map (a trough lettered along its axis); a missing angle, level
+  if (turned) lv <- dplyr::mutate(lv, angle = dplyr::coalesce(as.numeric(angle), 0))
   if (!is.null(at)) {
     if (inherits(lv, "sf")) {
       lv <- sf::st_drop_geometry(lv)
@@ -127,6 +132,7 @@ og_names <- function(
   map <- og_text(
     map, lv, lon = at[1], lat = at[2], label = !!rlang::sym("name"), size = !!rlang::sym("og_size"),
     priority = !!rlang::sym("og_priority"), minzoom = !!(if (zoomed) rlang::sym("min_zoom")),
+    angle = !!(if (turned) rlang::sym("angle")),
     colour = !!colour, search = !!rlang::sym("name"), popup = !!popup,
     name = name, id = id, info = info, section = section, visible = visible,
     # a name crowded at its point is written beside it
