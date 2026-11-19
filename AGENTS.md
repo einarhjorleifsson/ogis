@@ -98,12 +98,16 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
 
 ## State (2026-11-19)
 
-- **`main`** is at 2026.11.18.17 and on GitHub: c6f3bcf fixes vessel ids with a space on a served page and
-  `og_tracks(pings = )` with no map; the site's build installs ramb from a clone so its LFS example data are there
-  (0c4ed35). CI (R CMD check on Ubuntu, Windows and macOS; the site) passed on 0c4ed35. The side sessions that built
-  2026.11.18.14-17 are closed; their record is fishycode's decision 330.
+- **`main`** is at 2026.11.19 and on GitHub, pushed 2026-11-19 (CI on it not yet seen): cf66ca5 is a test only, a
+  served map's `og_cells(filter = )` in headless Chrome. The fault reported on fishycode's plan 078 demo did not
+  reproduce: its screenshots were taken before the page's first view (NEWS). The whole suite passed on cf66ca5 but for
+  the two tests below. Before it, 2026.11.18.17: c6f3bcf fixes vessel ids with a space on a served page and `og_tracks(pings = )`
+  with no map; the site's build installs ramb from a clone so its LFS example data are there (0c4ed35). CI (R CMD
+  check on Ubuntu, Windows and macOS; the site) passed on 0c4ed35. The side sessions that built 2026.11.18.14-17 are
+  closed; their record is fishycode's decision 330.
 - **Installed**: 2026.11.18.17, built from `main` at f2c5aa2 (`pkgbuild::build()`, then `install.packages()`), so
-  `RemoteSha` is empty. The two tests that run only against an installed ogis pass against it.
+  `RemoteSha` is empty. The two tests that run only against an installed ogis pass against it; against 2026.11.19
+  they skip until it is installed.
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's
   values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic
   depth model (TODO 204).
