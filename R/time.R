@@ -45,10 +45,10 @@
 #' @param lane_palette The lanes' colours, a value's the same in every span: by default Brewer's Paired, its twelve
 #'   colours given to each lane's values in their order (numbers as numbers), over and over. Colours named by value,
 #'   `c(Fishing = "#ff7f00")`, give those values theirs in every lane, the others keeping their default; a palette's
-#'   name or colours, as for [og_point()]'s `palette`, are used in place of Paired. A lane of a column that a layer
-#'   added before the panel colours by ([og_point()], [og_path()]) takes that layer's colours, so a value is one colour
-#'   on the map and in the lane; colours named here win. A label is written in white on a dark colour, in black on a
-#'   light one. An interval with no label is grey.
+#'   name or colours, as for [og_point()]'s `palette`, are used in place of Paired. A lane of a column that a layer of
+#'   the map colours by ([og_point()], [og_path()]; the first such, added before the panel or after it) takes that
+#'   layer's colours, so a value is one colour on the map and in the lane; colours named here win. A label is written
+#'   in white on a dark colour, in black on a light one. An interval with no label is grey.
 #' @param max_gap_s A silence between two rows longer than this many seconds breaks the panel's line, on the chart
 #'   and on the map, and a lane's run of one value. By default a path's ([og_path()]'s `max_gap_s`) when the map has
 #'   one already, else `Inf`: nothing broken, so no gap is hidden.
@@ -298,19 +298,12 @@ og_time <- function(
     )
   }))
   nm_l <- if (length(lane_sql)) .og_name(con, "og_lanes_")
-  # each interval's colour, by its value: named in lane_palette, else the colour a layer of the map gives it, else the
-  # palette's in the lane's values' order (numbers as numbers), so a value is one colour in every span and group
-  lane_fill <- unlist(lapply(seq_along(lanes), function(k) {
-    layer <- if (is.character(lanes[[k]])) s$state$value_colours[[lanes[[k]]]]
-    by_value <- c(lane_named, layer[setdiff(names(layer), names(lane_named))])
-    if (!length(by_value)) return(NULL)
-    sprintf(
-      "WHEN og_l.og_lane = %d AND og_l.og_label = %s THEN '%s'",
-      k,
-      DBI::dbQuoteString(con, names(by_value)),
-      by_value
-    )
-  }))
+  # each interval's colour, by its value: named in lane_palette, else the palette's in the lane's values' order (numbers
+  # as numbers), so a value is one colour in every span and group. A layer's colours for a lane's column are laid over
+  # these when the map is made (.og_time_layer_colours()), so the layer may come before the panel or after it
+  lane_fill <- if (length(lane_named)) {
+    sprintf("WHEN og_l.og_label = %s THEN '%s'", DBI::dbQuoteString(con, names(lane_named)), lane_named)
+  }
   create_l <- if (length(lane_sql)) {
     sprintf(
       "CREATE TEMP TABLE %1$s AS
@@ -589,12 +582,45 @@ og_time <- function(
       vessels = vessels
     ),
     series = series,
+    # each lane's column (NA for a table), and the values lane_palette names, for .og_time_layer_colours()
+    lane_cols = vapply(lanes, function(l) if (is.character(l)) l else NA_character_, "", USE.NAMES = FALSE),
+    lane_named = names(lane_named),
     tables = c(
       list(list(con = con, name = nm)),
       if (!is.null(nm_l)) list(list(con = con, name = nm_l))
     )
   )
   .og_hold(.og_quick_map(s))
+}
+
+# The time panel with a layer's colours laid over its lanes: a lane of a column that a layer of the map colours by
+# (state$value_colours, the first layer's) takes that layer's colour for each value lane_palette does not name. Made
+# each time the map is (.og_quick_map()), from the panel as og_time() left it, so a layer added after the panel counts
+# as one added before it: og_tracks() adds its pings after its panel
+.og_time_layer_colours <- function(time, value_colours) {
+  cols <- time$lane_cols
+  hit <- which(!is.na(cols) & cols %in% names(value_colours))
+  if (!length(hit)) {
+    return(time)
+  }
+  base <- time$series
+  named <- time$lane_named
+  time$series <- function(v, span) {
+    out <- base(v, span)
+    for (k in hit) {
+      lk <- out$lanes[[as.character(k)]]
+      if (is.null(lk)) {
+        next
+      }
+      vc <- value_colours[[cols[k]]]
+      fill <- as.character(lk$fill)
+      j <- which(lk$label %in% setdiff(names(vc), named))
+      fill[j] <- vc[as.character(lk$label[j])]
+      out$lanes[[as.character(k)]]$fill <- I(unname(fill))
+    }
+    out
+  }
+  time
 }
 
 # A time column as seconds since 1970 on its own clock, as the time panel holds its pings (og_time()'s `us`): a

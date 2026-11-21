@@ -1,3 +1,12 @@
+# ogis 2026.11.21.2
+
+* **A lane takes a layer's colours whether the layer comes before the panel or after it.** In 2026.11.21.1 a lane of a
+  column the map colours by took the layer's colours only when the layer was added before `og_time()`, so
+  `og_tracks()`, which adds its pings after its panel (they then show the panel's vessel and span alone), drew its
+  activity lane in Paired and its pings in Okabe-Ito: "Fishing" light blue in the lane, sky blue on the map. The layer's
+  colours are now laid over the lanes each time the map is made, from the first layer that colours by the lane's
+  column; colours named in `lane_palette` still win.
+
 # ogis 2026.11.21.1
 
 * **A lane's value has one colour, solid, the same in every span**: `og_time(lane_palette = )`. The lanes were

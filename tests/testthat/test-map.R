@@ -1747,6 +1747,18 @@ test_that("a lane's value has one colour in every span: named, else a layer's, e
     og_point(colour = behaviour, palette = c(Fishing = "red", Other = "grey40")) |>
     og_time(speed, lanes = lanes, lane_palette = c(Other = "white"))
   expect_equal(unname(fills(m)[["1"]][c("Fishing", "Other")]), c("#FF0000", "#FFFFFF"))
+  # a layer added after the panel counts as one added before it; the map it was added to keeps Paired
+  m0 <- og_time(d, speed, by = vid, lanes = lanes)
+  m <- og_point(m0, colour = behaviour, palette = c(Fishing = "red", Other = "grey40"))
+  expect_equal(unname(fills(m)[["1"]][c("Fishing", "Other")]), c("#FF0000", "#666666"))
+  expect_equal(unname(fills(m)[["2"]]), unname(fills(m0)[["2"]]))
+  expect_equal(unname(fills(m0)[["1"]][c("Fishing", "Other")]), paired[1:2])
+  # og_tracks() adds its pings after its panel: its activity lane takes the pings' colours (Okabe-Ito, the commoner
+  # first), in each vessel's span
+  m <- og_tracks(d, effort = FALSE)
+  for (v in c("EX_1", "EX_12")) {
+    expect_equal(unname(fills(m, v)[["1"]][c("Other", "Fishing")]), c("#E69F00", "#56B4E9"))
+  }
   # a table's intervals with no label have no colour of their own
   tab <- data.frame(vid = "EX_1", start = min(d$time[d$vid == "EX_1"]), end = max(d$time[d$vid == "EX_1"]))
   s <- jsonlite::fromJSON(get(.og_map_app(og_time(d, speed, by = vid, lanes = list(all = tab))), "/time",

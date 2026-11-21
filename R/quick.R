@@ -545,7 +545,7 @@ og_add_layer <- function(map, layer, section = "Layers") {
     m$config$time$layers <- unname(lapply(names(state$panel_fields), function(id) {
       c(list(id = id), Filter(Negate(is.null), state$panel_fields[[id]]))
     }))
-    m$time <- state$time
+    m$time <- .og_time_layer_colours(state$time, state$value_colours)
   }
   if (length(state$scripts)) {
     m$config$scripts <- state$scripts # a page's own (og_script()), whichever came first, it or a layer
