@@ -184,6 +184,7 @@
   colours <- lapply(seq_along(cols), function(i) {
     .og_colour_by(con, src, paste0("og_c", i), paste0("og_c", i), a$palette, a$limits, a$stretch, types[[i]])
   })
+  s$state <- .og_keep_value_colours(s$state, cols, colours)
   default <- if (mark == "text") "#1b2a3a" else .og_okabe_ito[1]
   fixed <- if (is.null(col)) default else if (!is.null(col$value)) .og_hex(col$value)
   outline <- if (mark == "polygon") {
@@ -1088,6 +1089,7 @@ og_path <- function(
       lines_src)
   }
   colours <- if (length(cc)) .og_colour_by(con, lines_src, "og_c1", "og_c1", palette, limits, stretch, type)
+  s$state <- .og_keep_value_colours(s$state, cc, list(colours))
   fixed <- if (is.null(col)) .og_okabe_ito[1] else if (!is.null(col$value)) .og_hex(col$value)
   hov <- .og_select(rlang::enquo(hover), keys, "hover")
   pop <- .og_select(rlang::enquo(popup), c(keys, if (length(cc)) cc), "popup")

@@ -1,3 +1,17 @@
+# ogis 2026.11.21.1
+
+* **A lane's value has one colour, solid, the same in every span**: `og_time(lane_palette = )`. The lanes were
+  coloured from Pastel 1, eight pale colours given to the values in the order they first came in the span shown, so
+  "Fishing" could be one colour in one trip and another in the next, and the lanes read as washed out. The maintainer
+  (2026-11-21), on a trip-check page: "Care to then not make the lower time panel so transparent. And use brewer pal
+  12", and asked whether in ogis or in the page, "Change ogis". Each interval's colour is now set in R, by its value,
+  over the lane's values in every group and span: colours named by value in `lane_palette` (`c(Fishing = "#ff7f00")`)
+  first; else, for a lane of a column a layer added before the panel colours by (`og_point()`, `og_path()`), that
+  layer's colour, so a value is one colour on the map and in the lane; else Brewer's Paired, its twelve colours given
+  to the values in their order (numbers as numbers: 9 before 10), over and over. A palette's name or colours in
+  `lane_palette` stand in for Paired. The bars are drawn solid, and a label inside one is written in white on a dark
+  colour and dark on a light one, whichever has the more contrast. An interval with no label stays grey.
+
 # ogis 2026.11.21
 
 * **The time panel draws every row on the map**, unless told otherwise. The window's path joined only every k-th ping

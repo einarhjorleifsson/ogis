@@ -134,7 +134,9 @@
       unlist(lapply(seq_along(dc$values), function(j) list(dc$values[j], dc$colours[j])), recursive = FALSE),
       list(.og_other)
     )
-    return(list(colour = colour, legend = legend, kind = "discrete", n = length(vals), shown = length(dc$values)))
+    # the colours by value, for a time panel's lane of the same column (og_time())
+    return(list(colour = colour, legend = legend, kind = "discrete", n = length(vals), shown = length(dc$values),
+                values = dc$values, colours = dc$colours))
   }
   # continuous: over the limits, the 1st to 99th percentile by default, stretched linearly, on a log scale, or in
   # equal shares of the values
@@ -236,4 +238,16 @@
     return(list(kind = "continuous", format = function(x) NULL))
   }
   list(kind = "discrete")
+}
+
+# A map's colours by value of each discrete column a layer colours by, kept for a time panel's lane of that column
+# (og_time()), so a value is one colour on the map and in the lane: the first layer's, of those added before the panel
+.og_keep_value_colours <- function(state, cols, colours) {
+  for (i in seq_along(cols)) {
+    cl <- colours[[i]]
+    if (identical(cl$kind, "discrete") && is.null(state$value_colours[[cols[i]]])) {
+      state$value_colours[[cols[i]]] <- stats::setNames(cl$colours, cl$values)
+    }
+  }
+  state
 }

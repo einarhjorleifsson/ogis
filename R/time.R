@@ -42,6 +42,13 @@
 #'     broken by a silence longer than `max_gap_s`;
 #'   * a table of intervals with the group's column (`by`), and its start and end in `start` and `end`;
 #'   * or `list(data = , start = , end = , label = )`, naming the columns, `label` a column that names each interval.
+#' @param lane_palette The lanes' colours, a value's the same in every span: by default Brewer's Paired, its twelve
+#'   colours given to each lane's values in their order (numbers as numbers), over and over. Colours named by value,
+#'   `c(Fishing = "#ff7f00")`, give those values theirs in every lane, the others keeping their default; a palette's
+#'   name or colours, as for [og_point()]'s `palette`, are used in place of Paired. A lane of a column that a layer
+#'   added before the panel colours by ([og_point()], [og_path()]) takes that layer's colours, so a value is one colour
+#'   on the map and in the lane; colours named here win. A label is written in white on a dark colour, in black on a
+#'   light one. An interval with no label is grey.
 #' @param max_gap_s A silence between two rows longer than this many seconds breaks the panel's line, on the chart
 #'   and on the map, and a lane's run of one value. By default a path's ([og_path()]'s `max_gap_s`) when the map has
 #'   one already, else `Inf`: nothing broken, so no gap is hidden.
@@ -78,6 +85,7 @@ og_time <- function(
   col,
   marks = NULL,
   lanes = NULL,
+  lane_palette = NULL,
   span = NULL,
   max_gap_s = NULL,
   span_max = 3000000,
@@ -171,6 +179,34 @@ og_time <- function(
       call. = FALSE
     )
   }
+  # the lanes' colours: named by value, else a palette in place of Paired
+  lane_named <- character()
+  lane_pal <- .og_paired
+  if (!is.null(lane_palette)) {
+    nms <- names(lane_palette)
+    if (!is.null(nms) && !all(nzchar(nms) & !is.na(nms))) {
+      stop(
+        "`lane_palette` is colours named by value, or a palette's name or colours for the values in turn: not both.",
+        call. = FALSE
+      )
+    }
+    if (!is.null(nms)) {
+      if (!is.character(lane_palette)) {
+        stop("`lane_palette` is colours named by value.", call. = FALSE)
+      }
+      bad <- !vapply(lane_palette, .og_is_colour, logical(1))
+      if (any(bad)) {
+        stop(
+          sprintf("`lane_palette` holds what is not a colour: %s.", paste(lane_palette[bad], collapse = ", ")),
+          call. = FALSE
+        )
+      }
+      lane_named <- vapply(lane_palette, .og_hex, "")
+    } else {
+      lane_pal <- .og_palette_colours(lane_palette, 12, "lane_palette")
+    }
+  }
+  lane_pal <- vapply(lane_pal, .og_hex, "", USE.NAMES = FALSE)
   con <- ctx$con
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
   types <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM (%s)", ctx$src))
@@ -262,11 +298,33 @@ og_time <- function(
     )
   }))
   nm_l <- if (length(lane_sql)) .og_name(con, "og_lanes_")
+  # each interval's colour, by its value: named in lane_palette, else the colour a layer of the map gives it, else the
+  # palette's in the lane's values' order (numbers as numbers), so a value is one colour in every span and group
+  lane_fill <- unlist(lapply(seq_along(lanes), function(k) {
+    layer <- if (is.character(lanes[[k]])) s$state$value_colours[[lanes[[k]]]]
+    by_value <- c(lane_named, layer[setdiff(names(layer), names(lane_named))])
+    if (!length(by_value)) return(NULL)
+    sprintf(
+      "WHEN og_l.og_lane = %d AND og_l.og_label = %s THEN '%s'",
+      k,
+      DBI::dbQuoteString(con, names(by_value)),
+      by_value
+    )
+  }))
   create_l <- if (length(lane_sql)) {
     sprintf(
-      "CREATE TEMP TABLE %s AS %s",
+      "CREATE TEMP TABLE %1$s AS
+       WITH og_l AS (%2$s),
+            og_r AS (SELECT og_lane, og_label,
+                            dense_rank() OVER (PARTITION BY og_lane ORDER BY TRY_CAST(og_label AS DOUBLE) NULLS LAST, og_label) - 1 AS og_r
+                     FROM (SELECT DISTINCT og_lane, og_label FROM og_l WHERE og_label IS NOT NULL))
+       SELECT og_l.*, CASE WHEN og_l.og_label IS NULL THEN NULL %3$s ELSE [%4$s][og_r.og_r %% %5$d + 1] END AS og_fill
+       FROM og_l LEFT JOIN og_r ON og_l.og_lane = og_r.og_lane AND og_l.og_label = og_r.og_label",
       nm_l,
-      paste(lane_sql, collapse = " UNION ALL ")
+      paste(lane_sql, collapse = " UNION ALL "),
+      paste(lane_fill, collapse = " "),
+      paste(sprintf("'%s'", lane_pal), collapse = ", "),
+      length(lane_pal)
     )
   }
   # a table dropped when its map was replaced on its port (og_serve()) is made again
@@ -496,7 +554,7 @@ og_time <- function(
       l <- DBI::dbGetQuery(
         con,
         sprintf(
-          "SELECT og_lane, og_t0, og_t1, og_label FROM %s WHERE og_v = %s AND og_t1 >= %s AND og_t0 <= %s ORDER BY og_lane, og_t0",
+          "SELECT og_lane, og_t0, og_t1, og_label, og_fill FROM %s WHERE og_v = %s AND og_t1 >= %s AND og_t0 <= %s ORDER BY og_lane, og_t0",
           nm_l,
           DBI::dbQuoteString(con, v),
           format(min(r$og_t), digits = 15),
@@ -506,7 +564,7 @@ og_time <- function(
       out$lanes <- stats::setNames(
         lapply(seq_along(lanes), function(k) {
           lk <- l[l$og_lane == k, ]
-          list(t0 = I(lk$og_t0), t1 = I(lk$og_t1), label = I(lk$og_label))
+          list(t0 = I(lk$og_t0), t1 = I(lk$og_t1), label = I(lk$og_label), fill = I(lk$og_fill))
         }),
         as.character(seq_along(lanes))
       )

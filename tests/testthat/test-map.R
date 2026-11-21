@@ -1695,6 +1695,105 @@ test_that("in the page, the window's map draws every row, its path through each;
   expect_false(grepl("drawn on the map", z$info))
 })
 
+test_that("a lane's value has one colour in every span: named, else a layer's, else Paired by value", {
+  skip_if_no_spatial()
+  d <- time_pings()
+  # ids, numbered so that their order as text is not their order as numbers (10 before 9)
+  d$day <- as.integer(as.Date(d$time) - min(as.Date(d$time))) + 1L
+  fills <- function(m, v = "EX_1", span = "all") {
+    s <- jsonlite::fromJSON(get(.og_map_app(m), "/time", sprintf("v=%s&span=%s", v, span))$body)
+    lapply(s$lanes, function(l) vapply(split(l$fill, l$label), unique, ""))
+  }
+  paired <- c(
+    "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A",
+    "#FFFF99", "#B15928"
+  )
+  lanes <- list(behaviour = "behaviour", day = "day")
+  # by default Paired, by the values' order (numbers as numbers), the same in each vessel's span and each month's
+  m <- og_time(d, speed, by = vid, lanes = lanes, span_max = 10000)
+  f1 <- fills(m)
+  f12 <- fills(m, "EX_12", "2014-12")
+  expect_equal(unname(f1[["1"]][c("Fishing", "Other")]), paired[1:2])
+  expect_equal(unname(f12[["1"]][c("Fishing", "Other")]), paired[1:2])
+  days <- sort(unique(d$day))
+  for (f in list(f1, f12)) {
+    v <- as.integer(names(f[["2"]]))
+    expect_equal(unname(f[["2"]]), paired[(match(v, days) - 1) %% 12 + 1])
+  }
+  # colours named by value; the values not named keep theirs
+  m <- og_time(d, speed, by = vid, lanes = lanes, lane_palette = c(Fishing = "darkorange"))
+  expect_equal(unname(fills(m)[["1"]][c("Fishing", "Other")]), c("#FF8C00", paired[2]))
+  # a palette in place of Paired, by name or as colours
+  set1 <- unname(grDevices::palette.colors(NULL, "Set 1"))
+  expect_equal(
+    unname(fills(og_time(d, speed, by = vid, lanes = lanes, lane_palette = "set1"))[["1"]][c("Fishing", "Other")]),
+    set1[1:2]
+  )
+  expect_equal(
+    unname(fills(og_time(d, speed, by = vid, lanes = lanes, lane_palette = c("black", "white")))[["1"]]),
+    c("#000000", "#FFFFFF")
+  )
+  # a column a layer of the map colours by: the layer's colours, its own default or its palette, so a value is one
+  # colour on the map and in the lane; colours named here win
+  m <- d |> og_path(group = vid, time = time, colour = behaviour) |> og_time(speed, lanes = lanes)
+  expect_equal(unname(fills(m)[["1"]][c("Other", "Fishing")]), c("#E69F00", "#56B4E9")) # Okabe-Ito, the commoner first
+  m <- d |>
+    og_path(group = vid, time = time) |>
+    og_point(colour = behaviour, palette = c(Fishing = "red", Other = "grey40")) |>
+    og_time(speed, lanes = lanes)
+  expect_equal(unname(fills(m)[["1"]][c("Fishing", "Other")]), c("#FF0000", "#666666"))
+  m <- d |>
+    og_path(group = vid, time = time) |>
+    og_point(colour = behaviour, palette = c(Fishing = "red", Other = "grey40")) |>
+    og_time(speed, lanes = lanes, lane_palette = c(Other = "white"))
+  expect_equal(unname(fills(m)[["1"]][c("Fishing", "Other")]), c("#FF0000", "#FFFFFF"))
+  # a table's intervals with no label have no colour of their own
+  tab <- data.frame(vid = "EX_1", start = min(d$time[d$vid == "EX_1"]), end = max(d$time[d$vid == "EX_1"]))
+  s <- jsonlite::fromJSON(get(.og_map_app(og_time(d, speed, by = vid, lanes = list(all = tab))), "/time",
+                              "v=EX_1&span=all")$body)
+  expect_true(all(is.na(s$lanes[["1"]]$fill)))
+  expect_error(og_time(d, speed, by = vid, lanes = lanes, lane_palette = c(Fishing = "nope")), "not a colour")
+  expect_error(og_time(d, speed, by = vid, lanes = lanes, lane_palette = c(Fishing = "red", "blue")), "lane_palette")
+})
+
+test_that("in the page, a lane is drawn in its value's colour, solid, its label in white on a dark fill", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- time_pings()
+  d <- d[d$vid == "EX_12", ] # runs of hours in a span of weeks, wide enough to sample (EX_1's span is two years)
+  dir <- withr::local_tempdir()
+  og_bundle(og_time(d, speed, by = vid, lanes = list(behaviour = "behaviour")), dir, overwrite = TRUE)
+  b <- open_page(paste0(serve_dir(dir), "index.html?base=none"))
+  ready <- "typeof TS !== 'undefined' && !!TS && TS.n != null && !!TU && map.loaded()"
+  expect_true(wait_until(function() isTRUE(page_eval(b, ready)), 40))
+  # the colour in the top row of each value's widest bar, at its middle (above its label), as the canvas holds it
+  px <- page_eval(b, paste(
+    "(() => {",
+    "  const u = TU, cv = document.getElementById('t-lanes'), d = TS.lanes['1'], c = cv.getContext('2d');",
+    "  const off = u.over.getBoundingClientRect().left - cv.getBoundingClientRect().left, out = {};",
+    "  for (const v of ['Fishing', 'Other']) {",
+    "    let j = -1, w = 0;",
+    "    d.label.forEach((l, k) => { if (l === v && d.t1[k] - d.t0[k] > w) { w = d.t1[k] - d.t0[k]; j = k; } });",
+    "    const x = off + (Math.max(0, u.valToPos(d.t0[j], 'x')) + Math.min(u.over.clientWidth, u.valToPos(d.t1[j], 'x'))) / 2;",
+    "    const y = 3.5;",
+    "    const p = c.getImageData(Math.round(x * devicePixelRatio), Math.round(y * devicePixelRatio), 1, 1).data;",
+    "    out[v] = { rgba: Array.from(p), fill: d.fill[j] };",
+    "  }",
+    "  return out;",
+    "})()"
+  ))
+  hex <- function(p) sprintf("#%02X%02X%02X", p[1], p[2], p[3])
+  for (v in c("Fishing", "Other")) {
+    expect_equal(hex(unlist(px[[v]]$rgba)), px[[v]]$fill)
+    expect_equal(unlist(px[[v]]$rgba)[4], 255) # solid
+  }
+  expect_equal(px$Fishing$fill, "#A6CEE3")
+  expect_equal(px$Other$fill, "#1F78B4")
+  # the label's ink: white on a dark fill, dark on a light one
+  ink <- page_eval(b, "['#A6CEE3', '#1F78B4', '#33A02C', '#6A3D9A', '#FFFF99', '#B15928'].map(laneInk)")
+  expect_equal(unlist(ink), c("#222", "#fff", "#222", "#fff", "#222", "#fff"))
+})
+
 test_that("a label on hover: style ids of the layer's own, TRUE for the click's, with a title", {
   data <- '{"type": "FeatureCollection", "features": []}'
   st <- list(list(id = "a-fill", type = "fill"), list(id = "a-line", type = "line"))

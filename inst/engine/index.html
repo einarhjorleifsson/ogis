@@ -2610,7 +2610,12 @@ const T_COLS = ["#2c5d87", "#d95f02", "#1b9e77", "#7570b3", "#e7298a", "#66a61e"
 const T_MARKS = ["#e31a1c", "#ff7f00", "#c51b8a", "#33a02c", "#1f78b4", "#a6761d"];
 const T_MARK_ROW = 8, LANE_FILL = ["#d9dde1", "#c4c9ce"];   // a mark row's height (px)
 const markColour = c => T_MARKS[c % T_MARKS.length];
-const LANE_PAL = ["#b3cde3", "#ccebc5", "#fed9a6", "#decbe4", "#fbb4ae", "#ffffcc", "#e5d8bd", "#fddaec"];   // Pastel1
+// a lane's label in white on a dark fill, dark on a light one: whichever has the more contrast (WCAG's luminance)
+function laneInk(hex) {
+  const lin = k => { const v = parseInt(hex.slice(k, k + 2), 16) / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const L = 0.2126 * lin(1) + 0.7152 * lin(3) + 0.0722 * lin(5);
+  return 1.05 / (L + 0.05) > (L + 0.05) / 0.0661 ? "#fff" : "#222";   // 0.0661: #222's luminance and 0.05
+}
 const INFERNO9 = ["#040404", "#2D1243", "#611163", "#961474", "#C53270", "#EB5C4C", "#F69422", "#F8C952", "#FFFE9E"];
 const EMPTY = { type: "FeatureCollection", features: [] };
 let uplotLib = null, tSeq = 0, tFrame = 0, tPinned = null;   // tPinned: a ping clicked on the map, until the pointer moves
@@ -2922,17 +2927,17 @@ function tDrawLanes(u) {
     c.fillStyle = "#5f6b76"; c.textAlign = "right";
     c.fillText(tr(lane.label), off - 6, y + LANE_H / 2, off - 8);
     if (!d) return;
-    // a value keeps its colour along the lane, in the order the values first come in the span
-    const col = new Map();
-    for (const v of d.label ?? []) if (v != null && !col.has(v)) col.set(v, LANE_PAL[col.size % LANE_PAL.length]);
+    // a value's colour is the one R gave it (og_time(lane_palette = )), the same in every span; an interval with no
+    // label is grey, the next one a shade apart
     for (let j = 0; j < d.t0.length; j++) {
       if (d.t1[j] < a || d.t0[j] > b) continue;
       const x0 = off + Math.max(0, u.valToPos(d.t0[j], "x")), x1 = off + Math.min(pw, u.valToPos(d.t1[j], "x"));
-      c.fillStyle = d.label?.[j] != null ? col.get(d.label[j]) : LANE_FILL[j % 2];
+      const fill = d.fill?.[j] ?? LANE_FILL[j % 2];
+      c.fillStyle = fill;
       c.fillRect(x0, y + 3, Math.max(2, x1 - x0), LANE_H - 6);
       if (x1 - x0 > 30 && d.label?.[j] != null) {
         c.save(); c.beginPath(); c.rect(x0, y, x1 - x0, LANE_H); c.clip();
-        c.fillStyle = "#222"; c.textAlign = "left"; c.fillText(String(d.label[j]), x0 + 3, y + LANE_H / 2);
+        c.fillStyle = laneInk(fill); c.textAlign = "left"; c.fillText(String(d.label[j]), x0 + 3, y + LANE_H / 2);
         c.restore();
       }
     }

@@ -9,6 +9,7 @@ og_time(
   col,
   marks = NULL,
   lanes = NULL,
+  lane_palette = NULL,
   span = NULL,
   max_gap_s = NULL,
   span_max = 3e+06,
@@ -40,6 +41,14 @@ broken by a silence longer than \code{max_gap_s};
 \item a table of intervals with the group's column (\code{by}), and its start and end in \code{start} and \code{end};
 \item or \code{list(data = , start = , end = , label = )}, naming the columns, \code{label} a column that names each interval.
 }}
+
+\item{lane_palette}{The lanes' colours, a value's the same in every span: by default Brewer's Paired, its twelve
+colours given to each lane's values in their order (numbers as numbers), over and over. Colours named by value,
+\code{c(Fishing = "#ff7f00")}, give those values theirs in every lane, the others keeping their default; a palette's
+name or colours, as for \code{\link[=og_point]{og_point()}}'s \code{palette}, are used in place of Paired. A lane of a column that a layer
+added before the panel colours by (\code{\link[=og_point]{og_point()}}, \code{\link[=og_path]{og_path()}}) takes that layer's colours, so a value is one colour
+on the map and in the lane; colours named here win. A label is written in white on a dark colour, in black on a
+light one. An interval with no label is grey.}
 
 \item{span}{Units the page holds one at a time, chosen besides the whole series: a column of the rows that names
 them, as a string (a leg, a deployment: \code{"leg"}, or \code{c(leg = "leg_id")} to name the list), one span per value from
