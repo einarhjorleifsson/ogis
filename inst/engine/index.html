@@ -2597,9 +2597,13 @@ if (G) {
 // map the window's track and pings. A drag across the chart sets the window, a double click shows the whole span; a
 // hover marks the ping on the map, a click on a ping of the window marks its time on the chart. The map's window is
 // drawn as new data each time: a filter on a big source re-tiles it (0.3 s on 150,000 points, as measured)
-// where new data of a day take 17 ms, so the window's pings are thinned to T_MAX, a marked one always kept.
-// pings drawn at most; a silence that breaks the line (s; og_time(max_gap_s = ), none by default); a lane's height
-const T_MAX = 5000, T_GAP = TP?.max_gap_s ?? Infinity, LANE_H = 20;
+// where new data of a day take 17 ms. Every ping is drawn, on the map and the chart (the maintainer, 2026-11-21: "plot
+// everything unless explicitly told not to do so"); og_time(thin = ) thins the map's window to about T_MAX pings, a
+// marked one always kept, for display only: a narrower window is thinned less. uPlot's line draws the pings that share
+// a pixel column from their least value to their most, over the x-range shown, so the chart needs no thinning.
+// pings drawn on the map at most (none: every one); a silence that breaks the line (s; og_time(max_gap_s = ), none by
+// default); a lane's height
+const T_MAX = TP?.thin ?? Infinity, T_GAP = TP?.max_gap_s ?? Infinity, LANE_H = 20;
 const T_COLS = ["#2c5d87", "#d95f02", "#1b9e77", "#7570b3", "#e7298a", "#66a61e"];   // the page's blue, then Dark2
 // a mark column's colour, the first red as before; then colours apart from the lines' and from each other on the dark
 // base map and the white chart
@@ -2843,7 +2847,8 @@ function tDrawWindow() {
   if (!TS || !TW || !map.getSource("og-time-line")) return;
   const t = TS.t, i0 = tFind(TW[0]), i1 = tFind(TW[1], true), lines = [];
   const n = i1 - i0, k = Math.max(1, Math.ceil(n / T_MAX)), v = TS.y[TP.cols[0].field], feats = [];
-  // the line thinned as the pings are (a long line is most of a window's time to draw), its ends at a silence kept
+  // every ping (k = 1), unless og_time(thin = ) asks for fewer: then the line is thinned as the pings are, its ends at
+  // a silence kept
   let cur = [], x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let i = i0; i < i1; i++) {
     if (cur.length && t[i] - t[i - 1] > T_GAP) { if (cur.length > 1) lines.push(cur); cur = []; }

@@ -13,6 +13,7 @@ og_time(
   max_gap_s = NULL,
   span_max = 3e+06,
   time_label = "UTC",
+  thin = FALSE,
   data = NULL,
   lon = NULL,
   lat = NULL,
@@ -57,6 +58,12 @@ The browser holds far more than the default is likely to meet: a series of 2.2 m
 
 \item{time_label}{The clock the times are on, shown beside them.}
 
+\item{thin}{\code{FALSE}, the default: the map draws every row of the window, its path through each and a point at
+each. A number thins a window of more rows than that, for display only: every k-th row is drawn, so about that
+many, a marked row always, a path's ends at a silence kept; a narrower window, as the reader narrows it on the
+chart, is thinned less, and one of that many rows or fewer not at all. The panel's readout says "1 in k drawn on
+the map" while it thins. \code{TRUE} is 5,000. The chart is not thinned.}
+
 \item{data}{Rows for this panel, in place of the map's.}
 
 \item{lon, lat, time}{The position and time columns: by default the map's, else \code{"lon"}, \code{"lat"} and \code{"time"}.}
@@ -87,8 +94,12 @@ into the page's address.
 The page holds one group's span at a time: by default its whole series; with \code{span}, also each of its intervals,
 chosen under \emph{Span}. A group with more than \code{span_max} rows is offered by its spans only, or by month where there
 are none. The map's other layers that carry the group and a time (\code{\link[=og_path]{og_path()}}, \code{\link[=og_point]{og_point()}}) show only the chosen
-group and span; a path's line that runs over a span's start or end is shown whole. The window's path is drawn whole,
-its points thinned to about 5,000 (every k-th, a marked one always), so the map stays quick.
+group and span; a path's line that runs over a span's start or end is shown whole.
+
+Every row is drawn. The window's path on the map joins every row of the window, and each row is a point, unless
+\code{thin} asks for fewer. The chart is given every row of the span; where more rows than pixels share the time axis,
+its line runs, in each column of pixels, from the least of their values to the most, so no value is left out, and a
+drag that narrows the window spreads the rows out again until each has its own.
 
 Times are shown as the data hold them, in no time zone, labelled by \code{time_label}.
 }

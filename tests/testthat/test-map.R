@@ -1633,6 +1633,68 @@ test_that("a bundle carries the time panel's spans, a file each", {
   expect_match(page, '"time":\\{', perl = TRUE)
 })
 
+test_that("in the page, the window's map draws every row, its path through each; thinned only when asked", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- time_pings()
+  d <- d[d$vid == "EX_12", ] # 23,449 pings: over the 5,000 the page once thinned every window to
+  n <- nrow(d)
+  expect_error(og_time(d, speed, by = vid, thin = 1), "`thin` is FALSE")
+  expect_error(og_time(d, speed, by = vid, thin = "yes"), "`thin` is FALSE")
+  expect_null(og_time(d, speed, by = vid)$config$time$thin)
+  expect_equal(og_time(d, speed, by = vid, thin = TRUE)$config$time$thin, 5000)
+  # the window as drawn: the rows the chart is given, the map's points and its path's vertices, the marked points, the
+  # readout; `window` a share of the span's rows (from its middle), else the whole span
+  drawn <- function(thin, window = NULL) {
+    dir <- withr::local_tempdir()
+    og_bundle(og_time(d, speed, by = vid, marks = flag, thin = thin), dir, overwrite = TRUE)
+    b <- open_page(paste0(serve_dir(dir), "index.html?base=none"))
+    ready <- "typeof TS !== 'undefined' && !!TS && TS.n != null && !!TU && map.loaded()"
+    expect_true(wait_until(function() isTRUE(page_eval(b, ready)), 40))
+    if (!is.null(window)) {
+      page_eval(b, sprintf(
+        "(() => { const i = Math.floor(TS.t.length / 2); TS.n = null; tSetWindow([TS.t[i], TS.t[i + %d - 1]]); return true; })()",
+        window
+      ))
+      expect_true(wait_until(function() isTRUE(page_eval(b, ready)), 20))
+    }
+    page_eval(b, paste(
+      "(async () => {",
+      "  const p = await map.getSource('og-time-pts').getData(), l = await map.getSource('og-time-line').getData();",
+      "  const i0 = tFind(TW[0]), i1 = tFind(TW[1], true);",
+      "  return { rows: TS.n, chart: TU.data[0].length, dots: p.features.length,",
+      "           line: l.geometry.coordinates.reduce((a, c) => a + c.length, 0),",
+      "           marked: p.features.filter(f => f.properties.mk).length,",
+      "           marked_rows: TS.mk.slice(i0, i1).filter(Boolean).length,",
+      "           info: document.getElementById('t-info').textContent };",
+      "})()"
+    ))
+  }
+  # by default every row of the whole span: a point each and the path through each, the chart given every row
+  w <- drawn(FALSE)
+  expect_equal(w$rows, n)
+  expect_equal(w$chart, n)
+  expect_equal(w$dots, n)
+  expect_equal(w$line, n)
+  expect_equal(w$marked, w$marked_rows)
+  expect_false(grepl("drawn on the map", w$info))
+  # asked for about 2,000: every 12th row on the map, a marked one always, the path's ends kept; the chart whole
+  k <- ceiling(n / 2000)
+  t2 <- drawn(2000)
+  expect_equal(t2$rows, n)
+  expect_equal(t2$chart, n)
+  expect_lt(t2$dots, n)
+  expect_equal(t2$marked, t2$marked_rows)
+  expect_equal(t2$line, length(unique(c(seq(1, n, by = k), n))))
+  expect_match(t2$info, sprintf("1 in %d drawn on the map", k), fixed = TRUE)
+  # a window narrowed on the chart to fewer rows than that: drawn whole again
+  z <- drawn(2000, window = 1500)
+  expect_equal(z$rows, 1500)
+  expect_equal(z$dots, 1500)
+  expect_equal(z$line, 1500)
+  expect_false(grepl("drawn on the map", z$info))
+})
+
 test_that("a label on hover: style ids of the layer's own, TRUE for the click's, with a title", {
   data <- '{"type": "FeatureCollection", "features": []}'
   st <- list(list(id = "a-fill", type = "fill"), list(id = "a-line", type = "line"))

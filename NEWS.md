@@ -1,3 +1,21 @@
+# ogis 2026.11.21
+
+* **The time panel draws every row on the map**, unless told otherwise. The window's path joined only every k-th ping
+  and its points were thinned alike, to about 5,000 (the documentation said the path was drawn whole). Over a vessel's
+  whole series of 63,740 pings, "1 in 13 drawn on the map", the path cut corners, and a point layer beside it showed
+  pings with no line through them. The maintainer (2026-11-21): "plot everything unless explicitly told not to do so";
+  thinning "was only supposed to deal with the view". The new `og_time(thin = )` asks for it: `FALSE` by default, a
+  number of rows (`TRUE` for 5,000) thins a window of more than that to about that many, a marked row always kept, and a
+  window narrowed on the chart is thinned less, then not at all. The chart was not thinned, and is not: it is given
+  every row, and uPlot's line runs, in each column of pixels, from the least value of the rows there to the most, over
+  the window shown, so a drag spreads them out again. `og_tracks()` takes the default, every row drawn.
+* **What it costs**, measured in headless Chrome (157, Apple M4 Pro): one vessel a ping a minute, the map settled after
+  the window was set (the median of five; the camera's move left out). The whole series of 60,000 pings: 250 ms, where
+  the thinned window took 33 ms; of 500,000: 2.7 s, where it took 33 ms. Most of it is in MapLibre's worker, the
+  line's data ready after 0.6 s, the points' after 1.4 s and their 500,000 circles laid out by 2.6 s; the page itself
+  is held once, for 0.6 s, as the window's points are handed to the worker (0.06 s at 60,000). A window of 5,000 pings: 33 ms, as before. The chart: 1.4 ms at 60,000 rows and
+  11 ms at 500,000. `thin` keeps a long window quick.
+
 # ogis 2026.11.19.1
 
 * **`og_names()` turns a name by its `angle`**, a column of the names in degrees counter-clockwise from level, as
