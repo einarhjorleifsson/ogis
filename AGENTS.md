@@ -100,28 +100,21 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
 
 ## State (2026-11-22)
 
-- **`main`** is at 2026.11.21.2 and on GitHub (pushed 2026-11-22 at the maintainer's word, 0bf40a8..93170cd, a
-  fast-forward of the side session's branch `time-draw-all`, since removed with its worktree). Three changes to
-  `og_time()`, asked by fishycode's check pages: 2026.11.21 (30bb43d), the map draws every row of the window,
-  `thin = ` asks for fewer; 2026.11.21.1 (539e10e), `lane_palette = `, a lane value one solid colour in every span,
-  Brewer's Paired by default; 2026.11.21.2 (93170cd), a layer's colours on its column's lane whether the layer comes
-  before the panel or after it, so `og_tracks()`' activity lane takes its pings' colours. Each with a test that failed
-  before it. Locally: `devtools::test()` 1,642 pass, 0 fail; `devtools::check()` 0 errors, 0 warnings, two notes (a
-  worktree's `.git` file, and `og_names()`' `angle`, there since 2026.11.19.1). CI on 93170cd: R CMD check passed on
-  Ubuntu, Windows and macOS, and the site was built. This record's own commit is not pushed (the maintainer,
-  2026-11-22: "no pushing again").
-- **Branch `claude/window-follow-5d61c8`** (worktree `.claude/worktrees/window-follow-5d61c8`), 2026.11.22 to
-  2026.11.22.5, not merged, pushed or installed: a trip check's wishes (fishycode's pages).
-  `og.window()` and `og.on("window")`; the window's path under the panel's points, `og_time(dots = )`;
-  `og_time(follow = )`, the window by default (the maintainer's choice); *On top* on every point layer coloured by a
-  number; `og_tracks()`' pings by speed in Inferno, `palette = list(<column> = )`. `devtools::test()` 1,739 pass, the
-  one failure (a race in the new `og.window()` test) fixed and passing since; `devtools::check()` 0 errors, 0
-  warnings, the two notes; the installed-only tests and the own-page and tracks articles checked against the branch
-  installed in a scratch library.
-- **Installed**: 2026.11.21.2, from GitHub's `main` at 93170cd (`remotes::install_git("https://github.com/einarhjorleifsson/ogis",
-  git = "external", force = TRUE)`; `RemoteSha` 93170cd, the LFS example data whole, dansk.parquet 6,583,218 bytes). The
-  tests that run only against an installed ogis pass against the same commit installed from the branch: test-knit.R 34
-  of 34, test-script.R 42 of 42.
+- **`main`** is at 2026.11.22.5 locally, not pushed: merged at the maintainer's word on 2026-11-22 as a
+  fast-forward of the side session's branch `claude/window-follow-5d61c8` (worktree
+  `.claude/worktrees/window-follow-5d61c8`). GitHub's `main` is at 93170cd (2026.11.21.2, CI green on all three
+  systems); the AGENTS.md commit 361cc68 and these are not pushed (the maintainer, 2026-11-22: "no pushing again").
+  A trip check's wishes (fishycode's pages), each with a test that failed before it: 2026.11.22
+  (c9103f7), `og.window()` and `og.on("window")`; 2026.11.22.1 (47db227), the window's path under the panel's point
+  and segment layers, `og_time(dots = )`; 2026.11.22.2 (df988cc), `og_time(follow = )`, the window by default (the
+  maintainer's choice); 2026.11.22.3 (0676dc8), *On top* on every point layer coloured by a number; 2026.11.22.4
+  (0c1878c), `og_tracks()`' pings by speed in Inferno, `palette = list(<column> = )`; 2026.11.22.5 (0612351), the
+  own-page article's window stepped a day at a time. `devtools::test()` 1,739 pass, the one failure (a race in the new
+  `og.window()` test) fixed and passing since; `devtools::check()` 0 errors, 0 warnings, two notes (a worktree's
+  `.git` file, and `og_names()`' `angle`, there since 2026.11.19.1). CI has not run on these.
+- **Installed**: 2026.11.22.5, from the branch's local tree (`devtools::install()`, `RemoteSha` empty; the LFS example
+  data whole, dansk.parquet 6,583,218 bytes), at the maintainer's word, for a trip check page. The tests that run only
+  against an installed ogis pass against it (test-knit.R's Quarto test, test-script.R's `og_serve(wait = TRUE)`).
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's
   values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic
   depth model (TODO 204).
