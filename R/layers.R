@@ -181,8 +181,10 @@
   t_s <- if (mark %in% c("point", "segment") && !is.null(ctx$time)) .og_time_s_sql(con, ctx$src, ctx$time)
   src <- sprintf("SELECT *%s%s%s FROM (%s)", paste(props_sql, collapse = ""), geo_sql,
                  if (is.null(t_s)) "" else sprintf(", %s AS og_t", t_s), ctx$src)
+  .og_column_palette(a$palette, NULL, cols)
   colours <- lapply(seq_along(cols), function(i) {
-    .og_colour_by(con, src, paste0("og_c", i), paste0("og_c", i), a$palette, a$limits, a$stretch, types[[i]])
+    .og_colour_by(con, src, paste0("og_c", i), paste0("og_c", i), .og_column_palette(a$palette, cols[i], cols),
+                  a$limits, a$stretch, types[[i]])
   })
   s$state <- .og_keep_value_colours(s$state, cols, colours)
   default <- if (mark == "text") "#1b2a3a" else .og_okabe_ito[1]
@@ -392,6 +394,20 @@
   }
   s$state$layer_section[[id]] <- a$section
   .og_hold(.og_quick_map(s, layer, sent$table))
+}
+
+# A colour column's palette: `palette` as given, or, given by column (a list named by the colour's columns,
+# list(speed = "inferno")), that column's, NULL (its default) for a column not named. With `col` NULL, the list checked
+.og_column_palette <- function(palette, col, cols) {
+  if (!is.list(palette)) {
+    return(palette)
+  }
+  nm <- names(palette)
+  if (is.null(nm) || anyNA(nm) || !all(nzchar(nm)) || anyDuplicated(nm) || !all(nm %in% cols)) {
+    stop(sprintf("`palette` by column is a list named by the columns of `colour` (%s): list(speed = \"inferno\").",
+                 paste(cols, collapse = ", ")), call. = FALSE)
+  }
+  if (is.null(col)) invisible(NULL) else palette[[col]]
 }
 
 # A point's sort key for the switch "On top" (og_point(), a number's colours): MapLibre draws a point of a higher key
@@ -724,7 +740,9 @@
 #'   leaves out the later). A turned text keeps the upright box round it clear of others.
 #' @param palette The colours for a column, in place of the default: a palette's name (from [og_palettes()],
 #'   `palette.pals()` or `hcl.pals()`, written loosely: `"set1"` is Set 1), colours, colours named by value
-#'   (`c(Fishing = "#c0392b")`), or a function of n (`viridisLite::mako`).
+#'   (`c(Fishing = "#c0392b")`), or a function of n (`viridisLite::mako`). For a choice of columns in `colour`, one of
+#'   these for each column, a list named by the columns (`list(speed = "inferno")`), a column not named keeping its
+#'   default.
 #' @param limits,stretch For a numeric column: the values the palette's ends stand at (by default its 1st and 99th
 #'   percentile), and how the colours spread between them, `"linear"`, `"log"` or `"equal"` (equal shares of the
 #'   values).
@@ -1136,7 +1154,9 @@ og_path <- function(
       paste(vapply(ranged, function(f) sprintf("%s AS %s", q(bin_nm(f)), q(f$field)), ""), collapse = ", "),
       lines_src)
   }
-  colours <- if (length(cc)) .og_colour_by(con, lines_src, "og_c1", "og_c1", palette, limits, stretch, type)
+  colours <- if (length(cc)) {
+    .og_colour_by(con, lines_src, "og_c1", "og_c1", .og_column_palette(palette, cc, cc), limits, stretch, type)
+  }
   s$state <- .og_keep_value_colours(s$state, cc, list(colours))
   fixed <- if (is.null(col)) .og_okabe_ito[1] else if (!is.null(col$value)) .og_hex(col$value)
   hov <- .og_select(rlang::enquo(hover), keys, "hover")

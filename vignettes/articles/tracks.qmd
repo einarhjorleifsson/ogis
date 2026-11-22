@@ -55,8 +55,9 @@ What to look at:
   the chart narrows the window, and the map then shows its pings alone; a double click shows the whole trip. The lane
   *trip* shows where each trip begins and ends against the speed: a trip should leave a harbour and come back to one.
   A trip is known by its vessel and ramb's number for it, which starts again each year.
-- **What the vessel was doing.** The lane *behaviour* and the pings' colours: fishing at slow, steady speed, steaming
-  fast between.
+- **Speed and what the vessel was doing.** The pings are coloured by speed, black the slowest (Inferno); *On top*
+  draws the slow or the fast pings over the others. *Colour by* behaviour shows what the vessel was doing, in the
+  colours of the lane *behaviour*: fishing at slow, steady speed, steaming fast between.
 - **The effort.** *Show* follows the panel's vessel: its own effort, its gear's, or the whole fleet's. *Cells* sets
   their size, live: about a pixel at each zoom, or 0.01 to 0.5 degrees at every zoom, a c-square (0.05) or an ICES
   rectangle (1 by 0.5), so the picture's dependence on the grid is seen. *Vessels, at least* hides the cells of fewer

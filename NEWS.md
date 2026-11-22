@@ -1,3 +1,17 @@
+# ogis 2026.11.22.4
+
+* **`og_tracks()` colours its pings by speed, in Inferno, black the slowest**, and by what the vessel was doing as a
+  choice in the page (*Colour by*), in the colours of the activity lane; before, by what it was doing alone, speed
+  only where the pings had no activity, in viridis. The maintainer (2026-11-22), on a trip check: "the device speed
+  should be the default colour of pings. And i am used to the inverse viridis when it comes to speed (black - low
+  speed)", then "I mean inferno". Asked where in ogis: in `og_tracks()`, which knows its speed column; `og_point()`
+  stays general, viridis for a number, and the time panel's own points already ran Inferno from black. With the
+  pings by speed, *On top* (2026.11.22.3) draws the slow or the fast ones over the others.
+* **A palette by column, for a choice of colours**: `og_point(colour = c(behaviour, speed), palette = list(speed =
+  "inferno"))`, each column its own palette, a column not named keeping its default, for every layer function with
+  `palette`. One palette had served every column of the choice, so a number's and a category's could not both be
+  chosen.
+
 # ogis 2026.11.22.3
 
 * **Points coloured by a number have a switch, *On top***: the rows in their order, as before and by default, or low

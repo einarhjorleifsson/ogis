@@ -34,8 +34,8 @@ og_tracks(
 start one, as in the map's place.}
 
 \item{vessel, time, lon, lat, speed, activity, trip, gear, hours}{The columns, as strings, where their names are not found:
-the vessel, the time, the position, the speed (more than one: the first shown, the others ticked on in the panel),
-what the vessel was doing (a lane, and the pings' colour), its trip (chosen in the panel, a trip at a time), its
+the vessel, the time, the position, the speed (more than one: the first shown, the others ticked on in the panel;
+the first the pings' colour), what the vessel was doing (a lane, and the pings' other colour), its trip (chosen in the panel, a trip at a time), its
 gear, and the hours each ping stands for (the effort's).}
 
 \item{lanes}{More lanes under the panel's chart, columns as strings (\code{c(observed = "ACTIVITY_L1")}): another
@@ -69,9 +69,10 @@ The map.
 \description{
 \code{og_tracks()} draws vessel tracks, a row a ping, for a look at what a track's processing made of them: a time panel
 under the map with a vessel's speed over time and lanes of what it was doing and of its trips (a vessel chosen
-there, then one of its trips), the map showing that span's path and the pings coloured by what the vessel was doing;
-and the fishing effort by cell, summed from the fishing pings' hours, showing the chosen vessel's, its gear's or the
-fleet's (\code{\link[=og_cells]{og_cells()}}'s \code{follow}).
+there, then one of its trips), the map showing the path and pings of the window shown on the chart, the pings
+coloured by speed in Inferno, black the slowest, or by what the vessel was doing (in the lane's colours), and slow
+or fast pings on top (\emph{On top}); and the fishing effort by cell, summed from the fishing pings' hours, showing the
+chosen vessel's, its gear's or the fleet's (\code{\link[=og_cells]{og_cells()}}'s \code{follow}).
 }
 \details{
 The columns are found by their names: ramb's (\code{vid}, \code{time}, \code{lon}, \code{lat}, \code{speed}, \code{voyage_key} or \code{trip_id},

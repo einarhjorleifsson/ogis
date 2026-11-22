@@ -16,7 +16,7 @@ track_pings <- function() {
         one("B", 1, "OTB", "2020-05-02 04:00", 10.3))
 }
 
-test_that("og_tracks(): the track, the pings by what the vessel did, a panel of speed with its trips, the effort", {
+test_that("og_tracks(): the track, the pings by speed or by what the vessel did, a panel of speed with its trips, the effort", {
   skip_if_no_spatial()
   m <- og_tracks(track_pings())
   expect_identical(vapply(m$config$layers, `[[`, "", "id"), c("cells", "pings"))
@@ -28,6 +28,16 @@ test_that("og_tracks(): the track, the pings by what the vessel did, a panel of 
   expect_setequal(vapply(tp$lanes, `[[`, "", "label"), c("behaviour", "trip"))
   # the pings are the panel's rows: its own points are not drawn over them
   expect_false(tp$dots)
+  # the pings coloured by speed in Inferno, black the slowest, or by what the vessel was doing; slow or fast on top
+  p <- m$config$layers[[2]]
+  expect_identical(vapply(p$variants$options, `[[`, "", "value"), c("speed", "behaviour"))
+  inferno <- function(paint) { cc <- unlist(paint[["circle-color"]]); cc[grepl("^#", cc)][1:9] }
+  expect_identical(inferno(p$style[[1]]$paint), grDevices::hcl.colors(9, "Inferno"))
+  expect_identical(p$state[[1]]$id, "ontop")
+  # with no activity, by speed alone
+  q <- og_tracks(track_pings()[, setdiff(names(track_pings()), "behaviour")], effort = FALSE)$config$layers[[1]]
+  expect_null(q$variants)
+  expect_identical(inferno(q$style[[1]]$paint), grDevices::hcl.colors(9, "Inferno"))
   # the effort: the fishing pings' hours by cell, vessel, gear and year, following the panel's vessel
   cl <- m$layers$cells
   expect_identical(cl$config$follow, list(id = "cells_follow", vessel = "cells_vid", gear = "cells_gear"))

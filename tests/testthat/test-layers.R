@@ -642,3 +642,22 @@ test_that("points coloured by a number: low or high values on top, a switch in t
   page_eval(b, "(() => { const s = document.getElementById('pts-by'); s.value = 'speed'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()")
   expect_true(wait_until(function() grepl('["get","og_c2"]', key(), fixed = TRUE), 10))
 })
+
+test_that("a palette by column, for a choice of colours: each column its own, a column not named its default", {
+  skip_if_no_spatial()
+  d <- data.frame(lon = c(10, 10.1, 10.2), lat = c(56, 56.1, 56.2), speed = c(1, 9, 5), kind = c("a", "b", "c"))
+  hexes <- function(x) { cc <- unname(unlist(x)); cc[grepl("^#", cc)] }
+  v <- (og_map(d) |> og_point(colour = c(kind, speed), palette = list(speed = "inferno")))$config$layers[[1]]$variants
+  expect_identical(hexes(v$options[[2]]$paint)[1:9], grDevices::hcl.colors(9, "Inferno"))
+  expect_identical(hexes(v$options[[1]]$paint)[1:3], .og_okabe_ito[1:3])
+  v <- (og_map(d) |> og_point(colour = c(kind, speed), palette = list(kind = c(a = "red"))))$config$layers[[1]]$variants
+  expect_identical(hexes(v$options[[1]]$paint)[1], "#FF0000")
+  expect_identical(hexes(v$options[[2]]$paint)[1:9], .og_viridis)
+  expect_error(og_map(d) |> og_point(colour = c(kind, speed), palette = list(depth = "inferno")), "named by the columns")
+  expect_error(og_map(d) |> og_point(colour = speed, palette = list("inferno")), "named by the columns")
+  # a path's one column, as well
+  d$vid <- "A"
+  d$time <- as.POSIXct("2020-01-01", tz = "UTC") + 1:3
+  pl <- (og_map(d) |> og_path(group = vid, time = time, colour = speed, palette = list(speed = "inferno")))$config$layers[[1]]
+  expect_identical(hexes(pl$style[[1]]$paint)[1:9], grDevices::hcl.colors(9, "Inferno"))
+})

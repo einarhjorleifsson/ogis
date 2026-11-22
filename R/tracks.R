@@ -7,9 +7,10 @@
 #'
 #' `og_tracks()` draws vessel tracks, a row a ping, for a look at what a track's processing made of them: a time panel
 #' under the map with a vessel's speed over time and lanes of what it was doing and of its trips (a vessel chosen
-#' there, then one of its trips), the map showing that span's path and the pings coloured by what the vessel was doing;
-#' and the fishing effort by cell, summed from the fishing pings' hours, showing the chosen vessel's, its gear's or the
-#' fleet's ([og_cells()]'s `follow`).
+#' there, then one of its trips), the map showing the path and pings of the window shown on the chart, the pings
+#' coloured by speed in Inferno, black the slowest, or by what the vessel was doing (in the lane's colours), and slow
+#' or fast pings on top (*On top*); and the fishing effort by cell, summed from the fishing pings' hours, showing the
+#' chosen vessel's, its gear's or the fleet's ([og_cells()]'s `follow`).
 #'
 #' The columns are found by their names: ramb's (`vid`, `time`, `lon`, `lat`, `speed`, `voyage_key` or `trip_id`,
 #' `gear`, `hours`, and `behaviour` or `activity`) or EM4SSF's D2.1 format's (`VESSEL_ID`, `DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`,
@@ -19,8 +20,8 @@
 #' @param pings The pings: a data frame, a lazy DuckDB table, or a parquet file's path; given here with no map, they
 #'   start one, as in the map's place.
 #' @param vessel,time,lon,lat,speed,activity,trip,gear,hours The columns, as strings, where their names are not found:
-#'   the vessel, the time, the position, the speed (more than one: the first shown, the others ticked on in the panel),
-#'   what the vessel was doing (a lane, and the pings' colour), its trip (chosen in the panel, a trip at a time), its
+#'   the vessel, the time, the position, the speed (more than one: the first shown, the others ticked on in the panel;
+#'   the first the pings' colour), what the vessel was doing (a lane, and the pings' other colour), its trip (chosen in the panel, a trip at a time), its
 #'   gear, and the hours each ping stands for (the effort's).
 #' @param lanes More lanes under the panel's chart, columns as strings (`c(observed = "ACTIVITY_L1")`): another
 #'   method's trips, an observer's activity, ...
@@ -195,6 +196,10 @@ og_tracks <- function(
     stop("og_tracks(): `effort` is TRUE, FALSE or a table of cells.", call. = FALSE)
   }
 
-  og_point(m, data = if (!is.null(map)) x, colour = !!(if (!is.null(activity)) sym(activity) else sym(speed[1])),
-           popup = !!popup, name = "Pings")
+  # the pings coloured by speed in Inferno, black the slowest (the maintainer, 2026-11-22: "the device speed should be
+  # the default colour of pings", "I mean inferno"), or by what the vessel was doing, chosen in the page: the activity
+  # lane takes those colours
+  og_point(m, data = if (!is.null(map)) x,
+           colour = !!(if (!is.null(activity)) rlang::expr(c(!!sym(speed[1]), !!sym(activity))) else sym(speed[1])),
+           palette = stats::setNames(list("inferno"), speed[1]), popup = !!popup, name = "Pings")
 }

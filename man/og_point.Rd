@@ -202,7 +202,9 @@ deepest zoom (\code{maxzoom}, 14 by default) and beyond, only points that would 
 
 \item{palette}{The colours for a column, in place of the default: a palette's name (from \code{\link[=og_palettes]{og_palettes()}},
 \code{palette.pals()} or \code{hcl.pals()}, written loosely: \code{"set1"} is Set 1), colours, colours named by value
-(\code{c(Fishing = "#c0392b")}), or a function of n (\code{viridisLite::mako}).}
+(\code{c(Fishing = "#c0392b")}), or a function of n (\code{viridisLite::mako}). For a choice of columns in \code{colour}, one of
+these for each column, a list named by the columns (\code{list(speed = "inferno")}), a column not named keeping its
+default.}
 
 \item{limits, stretch}{For a numeric column: the values the palette's ends stand at (by default its 1st and 99th
 percentile), and how the colours spread between them, \code{"linear"}, \code{"log"} or \code{"equal"} (equal shares of the
