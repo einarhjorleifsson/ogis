@@ -1745,6 +1745,49 @@ test_that("in the page, a script reads and sets the window (og.window()) and hea
   expect_error(page_eval(b, "og.on('window', 1)"), "fn is a function")
 })
 
+test_that("in the page, the window's path lies under the panel's points and segments; its own points optional", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- time_pings()
+  d <- d[d$vid == "EX_12", ]
+  expect_error(og_time(d, speed, by = vid, dots = "no"), "`dots` is TRUE")
+  expect_null(og_time(d, speed, by = vid)$config$time$dots)
+  expect_false(og_time(d, speed, by = vid, dots = FALSE)$config$time$dots)
+  # a path before the panel, points and segments (with a time) after it, the points sent whole: their file comes after
+  # the panel's layers are made, and goes over them
+  sets <- d[seq(1, nrow(d), by = 1000), ]
+  sets$lon_end <- sets$lon + 0.01
+  sets$lat_end <- sets$lat
+  own <- c("og-time-case", "og-time-line", "og-time-dot", "og-time-mark", "og-time-hover", "og-time-hover-in")
+  for (dots in c(TRUE, FALSE)) {
+    m <- d |>
+      og_path(group = vid, time = time, id = "track") |>
+      og_time(speed, dots = dots) |>
+      og_point(id = "pings", colour = speed) |>
+      og_segment(sets, lon_end = "lon_end", lat_end = "lat_end", id = "sets")
+    expect_setequal(vapply(m$config$time$layers, `[[`, "", "id"), c("track", "pings", "sets"))
+    dir <- withr::local_tempdir()
+    og_bundle(m, dir, overwrite = TRUE)
+    b <- open_page(paste0(serve_dir(dir), "index.html"))
+    ids <- function() {
+      unlist(page_eval(b, "map.getStyle().layers.map(l => l.id).filter(id => /^(track|pings|sets|og-time)/.test(id))"))
+    }
+    expect_true(wait_until(function() {
+      isTRUE(page_eval(b, "TS?.n != null && ['track-line', 'pings-dot', 'sets-line'].every(id => !!map.getLayer(id))"))
+    }, 40))
+    # the path, the window's path, the points and segments on it, the panel's own points, rings and hover over all
+    want <- c("track-line", own[1:2], "pings-dot", "sets-line", own[3:6])
+    expect_identical(ids(), want, info = paste("dots:", dots))
+    expect_identical(page_eval(b, "map.getLayoutProperty('og-time-dot', 'visibility')"), if (dots) "visible" else "none")
+    # and so after another base map
+    page_eval(b, "document.querySelector('#bases input[value=none]').click() ?? true")
+    expect_true(wait_until(function() identical(page_eval(b, "document.querySelector('#bases input:checked').value"), "none"), 10))
+    expect_true(wait_until(function() identical(ids(), want), 20))
+    expect_identical(page_eval(b, "map.getLayoutProperty('og-time-dot', 'visibility')"), if (dots) "visible" else "none")
+    b$close()
+  }
+})
+
 test_that("a lane's value has one colour in every span: named, else a layer's, else Paired by value", {
   skip_if_no_spatial()
   d <- time_pings()

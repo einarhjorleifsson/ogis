@@ -15,6 +15,7 @@ og_time(
   span_max = 3e+06,
   time_label = "UTC",
   thin = FALSE,
+  dots = TRUE,
   data = NULL,
   lon = NULL,
   lat = NULL,
@@ -72,6 +73,11 @@ each. A number thins a window of more rows than that, for display only: every k-
 many, a marked row always, a path's ends at a silence kept; a narrower window, as the reader narrows it on the
 chart, is thinned less, and one of that many rows or fewer not at all. The panel's readout says "1 in k drawn on
 the map" while it thins. \code{TRUE} is 5,000. The chart is not thinned.}
+
+\item{dots}{Whether the window's rows are drawn as points of the panel's own, coloured by the first of \code{col} in
+Inferno, a click on one marking its time on the chart: \code{TRUE}, the default; \code{FALSE} where a point layer of the
+map draws the same rows (\code{\link[=og_point]{og_point()}}, as \code{\link[=og_tracks]{og_tracks()}}' pings do). The window's path is drawn under the panel's
+point and segment layers (those with the group and a time), so the rows they draw lie on it.}
 
 \item{data}{Rows for this panel, in place of the map's.}
 

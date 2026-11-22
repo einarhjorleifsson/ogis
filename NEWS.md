@@ -1,3 +1,16 @@
+# ogis 2026.11.22.1
+
+* **The time panel's path lies under the map's points, and its own points are optional**: `og_time(dots = )`. The
+  window's path and points were drawn over every layer, so a point layer of the same rows (`og_tracks()`' pings) lay
+  under a white line and under the panel's own points, in another colour. The maintainer (2026-11-22), on a trip
+  check: "The white track line should not have a point. And the pings should be on top of the white track line". The
+  page there moved the panel's layers by their ids and hid its points, again after each change of base map. The
+  window's path is now drawn under the lowest of the panel's point and segment layers (`og_point()`, `og_segment()`:
+  those with the group and a time), over its other layers (a path), and its points, rings and hover over every layer,
+  as before; the order holds when a layer's data come late and over a change of base map. `dots = FALSE` leaves out
+  the panel's own points, and with them the click that marks a row's time on the chart; marked rows keep their rings.
+  `og_tracks()` passes it, as its pings are the panel's rows.
+
 # ogis 2026.11.22
 
 * **A page's script reads and sets the time panel's window, and hears it change**: `og.window()` and

@@ -1555,6 +1555,7 @@ function addLayer(l, meta) {
         spec.layout = { ...spec.layout, "text-font": og_face ? faceFont(og_face) : FONT };
       map.addLayer(spec, before);
     }
+    if (TP) tPlace();   // the time panel's layers in their place among them
     applyVariant(l); applyColour(l); applyShade(l); applyChoice(l); showLayer(l); countText(l); layerDone(l);
     if (shadeFollowing(l)) followShade(l);
     if (following(l)) fitColour(l, true);
@@ -2747,8 +2748,9 @@ function tSpanSteps() {
 }
 function timeLang() { tVessels(); tSpans(tVes()); tInfo(); TU?.redraw(false, false); }
 
-// the window's track, its pings (coloured by the first column, a mark ringed) and the ping under the cursor, over every
-// other layer; the line drawn twice, dark under light, so it shows on any base map
+// the window's track, its pings (coloured by the first column, a mark ringed; hidden by og_time(dots = FALSE), where a
+// point layer draws the same rows) and the ping under the cursor; the line drawn twice, dark under light, so it shows
+// on any base map. Placed by tPlace()
 function tLayers() {
   map.addSource("og-time-line", { type: "geojson", data: EMPTY });
   map.addSource("og-time-pts", { type: "geojson", data: EMPTY });
@@ -2758,6 +2760,7 @@ function tLayers() {
   map.addLayer({ id: "og-time-line", type: "line", source: "og-time-line",
                  paint: { "line-color": "#fff", "line-width": 1.5, "line-opacity": 0.9 } });
   map.addLayer({ id: "og-time-dot", type: "circle", source: "og-time-pts",
+                 layout: { visibility: TP.dots === false ? "none" : "visible" },
                  paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 1.5, 12, 3.5],
                           "circle-color": "#808080", "circle-stroke-color": "#fff",
                           "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 9, 0, 11, 0.6] } });
@@ -2769,6 +2772,21 @@ function tLayers() {
                  paint: { "circle-radius": 9, "circle-opacity": 0, "circle-stroke-color": "#000", "circle-stroke-width": 5 } });
   map.addLayer({ id: "og-time-hover-in", type: "circle", source: "og-time-hover",
                  paint: { "circle-radius": 9, "circle-opacity": 0, "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
+  tPlace();
+}
+// The panel's layers in their place, again as each of the map's layers is added (one whose data come late goes over
+// them): its pings, rings and hover over every other layer, under the verdicts' marks and the notes' pins; its line
+// under the lowest of the panel's point and segment layers (og_point(), og_segment(): those with a time), so the rows
+// they draw lie on it (the maintainer, 2026-11-22: "the pings should be on top of the white track line"), else under
+// its pings. A change of base map keeps the order
+const T_OWN = ["og-time-case", "og-time-line", "og-time-dot", "og-time-mark", "og-time-hover", "og-time-hover-in"];
+function tPlace() {
+  if (!T_OWN.every(id => map.getLayer(id))) return;
+  const top = ["og-verdict-mark", "og-notes-dot"].find(id => map.getLayer(id));
+  for (const id of T_OWN) map.moveLayer(id, top);
+  const marks = new Set((TP.layers ?? []).filter(x => x.t).flatMap(x => OTHER.find(l => l.id === x.id)?.style.map(s => s.id) ?? []));
+  const under = map.getStyle().layers.find(x => marks.has(x.id))?.id;
+  if (under) for (const id of T_OWN.slice(0, 2)) map.moveLayer(id, under);
 }
 
 // One vessel's span from the server, or from the bundle's file for it; a later choice wins over an earlier one

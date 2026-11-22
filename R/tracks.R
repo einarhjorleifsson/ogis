@@ -145,15 +145,17 @@ og_tracks <- function(
   marks <- c(if (!is.null(marks)) if (is.null(names(marks))) stats::setNames(marks, marks) else marks, cmp_marks)
   if (!length(marks)) marks <- NULL
   popup <- unique(c("vid", "time", speed, activity, trip, gear, unlist(pairs)))
-  # the time panel first: it draws the chosen vessel's span (its path and points) itself, and the pings added after it
-  # carry its vessel, so they show that vessel and span alone. A path of each vessel's whole series, as a layer of its
-  # own, ran over every span's ends and was drawn whole: on a year of a vessel, a tangle over the trip chosen
+  # the time panel first: it draws the chosen vessel's span (its path) itself, and the pings added after it carry its
+  # vessel, so they show that vessel and span alone, on the path; the panel's own points would be the same rows. A path
+  # of each vessel's whole series, as a layer of its own, ran over every span's ends and was drawn whole: on a year of a
+  # vessel, a tangle over the trip chosen
   ln <- c(if (!is.null(activity)) stats::setNames(activity, activity), if (!is.null(trip)) c(trip = "og_trip"),
           if (!is.null(lanes)) if (is.null(names(lanes))) stats::setNames(lanes, lanes) else lanes, cmp_lanes)
   panel <- function(m, data = NULL) {
     og_time(m, col = !!speed, lanes = if (length(ln)) as.list(ln), marks = !!marks, data = data,
             time = "time", by = !!sym("vid"),
-            span = if (!is.null(trip)) c(trip = "og_trip"), time_label = time_label, title = title)
+            span = if (!is.null(trip)) c(trip = "og_trip"), time_label = time_label, title = title,
+            dots = FALSE)
   }
   m <- if (is.null(map)) panel(x) else panel(map, x)
 

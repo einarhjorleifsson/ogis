@@ -26,6 +26,8 @@ test_that("og_tracks(): the track, the pings by what the vessel did, a panel of 
   lab <- vapply(tp$vessels[[1]]$spans, function(s) .og_or(s$label, ""), "")[-1]
   expect_identical(substr(lab, 1, 16), c("A 1 \u00b7 2020-05-01", "A 2 \u00b7 2020-05-03"))
   expect_setequal(vapply(tp$lanes, `[[`, "", "label"), c("behaviour", "trip"))
+  # the pings are the panel's rows: its own points are not drawn over them
+  expect_false(tp$dots)
   # the effort: the fishing pings' hours by cell, vessel, gear and year, following the panel's vessel
   cl <- m$layers$cells
   expect_identical(cl$config$follow, list(id = "cells_follow", vessel = "cells_vid", gear = "cells_gear"))

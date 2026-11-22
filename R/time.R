@@ -68,6 +68,10 @@
 #'   many, a marked row always, a path's ends at a silence kept; a narrower window, as the reader narrows it on the
 #'   chart, is thinned less, and one of that many rows or fewer not at all. The panel's readout says "1 in k drawn on
 #'   the map" while it thins. `TRUE` is 5,000. The chart is not thinned.
+#' @param dots Whether the window's rows are drawn as points of the panel's own, coloured by the first of `col` in
+#'   Inferno, a click on one marking its time on the chart: `TRUE`, the default; `FALSE` where a point layer of the
+#'   map draws the same rows ([og_point()], as [og_tracks()]' pings do). The window's path is drawn under the panel's
+#'   point and segment layers (those with the group and a time), so the rows they draw lie on it.
 #' @return An [og_map()] with the time panel.
 #' @seealso [og_path()] and [og_point()], the layers it pairs with; [og_bundle()], which writes the panel's series
 #'   beside the page.
@@ -92,6 +96,7 @@ og_time <- function(
   span_max = 3000000,
   time_label = "UTC",
   thin = FALSE,
+  dots = TRUE,
   data = NULL,
   lon = NULL,
   lat = NULL,
@@ -170,6 +175,9 @@ og_time <- function(
       "`thin` is FALSE (every row drawn on the map), TRUE (about 5,000) or a number of rows, 2 or more.",
       call. = FALSE
     )
+  }
+  if (!isTRUE(dots) && !isFALSE(dots)) {
+    stop("`dots` is TRUE (the window's rows drawn as the panel's own points) or FALSE.", call. = FALSE)
   }
   if (
     !is.null(lanes) &&
@@ -575,6 +583,8 @@ og_time <- function(
       max_gap_s = if (is.finite(max_gap_s)) max_gap_s,
       # none: the map draws every row of the window
       thin = if (!isFALSE(thin)) thin,
+      # none: the window's rows drawn as the panel's own points
+      dots = if (!dots) FALSE,
       cols = lapply(col, function(cc) list(field = cc, label = cc)),
       marks = lapply(seq_along(marks), function(k) list(field = marks[k], label = mark_labels[k])),
       lanes = lapply(seq_along(lanes), function(k) {
