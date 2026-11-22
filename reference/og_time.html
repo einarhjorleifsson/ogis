@@ -19,7 +19,7 @@ lanes of intervals under the chart (visits, legs, phases), a click on one settin
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,10 +66,12 @@ a float's, an animal's: the values of <code>by</code>):</p><ul><li><p>a column o
 <span>  <span class="va">col</span>,</span>
 <span>  marks <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lanes <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  lane_palette <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  span <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_gap_s <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  span_max <span class="op">=</span> <span class="fl">3e+06</span>,</span>
 <span>  time_label <span class="op">=</span> <span class="st">"UTC"</span>,</span>
+<span>  thin <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lon <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lat <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -107,6 +109,16 @@ broken by a silence longer than <code>max_gap_s</code>;</p></li>
 </ul></dd>
 
 
+<dt id="arg-lane-palette">lane_palette<a class="anchor" aria-label="anchor" href="#arg-lane-palette"></a></dt>
+<dd><p>The lanes' colours, a value's the same in every span: by default Brewer's Paired, its twelve
+colours given to each lane's values in their order (numbers as numbers), over and over. Colours named by value,
+<code>c(Fishing = "#ff7f00")</code>, give those values theirs in every lane, the others keeping their default; a palette's
+name or colours, as for <code><a href="og_point.html">og_point()</a></code>'s <code>palette</code>, are used in place of Paired. A lane of a column that a layer of
+the map colours by (<code><a href="og_point.html">og_point()</a></code>, <code><a href="og_path.html">og_path()</a></code>; the first such, added before the panel or after it) takes that
+layer's colours, so a value is one colour on the map and in the lane; colours named here win. A label is written
+in white on a dark colour, in black on a light one. An interval with no label is grey.</p></dd>
+
+
 <dt id="arg-span">span<a class="anchor" aria-label="anchor" href="#arg-span"></a></dt>
 <dd><p>Units the page holds one at a time, chosen besides the whole series: a column of the rows that names
 them, as a string (a leg, a deployment: <code>"leg"</code>, or <code>c(leg = "leg_id")</code> to name the list), one span per value from
@@ -130,6 +142,14 @@ The browser holds far more than the default is likely to meet: a series of 2.2 m
 
 <dt id="arg-time-label">time_label<a class="anchor" aria-label="anchor" href="#arg-time-label"></a></dt>
 <dd><p>The clock the times are on, shown beside them.</p></dd>
+
+
+<dt id="arg-thin">thin<a class="anchor" aria-label="anchor" href="#arg-thin"></a></dt>
+<dd><p><code>FALSE</code>, the default: the map draws every row of the window, its path through each and a point at
+each. A number thins a window of more rows than that, for display only: every k-th row is drawn, so about that
+many, a marked row always, a path's ends at a silence kept; a narrower window, as the reader narrows it on the
+chart, is thinned less, and one of that many rows or fewer not at all. The panel's readout says "1 in k drawn on
+the map" while it thins. <code>TRUE</code> is 5,000. The chart is not thinned.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
@@ -162,8 +182,11 @@ into the page's address.</p>
 <p>The page holds one group's span at a time: by default its whole series; with <code>span</code>, also each of its intervals,
 chosen under <em>Span</em>. A group with more than <code>span_max</code> rows is offered by its spans only, or by month where there
 are none. The map's other layers that carry the group and a time (<code><a href="og_path.html">og_path()</a></code>, <code><a href="og_point.html">og_point()</a></code>) show only the chosen
-group and span; a path's line that runs over a span's start or end is shown whole. The window's path is drawn whole,
-its points thinned to about 5,000 (every k-th, a marked one always), so the map stays quick.</p>
+group and span; a path's line that runs over a span's start or end is shown whole.</p>
+<p>Every row is drawn. The window's path on the map joins every row of the window, and each row is a point, unless
+<code>thin</code> asks for fewer. The chart is given every row of the span; where more rows than pixels share the time axis,
+its line runs, in each column of pixels, from the least of their values to the most, so no value is left out, and a
+drag that narrows the window spreads the rows out again until each has its own.</p>
 <p>Times are shown as the data hold them, in no time zone, labelled by <code>time_label</code>.</p>
     </div>
     <div class="section level2">

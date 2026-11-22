@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.19.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,6 +39,23 @@
       <small>Source: <a href="https://github.com/einarhjorleifsson/ogis/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2026.11.21.2" id="ogis-202611212">ogis 2026.11.21.2<a class="anchor" aria-label="anchor" href="#ogis-202611212"></a></h2>
+<ul><li>
+<strong>A lane takes a layer’s colours whether the layer comes before the panel or after it.</strong> In 2026.11.21.1 a lane of a column the map colours by took the layer’s colours only when the layer was added before <code><a href="../reference/og_time.html">og_time()</a></code>, so <code><a href="../reference/og_tracks.html">og_tracks()</a></code>, which adds its pings after its panel (they then show the panel’s vessel and span alone), drew its activity lane in Paired and its pings in Okabe-Ito: “Fishing” light blue in the lane, sky blue on the map. The layer’s colours are now laid over the lanes each time the map is made, from the first layer that colours by the lane’s column; colours named in <code>lane_palette</code> still win.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2026.11.21.1" id="ogis-202611211">ogis 2026.11.21.1<a class="anchor" aria-label="anchor" href="#ogis-202611211"></a></h2>
+<ul><li>
+<strong>A lane’s value has one colour, solid, the same in every span</strong>: <code>og_time(lane_palette = )</code>. The lanes were coloured from Pastel 1, eight pale colours given to the values in the order they first came in the span shown, so “Fishing” could be one colour in one trip and another in the next, and the lanes read as washed out. The maintainer (2026-11-21), on a trip-check page: “Care to then not make the lower time panel so transparent. And use brewer pal 12”, and asked whether in ogis or in the page, “Change ogis”. Each interval’s colour is now set in R, by its value, over the lane’s values in every group and span: colours named by value in <code>lane_palette</code> (<code>c(Fishing = "#ff7f00")</code>) first; else, for a lane of a column a layer added before the panel colours by (<code><a href="../reference/og_point.html">og_point()</a></code>, <code><a href="../reference/og_path.html">og_path()</a></code>), that layer’s colour, so a value is one colour on the map and in the lane; else Brewer’s Paired, its twelve colours given to the values in their order (numbers as numbers: 9 before 10), over and over. A palette’s name or colours in <code>lane_palette</code> stand in for Paired. The bars are drawn solid, and a label inside one is written in white on a dark colour and dark on a light one, whichever has the more contrast. An interval with no label stays grey.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2026.11.21" id="ogis-20261121">ogis 2026.11.21<a class="anchor" aria-label="anchor" href="#ogis-20261121"></a></h2>
+<ul><li>
+<strong>The time panel draws every row on the map</strong>, unless told otherwise. The window’s path joined only every k-th ping and its points were thinned alike, to about 5,000 (the documentation said the path was drawn whole). Over a vessel’s whole series of 63,740 pings, “1 in 13 drawn on the map”, the path cut corners, and a point layer beside it showed pings with no line through them. The maintainer (2026-11-21): “plot everything unless explicitly told not to do so”; thinning “was only supposed to deal with the view”. The new <code>og_time(thin = )</code> asks for it: <code>FALSE</code> by default, a number of rows (<code>TRUE</code> for 5,000) thins a window of more than that to about that many, a marked row always kept, and a window narrowed on the chart is thinned less, then not at all. The chart was not thinned, and is not: it is given every row, and uPlot’s line runs, in each column of pixels, from the least value of the rows there to the most, over the window shown, so a drag spreads them out again. <code><a href="../reference/og_tracks.html">og_tracks()</a></code> takes the default, every row drawn.</li>
+<li>
+<strong>What it costs</strong>, measured in headless Chrome (157, Apple M4 Pro): one vessel a ping a minute, the map settled after the window was set (the median of five; the camera’s move left out). The whole series of 60,000 pings: 250 ms, where the thinned window took 33 ms; of 500,000: 2.7 s, where it took 33 ms. Most of it is in MapLibre’s worker, the line’s data ready after 0.6 s, the points’ after 1.4 s and their 500,000 circles laid out by 2.6 s; the page itself is held once, for 0.6 s, as the window’s points are handed to the worker (0.06 s at 60,000). A window of 5,000 pings: 33 ms, as before. The chart: 1.4 ms at 60,000 rows and 11 ms at 500,000. <code>thin</code> keeps a long window quick.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2026.11.19.1" id="ogis-202611191">ogis 2026.11.19.1<a class="anchor" aria-label="anchor" href="#ogis-202611191"></a></h2>
 <ul><li>
