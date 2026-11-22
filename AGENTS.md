@@ -78,7 +78,8 @@ plans keep the names of their day.
 - **ogis does not depend on ramb.** ramb is installed only for the site's tracks article
   (`Config/Needs/website`).
 - **ogis views; it does not edit** (2026-11-17, fishycode plan 076). A page that edits builds on ogis's documented
-  surface: `og_script()`, `og_serve(routes = )`, and in the page `og.on()`, `og.state()`, `og.fetch()`. It uses no
+  surface: `og_script()`, `og_serve(routes = )`, and in the page `og.on()`, `og.state()`, `og.fetch()`,
+  `og.window()`. It uses no
   `:::` and no copied page. A fault such a page finds is fixed in ogis, with a test.
 - **Keep it simple** (2026-11-11): options studied and set aside are not built unasked. These include MLT,
   GeoArrow with deck.gl, DuckDB-WASM, FlatGeobuf, and a `.duckdb` file as the store (parquet stays the store).
@@ -109,6 +110,14 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
   worktree's `.git` file, and `og_names()`' `angle`, there since 2026.11.19.1). CI on 93170cd: R CMD check passed on
   Ubuntu, Windows and macOS, and the site was built. This record's own commit is not pushed (the maintainer,
   2026-11-22: "no pushing again").
+- **Branch `claude/window-follow-5d61c8`** (worktree `.claude/worktrees/window-follow-5d61c8`), 2026.11.22 to
+  2026.11.22.5, not merged, pushed or installed: a trip check's wishes (fishycode's pages).
+  `og.window()` and `og.on("window")`; the window's path under the panel's points, `og_time(dots = )`;
+  `og_time(follow = )`, the window by default (the maintainer's choice); *On top* on every point layer coloured by a
+  number; `og_tracks()`' pings by speed in Inferno, `palette = list(<column> = )`. `devtools::test()` 1,739 pass, the
+  one failure (a race in the new `og.window()` test) fixed and passing since; `devtools::check()` 0 errors, 0
+  warnings, the two notes; the installed-only tests and the own-page and tracks articles checked against the branch
+  installed in a scratch library.
 - **Installed**: 2026.11.21.2, from GitHub's `main` at 93170cd (`remotes::install_git("https://github.com/einarhjorleifsson/ogis",
   git = "external", force = TRUE)`; `RemoteSha` 93170cd, the LFS example data whole, dansk.parquet 6,583,218 bytes). The
   tests that run only against an installed ogis pass against the same commit installed from the branch: test-knit.R 34
