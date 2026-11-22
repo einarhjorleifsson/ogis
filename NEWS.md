@@ -1,3 +1,19 @@
+# ogis 2026.11.22.3
+
+* **Points coloured by a number have a switch, *On top***: the rows in their order, as before and by default, or low
+  or high values on top. The maintainer (2026-11-22): "that the user can 'arrange' the pings in the plot so that e.g.
+  the slowest come on top. This should be a switch in the app", for every point layer coloured by a number (asked
+  whether by default or by an argument). It is under the layer's name in the page, applies at once, goes into the
+  address as `<id>_ontop`, and holds over a change of base map; with a choice of colours (`colour = c(behaviour,
+  speed)`) it orders by the colour shown, and a colour of categories orders nothing. It is MapLibre's
+  `circle-sort-key`, read from the layer's state (`og_layer(state = )`): a point's class along the colour's scale, 32
+  classes four to each of the palette's nine stops, whatever the stretch, the rows in their order within a class and
+  a missing value under all. MapLibre draws each key of a tile at once, so a key for each value would be a draw call
+  for each point. Measured in headless Chrome (Apple M4 Pro), a served map of 200,000 points as tiles, 166,000 in view:
+  the switch re-lays the tiles, the map settled 0.22-0.25 s after it (0.13 s back to the rows' order), and a frame
+  took the same time in each. A sort key given in MapLibre's terms (`og_point("circle-sort-key" = )`) replaces the
+  switch.
+
 # ogis 2026.11.22.2
 
 * **The panel's other layers follow its window**: `og_time(follow = )`, `"window"` by default. A layer that carries

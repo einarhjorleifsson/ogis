@@ -1653,6 +1653,9 @@ function applyVariant(l) {
   const o = l.variants.options.find(x => x.value === $(l.id + "-by").value) ?? l.variants.options[0];
   for (const [sid, props] of Object.entries(o.paint ?? {}))
     if (map.getLayer(sid)) for (const [k, v] of Object.entries(props)) map.setPaintProperty(sid, k, v);
+  // and its layout: a point's sort key for the colour chosen (og_point()'s "On top")
+  for (const [sid, props] of Object.entries(o.layout ?? {}))
+    if (map.getLayer(sid)) for (const [k, v] of Object.entries(props)) map.setLayoutProperty(sid, k, v);
   const box = $(l.id + "-legend");
   if (box) {
     box.innerHTML = legendHtml(o.legend ?? l.legend ?? []);

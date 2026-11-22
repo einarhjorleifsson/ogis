@@ -186,7 +186,7 @@
          label = paste0(if (j == 1) paste0(intToUtf8(8804), " ") else if (j == 9) paste0(intToUtf8(8805), " ") else "",
                         type$format(stops[j]) %||% fmt(stops[j])))
   })
-  list(colour = colour, legend = legend, kind = "continuous", limits = lim, stretch = stretch)
+  list(colour = colour, legend = legend, kind = "continuous", limits = lim, stretch = stretch, stops = stops)
 }
 
 # What a column is, for its colours: discrete (text, a logical, a factor, its levels when it has them, ordered or not)

@@ -173,7 +173,9 @@ as DuckDB's GEOMETRY or WKB).}
 \item{colour}{The marks' colour (an area's outline): a colour (\code{"#c0392b"}), or a column written bare (\code{colour = speed}), coloured by \code{palette}; several columns, \code{c(behaviour, speed)}, are a choice in the page, the first
 shown. A column's colours by default: Okabe-Ito for up to eight values, Paired for up to twelve, Glasbey's 32
 beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. \code{color} is the
-same.}
+same. Points coloured by a number have a switch under the layer's name, \emph{On top}: the rows in their order (the
+default), or low or high values on top, so that the slowest pings, say, are not hidden under faster ones; it
+goes into the page's address as \verb{<id>_ontop}. MapLibre's own \code{"circle-sort-key"}, given in \code{...}, replaces it.}
 
 \item{size}{A point's diameter, a text's size (a number, or for text a column written bare), in pixels. For points, by default, a size that follows the zoom:
 the least, 2 pixels, until the zoom at which most points lie that far apart, then doubling with each zoom in, as

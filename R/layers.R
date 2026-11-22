@@ -290,6 +290,13 @@
   # the style
   sid <- paste0(id, "-", mk$suffix)
   colour_expr <- if (length(cols)) colours[[1]]$colour else fixed
+  # points coloured by a number: which are drawn on top, a switch in the page (the maintainer, 2026-11-22: "that the
+  # user can 'arrange' the pings ... so that e.g. the slowest come on top. This should be a switch in the app"), each
+  # colour's sort key, for the colour chosen
+  ontop <- mark == "point" && any(vapply(colours, function(cl) identical(cl$kind, "continuous"), NA))
+  sort_keys <- if (ontop) {
+    lapply(seq_along(cols), function(i) .og_ontop_key(id, paste0("og_c", i), colours[[i]]))
+  }
   zoomed <- function(a0, b0, c0) list("interpolate", list("linear"), list("zoom"), 3, a0, 8, b0, 13, c0)
   style <- switch(mark,
     point = list(list(id = sid, type = "circle", "source-layer" = "features",
@@ -318,6 +325,9 @@
       paint = list("text-color" = colour_expr, "text-opacity" = a$opacity %||% 1,
                    "text-halo-color" = "rgba(255,255,255,0.9)", "text-halo-width" = 1.5))
   )
+  if (ontop) {
+    style[[1]]$layout <- list("circle-sort-key" = sort_keys[[1]])
+  }
   sids <- vapply(style, `[[`, "", "id") # a text's styles: at points, and along lines where the data have them
   if (mark == "polygon") sids <- sid
   # what the colour paints, and the legend's swatches: a ring's stroke, an outline alone
@@ -325,9 +335,11 @@
   look <- if (!is.null(ring)) "ring" else if (hollow) "outline" else mark
   variants <- if (length(cols) > 1) {
     list(label = "Colour by", options = lapply(seq_along(cols), function(i) {
-      list(value = cols[i], label = cols[i],
+      o <- list(value = cols[i], label = cols[i],
            paint = stats::setNames(rep(list(stats::setNames(list(colours[[i]]$colour), paint_key)), length(sids)), sids),
            legend = if (isTRUE(a$legend)) .og_swatches(colours[[i]]$legend, look, outline))
+      if (ontop) o$layout <- stats::setNames(list(list("circle-sort-key" = sort_keys[[i]])), sid)
+      o
     }))
   }
   leg <- if (!isTRUE(a$legend)) NULL else if (length(cols)) .og_swatches(colours[[1]]$legend, look, outline) else
@@ -335,6 +347,12 @@
   what <- switch(mark, point = "point", line = "line", segment = "line from its start to its end",
                  polygon = "area", text = "label")
   style <- .og_styles_for(.og_style_props(style, a$props, paste0("og_", mark)), sent$kind)
+  # the switch where the style still reads it (a sort key of the call's own, in MapLibre's terms, replaces it)
+  ontop <- ontop && grepl(sprintf("[\"global-state\",\"%s_ontop\"]", id),
+                          as.character(jsonlite::toJSON(style, auto_unbox = TRUE)), fixed = TRUE)
+  if (!ontop && !is.null(variants)) {
+    variants$options <- lapply(variants$options, function(o) { o$layout <- NULL; o })
+  }
   layer <- og_layer(
     id, sent$kind,
     label = nm$label,
@@ -350,6 +368,12 @@
     style = style,
     legend = leg,
     variants = variants,
+    state = if (ontop) {
+      list(list(id = "ontop", label = "On top", default = "rows", options = list(
+        list(value = "rows", label = "rows in order"), list(value = "low", label = "low values"),
+        list(value = "high", label = "high values")
+      )))
+    },
     popup = if (!is.null(title)) {
       Filter(Negate(is.null), list(click = sids, title = title, row = if (length(pop)) TRUE,
                                    hover = if (length(hov)) TRUE))
@@ -368,6 +392,28 @@
   }
   s$state$layer_section[[id]] <- a$section
   .og_hold(.og_quick_map(s, layer, sent$table))
+}
+
+# A point's sort key for the switch "On top" (og_point(), a number's colours): MapLibre draws a point of a higher key
+# over one of a lower. Low or high values on top: the point's class along the colour's scale, its nine stops 4 classes
+# apart (32 in all, whatever the stretch), counted from the other end for low values; a missing value under all. MapLibre
+# draws the points of each key in a tile at once (a draw call a key), so a class, not the value itself, keeps a layer of
+# millions of rows quick; within a class the rows' own order. Rows in order: one key, the rows as they come. A colour of
+# categories orders nothing, but reads the switch
+.og_ontop_key <- function(id, prop, colour) {
+  gs <- list("global-state", paste0(id, "_ontop"))
+  if (!identical(colour$kind, "continuous")) {
+    return(list("match", gs, "low", 0, "high", 0, 0))
+  }
+  cls <- list("floor", c(
+    list("interpolate", list("linear"), list("to-number", list("get", prop))),
+    unlist(lapply(seq_along(colour$stops), function(j) list(colour$stops[j], (j - 1) * 4)), recursive = FALSE)
+  ))
+  num <- list("==", list("typeof", list("get", prop)), "number")
+  list("match", gs,
+       "low", list("case", num, list("-", (length(colour$stops) - 1) * 4, cls), -1),
+       "high", list("case", num, cls, -1),
+       0)
 }
 
 # How a layer's rows reach the page: as tiles cut by DuckDB when the page asks (og_tiles_table()), or whole, as one
@@ -639,7 +685,9 @@
 #'   speed`), coloured by `palette`; several columns, `c(behaviour, speed)`, are a choice in the page, the first
 #'   shown. A column's colours by default: Okabe-Ito for up to eight values, Paired for up to twelve, Glasbey's 32
 #'   beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. `color` is the
-#'   same.
+#'   same. Points coloured by a number have a switch under the layer's name, *On top*: the rows in their order (the
+#'   default), or low or high values on top, so that the slowest pings, say, are not hidden under faster ones; it
+#'   goes into the page's address as `<id>_ontop`. MapLibre's own `"circle-sort-key"`, given in `...`, replaces it.
 #' @param fill For `og_polygon()`, the areas' colour, as `colour` is for the other marks; `NA`, none: the outline
 #'   alone, in `colour`, 2 pixels wide unless `linewidth` says otherwise, a click inside an area still showing its row.
 #' @param size A point's diameter, a text's size (a number, or for text a column written bare), in pixels. For points, by default, a size that follows the zoom:

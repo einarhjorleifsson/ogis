@@ -567,3 +567,78 @@ test_that("a layer's id may be given, and MapLibre's own paint and layout go to 
   expect_error(og_map(pings) |> og_point("fill-color" = "red"), "circle")
   expect_error(og_map(pings) |> og_point(colr = "red"), "has no argument colr")
 })
+
+test_that("points coloured by a number: low or high values on top, a switch in the page kept in the address", {
+  skip_if_no_spatial()
+  d <- data.frame(lon = c(10, 10, 10, 10.2), lat = c(56, 56, 56, 56.1), speed = c(1, 9, 5, 3),
+                  kind = c("a", "b", "c", "d"))
+  # the switch for a number's colours, and none for categories, no colour, or a sort key of the call's own
+  m <- og_map(d) |> og_point(colour = speed, id = "pts")
+  l <- m$config$layers[[1]]
+  expect_identical(l$state[[1]]$id, "ontop")
+  expect_identical(vapply(l$state[[1]]$options, `[[`, "", "value"), c("rows", "low", "high"))
+  expect_identical(l$state[[1]]$default, "rows")
+  expect_match(as.character(jsonlite::toJSON(l$style[[1]]$layout, auto_unbox = TRUE)), '"global-state","pts_ontop"', fixed = TRUE)
+  expect_null((og_map(d) |> og_point(colour = kind))$config$layers[[1]]$state)
+  expect_null((og_map(d) |> og_point())$config$layers[[1]]$state)
+  expect_null((og_map(d) |> og_point(colour = speed, "circle-sort-key" = 1))$config$layers[[1]]$state)
+  # a choice of colours: each its own key, a category's ordering nothing
+  v <- (og_map(d) |> og_point(colour = c(kind, speed), id = "pts"))$config$layers[[1]]
+  expect_length(v$state, 1)
+  expect_identical(v$variants$options[[1]]$layout[["pts-dot"]][["circle-sort-key"]],
+                   list("match", list("global-state", "pts_ontop"), "low", 0, "high", 0, 0))
+  k2 <- as.character(jsonlite::toJSON(v$variants$options[[2]]$layout[["pts-dot"]][["circle-sort-key"]], auto_unbox = TRUE))
+  expect_match(k2, '["typeof",["get","og_c2"]]', fixed = TRUE)
+  expect_identical(v$style[[1]]$layout[["circle-sort-key"]], v$variants$options[[1]]$layout[["pts-dot"]][["circle-sort-key"]])
+
+  skip_if_no_chrome()
+  # three points on one spot drawn in the order 1, 9, 5, the last over the others; red at 1, green at 5, blue at 9
+  for (whole in c(TRUE, FALSE)) {
+    dir <- withr::local_tempdir()
+    m <- og_map(d) |> og_point(colour = speed, id = "pts", size = 40, opacity = 1, whole = whole,
+                               palette = c("#ff0000", "#00ff00", "#0000ff"), limits = c(1, 9))
+    og_bundle(m, dir, overwrite = TRUE)
+    url <- paste0(serve_dir(dir), "index.html?base=none")
+    # the colour drawn at the spot, read from the frame as MapLibre draws it
+    top <- function(b) {
+      p <- page_eval(b, paste(
+        "new Promise(res => {",
+        "  const c = map.getCanvas(), gl = c.getContext('webgl2') || c.getContext('webgl'), p = map.project([10, 56]);",
+        "  map.once('render', () => { const px = new Uint8Array(4);",
+        "    gl.readPixels(Math.round(p.x * devicePixelRatio), Math.round(c.height - p.y * devicePixelRatio), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);",
+        "    res(Array.from(px)); });",
+        "  map.triggerRepaint();",
+        "})"
+      ))
+      c("red", "green", "blue")[which.max(unlist(p)[1:3])]
+    }
+    ready <- "!!map.getLayer('pts-dot') && map.loaded() && !map.isMoving() && map.queryRenderedFeatures({ layers: ['pts-dot'] }).length >= 3"
+    b <- open_page(url)
+    expect_true(wait_until(function() isTRUE(page_eval(b, ready)), 40))
+    expect_identical(top(b), "green", info = paste("whole:", whole)) # rows in order: the last on top
+    set <- function(v) page_eval(b, sprintf("(() => { const s = document.getElementById('pts-s-ontop'); s.value = '%s'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()", v))
+    set("low")
+    expect_true(wait_until(function() identical(top(b), "red"), 10), info = paste("whole:", whole))
+    set("high")
+    expect_true(wait_until(function() identical(top(b), "blue"), 10), info = paste("whole:", whole))
+    expect_true(wait_until(function() grepl("pts_ontop=high", page_eval(b, "location.search")), 10))
+    set("rows")
+    expect_true(wait_until(function() identical(top(b), "green"), 10), info = paste("whole:", whole))
+    b$close()
+    # from the address
+    b <- open_page(paste0(url, "&pts_ontop=low"))
+    expect_true(wait_until(function() isTRUE(page_eval(b, ready)), 40))
+    expect_identical(page_eval(b, "document.getElementById('pts-s-ontop').value"), "low")
+    expect_true(wait_until(function() identical(top(b), "red"), 10), info = paste("whole:", whole))
+    b$close()
+  }
+  # a choice of colours: the colour chosen sets its sort key
+  dir <- withr::local_tempdir()
+  og_bundle(og_map(d) |> og_point(colour = c(kind, speed), id = "pts"), dir, overwrite = TRUE)
+  b <- open_page(paste0(serve_dir(dir), "index.html?base=none"))
+  expect_true(wait_until(function() isTRUE(page_eval(b, "!!map.getLayer('pts-dot') && map.loaded()")), 40))
+  key <- function() page_eval(b, "JSON.stringify(map.getLayoutProperty('pts-dot', 'circle-sort-key'))")
+  expect_false(grepl("og_c2", key()))
+  page_eval(b, "(() => { const s = document.getElementById('pts-by'); s.value = 'speed'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()")
+  expect_true(wait_until(function() grepl('["get","og_c2"]', key(), fixed = TRUE), 10))
+})
