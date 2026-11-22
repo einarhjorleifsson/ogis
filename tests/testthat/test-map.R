@@ -1728,10 +1728,10 @@ test_that("in the page, a script reads and sets the window (og.window()) and hea
   expect_true(wait_until(function() page_eval(b, "window.WINS.length") > n0, 10))
   expect_equal(unlist(page_eval(b, "window.WINS.at(-1).window")), t[c(1001, 1500)])
   expect_equal(page_eval(b, "TS.n"), 500)
-  # null: the whole span
+  # null: the whole span (the window read at once, heard once drawn, a frame later)
   page_eval(b, "og.window(null) ?? true")
-  expect_true(wait_until(function() isTRUE(all.equal(unlist(page_eval(b, "og.window()")), range(t))), 10))
-  expect_equal(unlist(page_eval(b, "window.WINS.at(-1).window")), range(t))
+  expect_true(wait_until(function() isTRUE(all.equal(unlist(page_eval(b, "window.WINS.at(-1).window")), range(t))), 10))
+  expect_equal(unlist(page_eval(b, "og.window()")), range(t))
   # the reader's own window (a drag across the chart sets the chart's scale) is heard as well
   n0 <- page_eval(b, "window.WINS.length")
   page_eval(b, sprintf("TU.setScale('x', { min: %.17g, max: %.17g }) ?? true", t[11], t[20]))

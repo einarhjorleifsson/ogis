@@ -1,3 +1,10 @@
+# ogis 2026.11.22.5
+
+* **The article *A page of your own* steps through a time panel's window**: two buttons of a page's script set the
+  window to a day and the next (`og.window()`), and the script's box says which day is shown (`og.on("window")`), on
+  a vessel of `og_example("dansk")` drawn by `og_tracks()`, its pings following the window, by speed, black the
+  slowest. The tracks article says what the map now shows of the window, and that the pings are by speed.
+
 # ogis 2026.11.22.4
 
 * **`og_tracks()` colours its pings by speed, in Inferno, black the slowest**, and by what the vessel was doing as a
