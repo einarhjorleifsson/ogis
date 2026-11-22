@@ -97,18 +97,22 @@ designs and choices:
 
 The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and others).
 
-## State (2026-11-19)
+## State (2026-11-22)
 
-- **`main`** is at 2026.11.19.1 and on GitHub (pushed 2026-11-19 at the maintainer's word): fd28f37, `og_names()`
-  turning a name by an `angle` column (fishycode's plan 078 ask i), with a test. Its push ran no CI, the newest commit
-  carrying the skip marker, nor did an empty commit quoting it (c27cc9e); 0bf40a8, empty, ran both: R CMD check passed
-  on Ubuntu, Windows and macOS, and the site was built (its build at 8fddee3 had failed installing R on the runner, not
-  in ogis). Before it, 2026.11.19 (cf66ca5, a test of a served map's `og_cells(filter = )`) and 2026.11.18.17
-  (c6f3bcf, 0c4ed35); the side sessions that built 2026.11.18.14-17 are closed, their record fishycode's decision 330.
-- **Installed**: 2026.11.19.1, from the local `main` at fd28f37 (`remotes::install_git("file:///Users/einarhj/R/Pakkar/ogis",
-  git = "external", force = TRUE)`: a bare path loses its leading slash; `RemoteSha` fd28f37, the LFS example data whole,
-  byte for byte the tree's). The tests that run only against an installed ogis (test-knit.R's renders) pass against it,
-  34 of 34. Before it, 2026.11.19 from GitHub at 79017ff.
+- **`main`** is at 2026.11.21.2 and on GitHub (pushed 2026-11-22 at the maintainer's word, 0bf40a8..93170cd, a
+  fast-forward of the side session's branch `time-draw-all`, since removed with its worktree). Three changes to
+  `og_time()`, asked by fishycode's check pages: 2026.11.21 (30bb43d), the map draws every row of the window,
+  `thin = ` asks for fewer; 2026.11.21.1 (539e10e), `lane_palette = `, a lane value one solid colour in every span,
+  Brewer's Paired by default; 2026.11.21.2 (93170cd), a layer's colours on its column's lane whether the layer comes
+  before the panel or after it, so `og_tracks()`' activity lane takes its pings' colours. Each with a test that failed
+  before it. Locally: `devtools::test()` 1,642 pass, 0 fail; `devtools::check()` 0 errors, 0 warnings, two notes (a
+  worktree's `.git` file, and `og_names()`' `angle`, there since 2026.11.19.1). CI on 93170cd: R CMD check passed on
+  Ubuntu, Windows and macOS, and the site was built. This record's own commit is not pushed (the maintainer,
+  2026-11-22: "no pushing again").
+- **Installed**: 2026.11.21.2, from GitHub's `main` at 93170cd (`remotes::install_git("https://github.com/einarhjorleifsson/ogis",
+  git = "external", force = TRUE)`; `RemoteSha` 93170cd, the LFS example data whole, dansk.parquet 6,583,218 bytes). The
+  tests that run only against an installed ogis pass against the same commit installed from the branch: test-knit.R 34
+  of 34, test-script.R 42 of 42.
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's
   values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic
   depth model (TODO 204).
