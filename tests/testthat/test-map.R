@@ -1695,6 +1695,56 @@ test_that("in the page, the window's map draws every row, its path through each;
   expect_false(grepl("drawn on the map", z$info))
 })
 
+test_that("in the page, a script reads and sets the window (og.window()) and hears it change (og.on('window'))", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- time_pings()
+  d <- d[d$vid == "EX_12", ]
+  t <- sort(as.numeric(d$time)) # seconds since 1970, as the panel holds them (UTC, no zone)
+  # set before the series has loaded (the script runs first, the map having no other layer): kept until it has, and
+  # set in place of the address's window
+  js <- sprintf(r"(
+    window.EARLY = og.window();
+    window.WINS = [];
+    og.on("window", e => window.WINS.push(e));
+    og.window([%.17g, %.17g]);
+  )", t[101], t[200])
+  dir <- withr::local_tempdir()
+  og_bundle(og_script(og_time(d, speed, by = vid), js), dir, overwrite = TRUE)
+  url <- paste0(serve_dir(dir), "index.html?base=none&tw=", floor(t[1]), ",", ceiling(t[50]))
+  b <- open_page(url)
+  expect_true(wait_until(function() isTRUE(page_eval(b, "window.WINS?.length > 0 && TS?.n != null")), 40))
+  expect_null(page_eval(b, "window.EARLY"))
+  expect_equal(unlist(page_eval(b, "og.window()")), t[c(101, 200)])
+  expect_equal(page_eval(b, "TS.n"), 100)
+  e <- page_eval(b, "window.WINS.at(-1)")
+  expect_equal(unlist(e$window), t[c(101, 200)])
+  expect_identical(e$group, "EX_12")
+  expect_identical(e$span, "all")
+  expect_true(wait_until(function() grepl(sprintf("tw=%.0f,%.0f", floor(t[101]), ceiling(t[200])), page_eval(b, "location.search")), 10))
+  # set once loaded: drawn at once, and heard
+  n0 <- page_eval(b, "window.WINS.length")
+  page_eval(b, sprintf("og.window([%.17g, %.17g]) ?? true", t[1001], t[1500]))
+  expect_true(wait_until(function() page_eval(b, "window.WINS.length") > n0, 10))
+  expect_equal(unlist(page_eval(b, "window.WINS.at(-1).window")), t[c(1001, 1500)])
+  expect_equal(page_eval(b, "TS.n"), 500)
+  # null: the whole span
+  page_eval(b, "og.window(null) ?? true")
+  expect_true(wait_until(function() isTRUE(all.equal(unlist(page_eval(b, "og.window()")), range(t))), 10))
+  expect_equal(unlist(page_eval(b, "window.WINS.at(-1).window")), range(t))
+  # the reader's own window (a drag across the chart sets the chart's scale) is heard as well
+  n0 <- page_eval(b, "window.WINS.length")
+  page_eval(b, sprintf("TU.setScale('x', { min: %.17g, max: %.17g }) ?? true", t[11], t[20]))
+  expect_true(wait_until(function() page_eval(b, "window.WINS.length") > n0, 10))
+  expect_equal(unlist(page_eval(b, "window.WINS.at(-1).window")), t[c(11, 20)])
+  # a listener added later is told the window shown at once
+  expect_equal(unlist(page_eval(b, "(() => { let w = null; og.on('window', e => { w = e.window; }); return w; })()")), t[c(11, 20)])
+  # a window is two times, the earlier first, or null
+  expect_error(page_eval(b, "og.window([2, 1])"), "from before to")
+  expect_error(page_eval(b, "og.window('2020')"), "from before to")
+  expect_error(page_eval(b, "og.on('window', 1)"), "fn is a function")
+})
+
 test_that("a lane's value has one colour in every span: named, else a layer's, else Paired by value", {
   skip_if_no_spatial()
   d <- time_pings()

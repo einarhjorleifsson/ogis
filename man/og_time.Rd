@@ -98,7 +98,8 @@ a float's, an animal's: the values of \code{by}):
 The panel and the map are linked. A drag across the chart sets the time window, and a double click goes back to
 the whole span. The map draws the window's path and points, and fits to them. A hover on the chart marks that row
 on the map, and a click on a point of the window marks its time on the chart. The group, the span and the window go
-into the page's address.
+into the page's address. A page's own script (\code{\link[=og_script]{og_script()}}) reads and sets the window with \code{og.window()}, and
+hears it change with \code{og.on("window", fn)}.
 
 The page holds one group's span at a time: by default its whole series; with \code{span}, also each of its intervals,
 chosen under \emph{Span}. A group with more than \code{span_max} rows is offered by its spans only, or by month where there

@@ -2238,11 +2238,32 @@ const OG = {
     featureStates.set(k, { f, value: { ...(featureStates.get(k)?.value ?? {}), ...value } });
   },
   // a click on a layer's features taken by the page: fn({ feature, lngLat, point, row }), row() its row's columns
-  // (those `popup` names), null when a newer click has come meanwhile; the layer's own popup is not shown
+  // (those `popup` names), null when a newer click has come meanwhile; the layer's own popup is not shown. Or the time
+  // panel's window: og.on("window", fn), fn({ window, group, span }) each time the window is drawn, and at once with
+  // the window shown, if one is
   on(type, id, fn) {
-    if (type !== "click") throw new Error('og.on(): "click" is the one event');
+    if (type === "window") {
+      const f = typeof id === "function" ? id : fn;
+      if (!TP) throw new Error('og.on(): "window" is the time panel\'s, and the map has none (og_time())');
+      if (typeof f !== "function") throw new Error('og.on("window", fn): fn is a function');
+      tWindowFns.push(f);
+      if (tShown()) tTell(f);
+      return;
+    }
+    if (type !== "click") throw new Error('og.on(): the events are "click" and "window"');
     if (!OTHER.some(l => l.id === id)) throw new Error(`og.on(): the map has no layer "${id}"`);
     scriptClicks.set(id, fn);
+  },
+  // the time panel's window (og_time()): og.window() the one shown, [from, to] in seconds on the panel's clock, or null
+  // (no panel, a series loading, a span of no rows); og.window([from, to]) sets it, as a drag across the chart does,
+  // og.window(null) shows the whole span. Asked for before the series has loaded, it is applied once it has, over
+  // the address's
+  window(w) {
+    if (w === undefined) return TP ? tShown() : null;
+    if (!TP) throw new Error("og.window(): the map has no time panel (og_time())");
+    if (w !== null && !(Array.isArray(w) && w.length === 2 && w.every(Number.isFinite) && w[0] < w[1]))
+      throw new Error("og.window(): a window is [from, to] in seconds, from before to, or null for the whole span");
+    if (TU && tDone === tSeq) tSetWindow(w); else tWant = w;
   },
   // a whole layer's data sent again (GeoJSON), at most once a frame, its count beside its name kept
   setData(id, data) {
@@ -2619,6 +2640,10 @@ function laneInk(hex) {
 const INFERNO9 = ["#040404", "#2D1243", "#611163", "#961474", "#C53270", "#EB5C4C", "#F69422", "#F8C952", "#FFFE9E"];
 const EMPTY = { type: "FeatureCollection", features: [] };
 let uplotLib = null, tSeq = 0, tFrame = 0, tPinned = null;   // tPinned: a ping clicked on the map, until the pointer moves
+// the window a page's script asked for (og.window()) before the series it is for had loaded, applied once it has
+// (undefined: none); the load last finished (tSeq's), and the script's listeners to the window (og.on("window"))
+let tWant, tDone = 0;
+const tWindowFns = [];
 // uPlot, pinned as MapLibre is, loaded only for a map with a time panel
 const loadUplot = () => uplotLib ??= new Promise((resolve, reject) => {
   const c = document.createElement("link");
@@ -2786,7 +2811,12 @@ async function tLoad(win = null) {
   // the other layers show only this vessel and span
   for (const l of OTHER) applyChoice(l);
   await tChart();
-  tSetWindow(win);
+  if (seq !== tSeq) return;
+  tDone = seq;
+  // the window a script asked for meanwhile wins over the address's
+  const w = tWant !== undefined ? tWant : win;
+  tWant = undefined;
+  tSetWindow(w);
 }
 
 async function tChart() {
@@ -2875,7 +2905,15 @@ function tDrawWindow() {
   tInfo();
   if (n) map.fitBounds([[x0, y0], [x1, y1]], { padding: 40, maxZoom: 15, duration: 300 });
   writeAddress();
+  for (const fn of tWindowFns) tTell(fn);
 }
+// a page's listener told the window drawn, its group and span (og.on("window"))
+function tTell(fn) {
+  try { fn({ window: [TW[0], TW[1]], group: tVes().value, span: $("t-span").value }); }
+  catch (err) { console.error("ogis: a page's window", err); }
+}
+// the window shown, or null: none while a series loads or where it has no rows
+const tShown = () => TU && TW && TS?.t?.length && tDone === tSeq ? [TW[0], TW[1]] : null;
 // the window in words, or the ping under the cursor
 function tInfo(i = null) {
   if (!TS || !TW || TS.n == null) return;

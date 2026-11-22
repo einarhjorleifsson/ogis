@@ -1,3 +1,15 @@
+# ogis 2026.11.22
+
+* **A page's script reads and sets the time panel's window, and hears it change**: `og.window()` and
+  `og.on("window", fn)`, documented in `og_script()`. A page built on the panel had to call the page's internal
+  `tSetWindow()`, judge the series loaded by its internal `TS`, and poll the address's `tw` to follow the reader (a
+  trip check built on ogis). `og.window()` gives the window shown,
+  `[from, to]` in seconds on the panel's clock, or `null` (no panel, a series loading, a span of no rows);
+  `og.window([from, to])` sets it as a drag across the chart does, and `og.window(null)` shows the whole span. Asked
+  for before the series has loaded, the window is set once it has, in place of the address's. `og.on("window", fn)`
+  calls `fn({window, group, span})` each time the window is drawn (a drag, a double click, a lane, another group or
+  span, `og.window()`), and at once with the window shown, if there is one.
+
 # ogis 2026.11.21.2
 
 * **A lane takes a layer's colours whether the layer comes before the panel or after it.** In 2026.11.21.1 a lane of a

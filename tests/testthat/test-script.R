@@ -124,6 +124,10 @@ test_that("in the page: a script's click reads the row, its route keeps what it 
   expect_true(wait_until(function() identical(page_eval(b, 'map.queryRenderedFeatures({ layers: ["positions-dot"] }).length'), 1L), 20))
   expect_match(page_eval(b, 'document.getElementById("positionsinfo").textContent'), "^1 ")
   expect_error(page_eval(b, 'og.on("hover", "positions", () => 0)'), "click")
+  # a map with no time panel has no window
+  expect_null(page_eval(b, "og.window()"))
+  expect_error(page_eval(b, "og.window([1, 2])"), "no time panel")
+  expect_error(page_eval(b, 'og.on("window", () => 0)'), "has none")
   # in a bundle the script runs with no server
   dir <- withr::local_tempdir()
   og_bundle(m, dir, overwrite = TRUE)

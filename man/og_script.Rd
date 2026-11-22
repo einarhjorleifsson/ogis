@@ -35,6 +35,14 @@ kept through a change of base map.
 \item \code{og.on("click", id, fn)}: a click on the layer's features is the script's: \verb{fn(\{feature, lngLat, point, row\})},
 where \code{row()} is a promise of the clicked row's columns (those its \code{popup} names, each \code{name}, \code{label}, \code{unit},
 \code{value}), or \code{null} when the reader has clicked again meanwhile; the layer's own popup is not shown.
+\item \code{og.window()}: the time panel's window (\code{\link[=og_time]{og_time()}}), \verb{[from, to]} in seconds since 1970 on the panel's clock (as
+the data hold the times, in no zone), or \code{null} where there is no panel, while a series loads, or for a span of no
+rows. \verb{og.window([from, to])} sets it, as a drag across the chart does, and \code{og.window(null)} shows the group's
+whole span. Asked for before the panel's series has loaded, the window is set once it has, in place of the
+address's.
+\item \code{og.on("window", fn)}: \verb{fn(\{window, group, span\})} each time the time panel's window is drawn (a drag, a double
+click, a lane, another group or span, \code{og.window()}), with the group and the span shown; called at once with the
+window shown, if there is one.
 \item \code{og.setData(id, geojson)}: a layer sent whole (\code{whole = TRUE}) given new data, at most once a frame.
 \item \code{og.filter(id, key, expr)}: a filter of the script's on a layer (a MapLibre expression), kept with the page's own
 choices; \code{null} removes it.
