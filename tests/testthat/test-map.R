@@ -1788,6 +1788,59 @@ test_that("in the page, the window's path lies under the panel's points and segm
   }
 })
 
+test_that("in the page, the panel's other layers show the window's rows, or the span's with follow = 'span'", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  d <- time_pings()
+  d <- d[d$vid == "EX_12", ]
+  t <- sort(as.numeric(d$time))
+  expect_error(og_time(d, speed, by = vid, follow = "trip"), "`follow` is")
+  expect_error(og_time(d, speed, by = vid, follow = NA), "`follow` is")
+  expect_null(og_time(d, speed, by = vid)$config$time$follow)
+  expect_identical(og_time(d, speed, by = vid, follow = "span")$config$time$follow, "span")
+  sets <- d[seq(1, nrow(d), by = 10), ]
+  sets$lon_end <- sets$lon + 0.001
+  sets$lat_end <- sets$lat
+  # the pings drawn, each once (a whole layer's point may be drawn in two tiles), and their times; the window fitted
+  # in view, so every row of it is drawn; the segments' times as their filter leaves them
+  drawn <- function(b, id) {
+    page_eval(b, sprintf(paste(
+      "(() => { const fs = map.queryRenderedFeatures({ layers: ['%s'] }), seen = new Map();",
+      "  for (const f of fs) seen.set(f.properties.og_row, f.properties.og_t);",
+      "  const t = [...seen.values()]; return { n: t.length, lo: Math.min(...t), hi: Math.max(...t) }; })()"
+    ), id))
+  }
+  for (follow in c("window", "span")) {
+    m <- og_time(d, speed, by = vid, follow = follow) |>
+      og_point(id = "pings") |>
+      og_segment(sets, lon_end = "lon_end", lat_end = "lat_end", id = "sets")
+    dir <- withr::local_tempdir()
+    og_bundle(m, dir, overwrite = TRUE)
+    b <- open_page(paste0(serve_dir(dir), "index.html?base=none&tw=", floor(t[1001]), ",", ceiling(t[1100])))
+    ready <- "TS?.n != null && ['pings-dot', 'sets-line'].every(id => !!map.getLayer(id)) && map.loaded() && !map.isMoving()"
+    expect_true(wait_until(function() isTRUE(page_eval(b, ready)), 40))
+    if (follow == "window") {
+      # the window's 100 rows alone, and its 10 segments
+      expect_true(wait_until(function() identical(drawn(b, "pings-dot")$n, 100L), 20))
+      p <- drawn(b, "pings-dot")
+      expect_equal(c(p$lo, p$hi), t[c(1001, 1100)])
+      expect_true(wait_until(function() identical(drawn(b, "sets-line")$n, 10L), 20))
+      # a window set again: the layers follow it
+      page_eval(b, sprintf("og.window([%.17g, %.17g]) ?? true", t[5001], t[5300]))
+      expect_true(wait_until(function() identical(drawn(b, "pings-dot")$n, 300L), 20))
+      p <- drawn(b, "pings-dot")
+      expect_equal(c(p$lo, p$hi), t[c(5001, 5300)])
+      expect_true(wait_until(function() identical(drawn(b, "sets-line")$n, 30L), 20))
+    } else {
+      # the span's rows in view, beyond the window's
+      expect_true(wait_until(function() isTRUE(drawn(b, "pings-dot")$n > 100), 20))
+      p <- drawn(b, "pings-dot")
+      expect_true(p$lo < t[1001] || p$hi > t[1100])
+    }
+    b$close()
+  }
+})
+
 test_that("a lane's value has one colour in every span: named, else a layer's, else Paired by value", {
   skip_if_no_spatial()
   d <- time_pings()

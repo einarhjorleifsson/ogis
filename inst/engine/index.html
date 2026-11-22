@@ -1711,12 +1711,15 @@ function choiceFilter(l, st) {
   const parts = [st.filter, ...conds, ...timeFilter(l), ...Object.values(l.extra ?? {})].filter(Boolean);
   return parts.length === 0 ? null : parts.length === 1 ? parts[0] : ["all", ...parts];
 }
-// The time panel's vessel and span on a layer whose features carry them (og_time()): its pings from the span's
-// first to its last, its lines that overlap the span. Set as a vessel or span is loaded, not as the window moves
+// The time panel's vessel and window on a layer whose features carry them (og_time()): its pings and segments in the
+// window, its lines that overlap it. Set as a vessel or span is loaded and again as the window is drawn: one setFilter,
+// re-laid in MapLibre's worker, for each window the reader sets. With og_time(follow = "span"), the span's, set as a
+// vessel or span is loaded alone. The span while a series loads, before its window is drawn
 function timeFilter(l) {
   const f = TP?.layers?.find(x => x.id === l.id);
   if (!f || !TS?.t?.length) return [];
-  const t0 = TS.t[0], t1 = TS.t[TS.t.length - 1], c = [];
+  const w = TP.follow !== "span" && TW && tDone === tSeq ? TW : [TS.t[0], TS.t[TS.t.length - 1]];
+  const t0 = w[0], t1 = w[1], c = [];
   if (TP.by && f.by === TP.by) c.push(["==", ["to-string", ["get", f.by]], tVes().value]);
   if (f.t) c.push([">=", ["get", f.t], t0], ["<=", ["get", f.t], t1]);
   else c.push([">=", ["get", f.t1], t0], ["<=", ["get", f.t0], t1]);
@@ -2922,6 +2925,8 @@ function tDrawWindow() {
   TS.n = n; TS.k = k;
   tInfo();
   if (n) map.fitBounds([[x0, y0], [x1, y1]], { padding: 40, maxZoom: 15, duration: 300 });
+  // the other layers that carry the group and a time show the window's rows (og_time(follow = ), "window" by default)
+  if (TP.follow !== "span") for (const l of OTHER) if (TP.layers?.some(x => x.id === l.id)) applyChoice(l);
   writeAddress();
   for (const fn of tWindowFns) tTell(fn);
 }

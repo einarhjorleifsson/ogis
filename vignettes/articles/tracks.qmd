@@ -9,8 +9,8 @@ knitr:
 
 `og_tracks()` draws vessel tracks, a row a ping, for a quick look at what a step of their processing made of them:
 a time panel of speed under the map (a vessel chosen there, then one of its trips), lanes of what the vessel was doing
-and of its trips, the chosen span's path and pings on the map, and the fishing effort by cell, which follows the vessel
-chosen.
+and of its trips, the path and pings of the window shown on the chart, and the fishing effort by cell, which follows
+the vessel chosen.
 The processing is [ramb](https://github.com/einarhjorleifsson/ramb)'s: flags, harbours, trips, fishing and effort.
 ogis only draws, so a step's output, ramb's or another workflow's, can be looked at as soon as it is made.
 
@@ -51,7 +51,8 @@ og_tracks(pings, title = "Danish vessels")
 
 What to look at:
 
-- **The trips.** Under *Time*, choose a vessel, then a trip: the map and the panel show that trip alone. The lane
+- **The trips.** Under *Time*, choose a vessel, then a trip: the map and the panel show that trip alone. A drag across
+  the chart narrows the window, and the map then shows its pings alone; a double click shows the whole trip. The lane
   *trip* shows where each trip begins and ends against the speed: a trip should leave a harbour and come back to one.
   A trip is known by its vessel and ramb's number for it, which starts again each year.
 - **What the vessel was doing.** The lane *behaviour* and the pings' colours: fishing at slow, steady speed, steaming

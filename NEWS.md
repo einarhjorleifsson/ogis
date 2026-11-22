@@ -1,3 +1,18 @@
+# ogis 2026.11.22.2
+
+* **The panel's other layers follow its window**: `og_time(follow = )`, `"window"` by default. A layer that carries
+  the group and a time (`og_point()`, `og_segment()`, `og_path()`) showed the group's whole span, wherever the window
+  was set, so a trip opened with a few pings either side, or a window dragged on the chart, showed more on the map
+  than on the chart. A page built on the panel filtered its layers to the window itself (`og.filter()` on the
+  features' time, `og_t`). The maintainer (2026-11-22): "By default I wanted only the trip window proper to appear
+  both in space and time"; asked whether ogis should do it by default, the window. Those layers now show the rows of
+  the window alone (a path's run where it overlaps the window, whole), and follow it each time it is set: a drag, a
+  double click, a lane, `og.window()`. `follow = "span"` shows the span's, as before. Each window the reader sets is
+  one filter on each such layer, laid out again in MapLibre's worker, where a span was filtered once. Measured in
+  headless Chrome (Apple M4 Pro), a served map of one vessel's 200,000 pings a minute as tiles: a window of a day set
+  with `og.window()`, the map settled after a median 615 ms following the window and 582 ms following the span (five
+  windows each, the camera's move included), so the filter adds little to the move. `og_tracks()` takes the default.
+
 # ogis 2026.11.22.1
 
 * **The time panel's path lies under the map's points, and its own points are optional**: `og_time(dots = )`. The

@@ -17,8 +17,9 @@
 #'
 #' The page holds one group's span at a time: by default its whole series; with `span`, also each of its intervals,
 #' chosen under *Span*. A group with more than `span_max` rows is offered by its spans only, or by month where there
-#' are none. The map's other layers that carry the group and a time ([og_path()], [og_point()]) show only the chosen
-#' group and span; a path's line that runs over a span's start or end is shown whole.
+#' are none. The map's other layers that carry the group and a time ([og_point()], [og_segment()], [og_path()]) show
+#' only the chosen group and the rows of the window, again as the window changes (`follow`); a path's line that runs
+#' over the window's start or end is shown whole.
 #'
 #' Every row is drawn. The window's path on the map joins every row of the window, and each row is a point, unless
 #' `thin` asks for fewer. The chart is given every row of the span; where more rows than pixels share the time axis,
@@ -72,6 +73,10 @@
 #'   Inferno, a click on one marking its time on the chart: `TRUE`, the default; `FALSE` where a point layer of the
 #'   map draws the same rows ([og_point()], as [og_tracks()]' pings do). The window's path is drawn under the panel's
 #'   point and segment layers (those with the group and a time), so the rows they draw lie on it.
+#' @param follow What the map's other layers that carry the group and a time ([og_point()], [og_segment()],
+#'   [og_path()]) show of the group chosen: `"window"`, the default, the rows of the window alone, as the chart's axis
+#'   shows them, again each time the window is set; `"span"`, every row of the span, wherever the window is. A path's
+#'   line (a run of the group, broken by a silence or a change of colour) is shown whole where it overlaps.
 #' @return An [og_map()] with the time panel.
 #' @seealso [og_path()] and [og_point()], the layers it pairs with; [og_bundle()], which writes the panel's series
 #'   beside the page.
@@ -97,6 +102,7 @@ og_time <- function(
   time_label = "UTC",
   thin = FALSE,
   dots = TRUE,
+  follow = c("window", "span"),
   data = NULL,
   lon = NULL,
   lat = NULL,
@@ -178,6 +184,14 @@ og_time <- function(
   }
   if (!isTRUE(dots) && !isFALSE(dots)) {
     stop("`dots` is TRUE (the window's rows drawn as the panel's own points) or FALSE.", call. = FALSE)
+  }
+  # the map's other layers show the window's rows (the maintainer, 2026-11-22: "By default I wanted only the trip
+  # window proper to appear both in space and time"; the window by default, the maintainer's choice when asked)
+  if (identical(follow, c("window", "span"))) {
+    follow <- "window"
+  }
+  if (!is.character(follow) || length(follow) != 1 || !follow %in% c("window", "span")) {
+    stop("`follow` is \"window\" (the other layers show the window's rows) or \"span\" (the span's).", call. = FALSE)
   }
   if (
     !is.null(lanes) &&
@@ -585,6 +599,8 @@ og_time <- function(
       thin = if (!isFALSE(thin)) thin,
       # none: the window's rows drawn as the panel's own points
       dots = if (!dots) FALSE,
+      # none: the window
+      follow = if (follow == "span") "span",
       cols = lapply(col, function(cc) list(field = cc, label = cc)),
       marks = lapply(seq_along(marks), function(k) list(field = marks[k], label = mark_labels[k])),
       lanes = lapply(seq_along(lanes), function(k) {

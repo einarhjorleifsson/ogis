@@ -16,6 +16,7 @@ og_time(
   time_label = "UTC",
   thin = FALSE,
   dots = TRUE,
+  follow = c("window", "span"),
   data = NULL,
   lon = NULL,
   lat = NULL,
@@ -79,6 +80,11 @@ Inferno, a click on one marking its time on the chart: \code{TRUE}, the default;
 map draws the same rows (\code{\link[=og_point]{og_point()}}, as \code{\link[=og_tracks]{og_tracks()}}' pings do). The window's path is drawn under the panel's
 point and segment layers (those with the group and a time), so the rows they draw lie on it.}
 
+\item{follow}{What the map's other layers that carry the group and a time (\code{\link[=og_point]{og_point()}}, \code{\link[=og_segment]{og_segment()}},
+\code{\link[=og_path]{og_path()}}) show of the group chosen: \code{"window"}, the default, the rows of the window alone, as the chart's axis
+shows them, again each time the window is set; \code{"span"}, every row of the span, wherever the window is. A path's
+line (a run of the group, broken by a silence or a change of colour) is shown whole where it overlaps.}
+
 \item{data}{Rows for this panel, in place of the map's.}
 
 \item{lon, lat, time}{The position and time columns: by default the map's, else \code{"lon"}, \code{"lat"} and \code{"time"}.}
@@ -109,8 +115,9 @@ hears it change with \code{og.on("window", fn)}.
 
 The page holds one group's span at a time: by default its whole series; with \code{span}, also each of its intervals,
 chosen under \emph{Span}. A group with more than \code{span_max} rows is offered by its spans only, or by month where there
-are none. The map's other layers that carry the group and a time (\code{\link[=og_path]{og_path()}}, \code{\link[=og_point]{og_point()}}) show only the chosen
-group and span; a path's line that runs over a span's start or end is shown whole.
+are none. The map's other layers that carry the group and a time (\code{\link[=og_point]{og_point()}}, \code{\link[=og_segment]{og_segment()}}, \code{\link[=og_path]{og_path()}}) show
+only the chosen group and the rows of the window, again as the window changes (\code{follow}); a path's line that runs
+over the window's start or end is shown whole.
 
 Every row is drawn. The window's path on the map joins every row of the window, and each row is a point, unless
 \code{thin} asks for fewer. The chart is given every row of the span; where more rows than pixels share the time axis,
