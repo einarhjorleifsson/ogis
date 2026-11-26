@@ -11,7 +11,7 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="tracks_files/libs/quarto-html/popper.min.js"></script><script src="tracks_files/libs/quarto-html/tippy.umd.min.js"></script><link href="tracks_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="tracks_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<script src="tracks_files/libs/og-map-3d60e8762531-1/og-locate.js"></script><script src="tracks_files/libs/og-map-f1a3642bac39-1/og-locate.js"></script><script src="tracks_files/libs/og-map-3693a7c22279-1/og-locate.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Vessel tracks">
+<script src="tracks_files/libs/og-map-b4ffeacc5ff9-1/og-locate.js"></script><script src="tracks_files/libs/og-map-777536b7ae41-1/og-locate.js"></script><script src="tracks_files/libs/og-map-fd480921cbf6-1/og-locate.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Vessel tracks">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -70,7 +70,7 @@
 
 
 
-    <p><code><a href="../reference/og_tracks.html">og_tracks()</a></code> draws vessel tracks, a row a ping, for a quick look at what a step of their processing made of them: a time panel of speed under the map (a vessel chosen there, then one of its trips), lanes of what the vessel was doing and of its trips, the chosen span’s path and pings on the map, and the fishing effort by cell, which follows the vessel chosen. The processing is <a href="https://github.com/einarhjorleifsson/ramb" class="external-link">ramb</a>’s: flags, harbours, trips, fishing and effort. ogis only draws, so a step’s output, ramb’s or another workflow’s, can be looked at as soon as it is made.</p>
+    <p><code><a href="../reference/og_tracks.html">og_tracks()</a></code> draws vessel tracks, a row a ping, for a quick look at what a step of their processing made of them: a time panel of speed under the map (a vessel chosen there, then one of its trips), lanes of what the vessel was doing and of its trips, the path and pings of the window shown on the chart, and the fishing effort by cell, which follows the vessel chosen. The processing is <a href="https://github.com/einarhjorleifsson/ramb" class="external-link">ramb</a>’s: flags, harbours, trips, fishing and effort. ogis only draws, so a step’s output, ramb’s or another workflow’s, can be looked at as soon as it is made.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://einarhjorleifsson.github.io/ogis/">ogis</a></span><span class="op">)</span></span>
@@ -103,15 +103,15 @@
 <span>  <span class="fu">ramb</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ramb/man/rb_add_effort.html" class="external-link">rb_add_effort</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/og_tracks.html">og_tracks</a></span><span class="op">(</span><span class="va">pings</span>, title <span class="op">=</span> <span class="st">"Danish vessels"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
-<iframe class="og-map" data-rr-map="og-map-3d60e8762531" title="Danish vessels" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
+<iframe class="og-map" data-rr-map="og-map-b4ffeacc5ff9" title="Danish vessels" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
 </div>
 </div>
 <p>What to look at:</p>
 <ul>
 <li>
-<strong>The trips.</strong> Under <em>Time</em>, choose a vessel, then a trip: the map and the panel show that trip alone. The lane <em>trip</em> shows where each trip begins and ends against the speed: a trip should leave a harbour and come back to one. A trip is known by its vessel and ramb’s number for it, which starts again each year.</li>
+<strong>The trips.</strong> Under <em>Time</em>, choose a vessel, then a trip: the map and the panel show that trip alone. A drag across the chart narrows the window, and the map then shows its pings alone; a double click shows the whole trip. The lane <em>trip</em> shows where each trip begins and ends against the speed: a trip should leave a harbour and come back to one. A trip is known by its vessel and ramb’s number for it, which starts again each year.</li>
 <li>
-<strong>What the vessel was doing.</strong> The lane <em>behaviour</em> and the pings’ colours: fishing at slow, steady speed, steaming fast between.</li>
+<strong>Speed and what the vessel was doing.</strong> The pings are coloured by speed, black the slowest (Inferno); <em>On top</em> draws the slow or the fast pings over the others. <em>Colour by</em> behaviour shows what the vessel was doing, in the colours of the lane <em>behaviour</em>: fishing at slow, steady speed, steaming fast between.</li>
 <li>
 <strong>The effort.</strong> <em>Show</em> follows the panel’s vessel: its own effort, its gear’s, or the whole fleet’s. <em>Cells</em> sets their size, live: about a pixel at each zoom, or 0.01 to 0.5 degrees at every zoom, a c-square (0.05) or an ICES rectangle (1 by 0.5), so the picture’s dependence on the grid is seen. <em>Vessels, at least</em> hides the cells of fewer vessels, as a confidentiality rule would; a click on a cell shows its number.</li>
 </ul></section><section class="level2"><h2 id="flags-against-the-truth">Flags against the truth<a class="anchor" aria-label="anchor" href="#flags-against-the-truth"></a>
@@ -136,7 +136,7 @@
 <span>          marks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>planted <span class="op">=</span> <span class="st">"fault"</span>, flagged <span class="op">=</span> <span class="st">"ping_flag"</span><span class="op">)</span>,</span>
 <span>          effort <span class="op">=</span> <span class="cn">FALSE</span>, title <span class="op">=</span> <span class="st">"Planted faults"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
-<iframe class="og-map" data-rr-map="og-map-f1a3642bac39" title="Planted faults" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
+<iframe class="og-map" data-rr-map="og-map-777536b7ae41" title="Planted faults" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
 </div>
 </div>
 <p>The map opens on the whole track, a line across the Baltic among it: a ping moved a thousand kilometres east, as one of the planted faults does. A planted fault with no flag is one the step missed; a flag with no planted fault, a good ping it took for a bad one. Drag across the chart where they cluster, to see them on the map.</p>
@@ -159,16 +159,16 @@
 <span>          compare <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>rule <span class="op">=</span> <span class="st">"rule"</span>, observer <span class="op">=</span> <span class="st">"observer"</span><span class="op">)</span>,</span>
 <span>          effort <span class="op">=</span> <span class="cn">FALSE</span>, title <span class="op">=</span> <span class="st">"Gillnet trips"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
-<iframe class="og-map" data-rr-map="og-map-3693a7c22279" title="Gillnet trips" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
+<iframe class="og-map" data-rr-map="og-map-fd480921cbf6" title="Gillnet trips" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
 </div>
 </div>
 <p>Choose a trip and drag across a cluster of marks: the rule calls fishing where the boat drifts, or misses the net’s setting where the boat moves faster.</p>
 </section><section class="level2"><h2 id="another-workflows-output">Another workflow’s output<a class="anchor" aria-label="anchor" href="#another-workflows-output"></a>
 </h2>
-<p><code><a href="../reference/og_tracks.html">og_tracks()</a></code> finds its columns by name: ramb’s, or those of the EM4SSF project’s track format (D2.1: <code>VESSEL_ID</code>, <code>DATE_TIME</code>, <code>LONGITUDE</code>, <code>LATITUDE</code>, <code>SPEED</code>, <code>TRIP_ID</code>, <code>ACTIVITY</code>, <code>GEAR</code>), or those given. A file written by any step of such a workflow is looked at in one line, another method’s trips held against it:</p>
+<p><code><a href="../reference/og_tracks.html">og_tracks()</a></code> finds its columns by name: ramb’s, or upper-case ones (<code>VESSEL_ID</code>, <code>DATE_TIME</code>, <code>LONGITUDE</code>, <code>LATITUDE</code>, <code>SPEED</code>, <code>TRIP_ID</code>, <code>ACTIVITY</code>, <code>GEAR</code>), or those given. A file written by any step of such a workflow is looked at in one line, another method’s trips held against it:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/og_tracks.html">og_tracks</a></span><span class="op">(</span><span class="st">"trips_step01.parquet"</span>, compare <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ramb <span class="op">=</span> <span class="st">"trip_key"</span>, EM4SSF <span class="op">=</span> <span class="st">"TRIP_ID"</span><span class="op">)</span>, effort <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/og_tracks.html">og_tracks</a></span><span class="op">(</span><span class="st">"trips.parquet"</span>, compare <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ramb <span class="op">=</span> <span class="st">"trip_key"</span>, other <span class="op">=</span> <span class="st">"TRIP_ID"</span><span class="op">)</span>, effort <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>A set and its haul, drawn as a segment with a time (<code><a href="../reference/og_point.html">og_segment()</a></code>), follow the panel as the pings do: a static gear’s soak is checked on the map beside the track that made it.</p>
 </section><script id="quarto-html-after-body" type="application/javascript">

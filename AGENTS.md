@@ -122,8 +122,8 @@ entries and fishycode’s plans keep the names of their day.
   page that edits builds on ogis’s documented surface:
   [`og_script()`](https://einarhjorleifsson.github.io/ogis/reference/og_script.md),
   `og_serve(routes = )`, and in the page `og.on()`, `og.state()`,
-  `og.fetch()`. It uses no `:::` and no copied page. A fault such a page
-  finds is fixed in ogis, with a test.
+  `og.fetch()`, `og.window()`. It uses no `:::` and no copied page. A
+  fault such a page finds is fixed in ogis, with a test.
 - **Keep it simple** (2026-11-11): options studied and set aside are not
   built unasked. These include MLT, GeoArrow with deck.gl, DuckDB-WASM,
   FlatGeobuf, and a `.duckdb` file as the store (parquet stays the
@@ -149,31 +149,47 @@ and fishycode (`~/stasi/fishycode`) holds the designs and choices:
 The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*`
 and others).
 
-## State (2026-11-19)
+## State (2026-11-26)
 
-- **`main`** is at 2026.11.19.1 and on GitHub (pushed 2026-11-19 at the
-  maintainer’s word): fd28f37,
-  [`og_names()`](https://einarhjorleifsson.github.io/ogis/reference/og_names.md)
-  turning a name by an `angle` column (fishycode’s plan 078 ask i), with
-  a test. Its push ran no CI, the newest commit carrying the skip
-  marker, nor did an empty commit quoting it (c27cc9e); 0bf40a8, empty,
-  ran both: R CMD check passed on Ubuntu, Windows and macOS, and the
-  site was built (its build at 8fddee3 had failed installing R on the
-  runner, not in ogis). Before it, 2026.11.19 (cf66ca5, a test of a
-  served map’s `og_cells(filter = )`) and 2026.11.18.17 (c6f3bcf,
-  0c4ed35); the side sessions that built 2026.11.18.14-17 are closed,
-  their record fishycode’s decision 330.
-- **Installed**: 2026.11.19.1, from the local `main` at fd28f37
-  (`remotes::install_git("file:///Users/einarhj/R/Pakkar/ogis", git = "external", force = TRUE)`:
-  a bare path loses its leading slash; `RemoteSha` fd28f37, the LFS
-  example data whole, byte for byte the tree’s). The tests that run only
-  against an installed ogis (test-knit.R’s renders) pass against it, 34
-  of 34. Before it, 2026.11.19 from GitHub at 79017ff.
+- **`main`** is at 2026.11.26.3 on GitHub, pushed on 2026-11-26 at the
+  maintainer’s word (“Yes, scrub and push”). Before the push, the twelve
+  local commits after 93170cd (2026.11.21.2) had their messages and
+  notes reworded to take out work outside ogis; no code changed, and the
+  commits as they were are on the local branch
+  `backup/pre-scrub-2026-11-26`. 2026.11.26.3 words
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)’
+  help, a test’s name, the tracks article and NEWS alike. The versions
+  in the push: 2026.11.22 (c5eb655), `og.window()` and
+  `og.on("window")`; 2026.11.22.1 (6c15a84), `og_time(dots = )`;
+  2026.11.22.2 (9439689), `og_time(follow = )`, the window by default
+  (the maintainer’s choice); 2026.11.22.3 (f26df14), *On top* on every
+  point layer coloured by a number; 2026.11.22.4 (28900dd),
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)’
+  pings by speed in Inferno, `palette = list(<column> = )`; 2026.11.22.5
+  (5af9bac), the own-page article’s window stepped a day at a time;
+  2026.11.26 (dd74c85), H3’s hexagons in
+  [`og_cells()`](https://einarhjorleifsson.github.io/ogis/reference/og_cells.md);
+  2026.11.26.1 (2b26095), a grid cell with no value grey (the user: “fix
+  the no-soak colour in ogis”); 2026.11.26.2 (35b08ac),
+  `og_cells(pixel = FALSE)` and a bundle carrying every size offered.
+  `devtools::test()` passed as each landed (1,739 on 2026.11.22.5; two
+  tests skip that need the installed ogis), and `devtools::check()` on
+  2026.11.22.5 gave 0 errors, 0 warnings and two notes (a worktree’s
+  `.git` file, and
+  [`og_names()`](https://einarhjorleifsson.github.io/ogis/reference/og_names.md)’
+  `angle`, there since 2026.11.19.1). CI runs on the push.
+- **Installed**: 2026.11.26.2, from `main`’s local tree
+  (`devtools::install()`, `RemoteSha` empty), for an effort page; before
+  it 2026.11.22.5, from the branch’s local tree (the LFS example data
+  whole, dansk.parquet 6,583,218 bytes), at the maintainer’s word, for a
+  trip check page. The tests that run only against an installed ogis
+  pass against it (test-knit.R’s Quarto test, test-script.R’s
+  `og_serve(wait = TRUE)`).
 - **Open**: a vessel id with a comma is still refused by the effort’s
   cells, since the server splits a filter’s values at commas (fishycode
   TODO 203); a tile address for dem and contour layers, the S3 route for
   the Icelandic depth model (TODO 204).
-- **Next**: the EM4SSF hackathon in Ancona, 1-4 December 2026. There,
+- **Next**:
   [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
-  is a quick visual check of each step of a track’s processing, with
+  as a quick visual check of each step of a track’s processing, with
   ramb doing the processing.

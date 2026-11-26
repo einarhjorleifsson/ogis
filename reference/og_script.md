@@ -60,6 +60,20 @@ The map, with the script.
   `value`), or `null` when the reader has clicked again meanwhile; the
   layer's own popup is not shown.
 
+- `og.window()`: the time panel's window
+  ([`og_time()`](https://einarhjorleifsson.github.io/ogis/reference/og_time.md)),
+  `[from, to]` in seconds since 1970 on the panel's clock (as the data
+  hold the times, in no zone), or `null` where there is no panel, while
+  a series loads, or for a span of no rows. `og.window([from, to])` sets
+  it, as a drag across the chart does, and `og.window(null)` shows the
+  group's whole span. Asked for before the panel's series has loaded,
+  the window is set once it has, in place of the address's.
+
+- `og.on("window", fn)`: `fn({window, group, span})` each time the time
+  panel's window is drawn (a drag, a double click, a lane, another group
+  or span, `og.window()`), with the group and the span shown; called at
+  once with the window shown, if there is one.
+
 - `og.setData(id, geojson)`: a layer sent whole (`whole = TRUE`) given
   new data, at most once a frame.
 

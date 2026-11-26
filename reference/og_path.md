@@ -124,6 +124,9 @@ og_path(
   loosely: `"set1"` is Set 1), colours, colours named by value
   (`c(Fishing = "#c0392b")`), or a function of n
   ([`viridisLite::mako`](https://sjmgarnier.github.io/viridisLite/reference/viridis.html)).
+  For a choice of columns in `colour`, one of these for each column, a
+  list named by the columns (`list(speed = "inferno")`), a column not
+  named keeping its default.
 
 - limits, stretch:
 

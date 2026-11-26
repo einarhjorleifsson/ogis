@@ -15,6 +15,8 @@ lists it):
 | `map` | MapLibre’s map |
 | `layer(id)` | a layer’s MapLibre style ids, source and key |
 | `on("click", id, fn)` | a click on a layer’s features, its row as [`row()`](https://rdrr.io/r/base/row.html) |
+| `window([from, to])` | the time panel’s window ([`og_time()`](https://einarhjorleifsson.github.io/ogis/reference/og_time.md)) set, in seconds, or `null` for the whole span; read with no argument |
+| `on("window", fn)` | the time panel’s window each time it is drawn, with its group and span |
 | `state(id, key, value)` | a feature’s state in MapLibre, which its styles read |
 | `setData(id, geojson)` | new data for a layer sent whole |
 | `filter(id, key, expr)` | a filter of your own, kept with the page’s choices |
@@ -95,3 +97,48 @@ In a script run by `Rscript`, give `og_serve(..., wait = TRUE)`: it
 keeps serving until stopped (Ctrl-C). In RStudio it answers while the
 console is idle. The page’s writes are answered only for a page opened
 from this computer.
+
+## The time panel’s window
+
+A map with a time panel
+([`og_time()`](https://einarhjorleifsson.github.io/ogis/reference/og_time.md),
+[`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md))
+shows a window of a group’s span: the chart’s time axis, and on the map
+the rows in it. `og.window()` reads it and sets it, as a drag across the
+chart does, in seconds since 1970 on the panel’s clock;
+`og.on("window", fn)` hears each window drawn, the reader’s or the
+script’s. Here two buttons step through a vessel’s track a day at a
+time, and the panel’s box says which day is shown:
+
+``` r
+
+js_days <- r"(
+  const body = og.panel("Day by day");
+  const said = document.createElement("div");
+  const back = document.createElement("button"), on = document.createElement("button");
+  back.textContent = "‹ day"; on.textContent = "day ›";
+  body.append(said, back, on);
+  const day = 86400, iso = s => new Date(s * 1000).toISOString().slice(0, 16).replace("T", " ");
+  og.on("window", ({ window: w, group }) => { said.textContent = `${group}: ${iso(w[0])} to ${iso(w[1])}`; });
+  // a window of one day steps a day either way; any other first shows the day it starts in
+  const step = k => {
+    const w = og.window();
+    if (!w) return;
+    const d0 = Math.floor(w[0] / day) * day, one = Math.abs(w[0] - d0) < 1 && Math.abs(w[1] - w[0] - day) < 1;
+    const a = d0 + (one ? k : 0) * day;
+    og.window([a, a + day]);
+  };
+  back.onclick = () => step(-1);
+  on.onclick = () => step(1);
+)"
+og_example("dansk") |>
+  dplyr::filter(vessel_id == "EX_12") |>
+  dplyr::collect() |>
+  dplyr::slice(seq(1, dplyr::n(), by = 3)) |>
+  og_tracks(effort = FALSE, title = "Day by day") |>
+  og_script(js_days)
+```
+
+The map’s pings show the window’s rows alone, as the chart does
+(`og_time(follow = )`), coloured by speed, black the slowest; *On top*
+under *Pings* draws the slow or the fast ones over the others.

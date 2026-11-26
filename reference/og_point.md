@@ -197,7 +197,12 @@ og_text(
   shown. A column's colours by default: Okabe-Ito for up to eight
   values, Paired for up to twelve, Glasbey's 32 beyond, the rest grey as
   "other"; viridis for an ordered factor and for numbers, dates and
-  times. `color` is the same.
+  times. `color` is the same. Points coloured by a number have a switch
+  under the layer's name, *On top*: the rows in their order (the
+  default), or low or high values on top, so that the slowest pings,
+  say, are not hidden under faster ones; it goes into the page's address
+  as `<id>_ontop`. MapLibre's own `"circle-sort-key"`, given in `...`,
+  replaces it.
 
 - size:
 
@@ -252,6 +257,9 @@ og_text(
   loosely: `"set1"` is Set 1), colours, colours named by value
   (`c(Fishing = "#c0392b")`), or a function of n
   ([`viridisLite::mako`](https://sjmgarnier.github.io/viridisLite/reference/viridis.html)).
+  For a choice of columns in `colour`, one of these for each column, a
+  list named by the columns (`list(speed = "inferno")`), a column not
+  named keeping its default.
 
 - limits, stretch:
 

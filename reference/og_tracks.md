@@ -3,8 +3,10 @@
 `og_tracks()` draws vessel tracks, a row a ping, for a look at what a
 track's processing made of them: a time panel under the map with a
 vessel's speed over time and lanes of what it was doing and of its trips
-(a vessel chosen there, then one of its trips), the map showing that
-span's path and the pings coloured by what the vessel was doing; and the
+(a vessel chosen there, then one of its trips), the map showing the path
+and pings of the window shown on the chart, the pings coloured by speed
+in Inferno, black the slowest, or by what the vessel was doing (in the
+lane's colours), and slow or fast pings on top (*On top*); and the
 fishing effort by cell, summed from the fishing pings' hours, showing
 the chosen vessel's, its gear's or the fleet's
 ([`og_cells()`](https://einarhjorleifsson.github.io/ogis/reference/og_cells.md)'s
@@ -54,9 +56,10 @@ og_tracks(
 
   The columns, as strings, where their names are not found: the vessel,
   the time, the position, the speed (more than one: the first shown, the
-  others ticked on in the panel), what the vessel was doing (a lane, and
-  the pings' colour), its trip (chosen in the panel, a trip at a time),
-  its gear, and the hours each ping stands for (the effort's).
+  others ticked on in the panel; the first the pings' colour), what the
+  vessel was doing (a lane, and the pings' other colour), its trip
+  (chosen in the panel, a trip at a time), its gear, and the hours each
+  ping stands for (the effort's).
 
 - lanes:
 
@@ -73,7 +76,7 @@ og_tracks(
 - compare:
 
   Two columns to hold against each other, as strings, named for their
-  sources (`c(ramb = "trip_id", EM4SSF = "TRIP_ID")`), or a list of such
+  sources (`c(ramb = "trip_id", other = "TRIP_ID")`), or a list of such
   pairs: two methods' trips, an inferred activity against an observer's.
   Each is a lane, and the panel marks, each a row of its own, the pings
   that one has and the other has not (in a trip by one method alone),
@@ -119,9 +122,9 @@ The map.
 
 The columns are found by their names: ramb's (`vid`, `time`, `lon`,
 `lat`, `speed`, `voyage_key` or `trip_id`, `gear`, `hours`, and
-`behaviour` or `activity`) or EM4SSF's D2.1 format's (`VESSEL_ID`,
-`DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`, `TRIP_ID`, `ACTIVITY`,
-`GEAR`), or given.
+`behaviour` or `activity`) or upper-case ones (`VESSEL_ID`, `DATE_TIME`,
+`LONGITUDE`, `LATITUDE`, `SPEED`, `TRIP_ID`, `ACTIVITY`, `GEAR`), or
+given.
 
 ## See also
 

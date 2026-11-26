@@ -17,7 +17,7 @@ zooms. A click on a cell shows its values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -70,8 +70,10 @@ zooms. A click on a cell shows its values.</p>
 <span>  one_of <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  range <span class="op">=</span> <span class="st">"year"</span>,</span>
 <span>  unit <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  h3 <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
 <span>  ices <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  pixel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  cell <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  vessels <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  min_vessels <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -123,13 +125,26 @@ fishing, say): one value shown at a time, the first by default, with no "all".</
 <dd><p>The degrees of one step of <code>ix</code> and <code>iy</code>.</p></dd>
 
 
+<dt id="arg-h-">h3<a class="anchor" aria-label="anchor" href="#arg-h-"></a></dt>
+<dd><p>The column of the cells' H3 index: by default <code>"h3"</code> where the cells have one; <code>FALSE</code>, none.</p></dd>
+
+
 <dt id="arg-sizes-ices">sizes, ices<a class="anchor" aria-label="anchor" href="#arg-sizes-ices"></a></dt>
 <dd><p>The cell sizes in degrees the page offers besides about a pixel, those that are a whole number of the
-cells' own; <code>ices</code>, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them.</p></dd>
+cells' own; <code>ices</code>, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them. A bundle carries
+every size offered.</p></dd>
+
+
+<dt id="arg-pixel">pixel<a class="anchor" aria-label="anchor" href="#arg-pixel"></a></dt>
+<dd><p>Whether the page offers cells of about a screen pixel at each zoom (and finer and coarser) beside the
+fixed sizes. <code>FALSE</code>, the fixed sizes alone (and H3's), opening on the finest: for cells whose own size is already
+about a pixel at the zooms they are looked at, where a pixel's cells are the finest size's.</p></dd>
 
 
 <dt id="arg-cell">cell<a class="anchor" aria-label="anchor" href="#arg-cell"></a></dt>
-<dd><p>The cells' size when the page opens: <code>NULL</code>, about a pixel; one of <code>sizes</code>; or <code>"ices"</code>.</p></dd>
+<dd><p>The cells' size when the page opens: <code>NULL</code>, about a pixel (the finest size with <code>pixel = FALSE</code>; H3
+following the zoom where the cells have no squares); one of <code>sizes</code>; <code>"ices"</code>; <code>"h3"</code>, H3 following the zoom; or
+<code>"h3_&lt;resolution&gt;"</code>, such as <code>"h3_9"</code>.</p></dd>
 
 
 <dt id="arg-vessels">vessels<a class="anchor" aria-label="anchor" href="#arg-vessels"></a></dt>
@@ -209,14 +224,17 @@ column, each a named vector, code to name (<code>list(gid = c("6" = "Bottom traw
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The map, with the layer. A map has one such layer at most. <code><a href="og_bundle.html">og_bundle()</a></code> carries it with no further word,
-summed by the browser from the cells at sizes from 0.01 degrees up.</p>
+summed by the browser from the cells at sizes from 0.01 degrees up; H3's hexagons are drawn on a served map only,
+so a bundle offers the squares alone, and leaves out cells that have no squares.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The page's <em>Cells</em> sets their size, live: about a screen pixel at each zoom (finer or coarser), or one size at every
 zoom (by default 0.01, 0.05, a c-square, 0.1 and 0.5 degrees, and the ICES statistical rectangle, 1 by 0.5
 degrees), so the reader sees what a grid's resolution does to the picture. A size narrower than half a pixel at the
-zoom is drawn at a whole number of it that is not. Where the cells name their vessel (<code>vessels</code>), the page also hides
+zoom is drawn at a whole number of it that is not. Where the cells also carry their H3 cell (<code>h3</code>), the same control
+offers H3's hexagons: at a resolution following the zoom (about eight pixels across), or at one resolution at every
+zoom, from the cells' own to coarser; a square and a hexagon are two grids over the same values. Where the cells name their vessel (<code>vessels</code>), the page also hides
 the cells of fewer than a number of vessels chosen there (all by default), as a confidentiality rule would, and a
 click shows each cell's.</p>
 <p>The arguments are the starting look and choices; the page's controls change them, and a value in the page's address
@@ -232,6 +250,10 @@ fastest;</p></li>
 </ul><p>Its columns:</p><ul><li><p><code>ix</code> and <code>iy</code> (or <code>x</code> and <code>y</code>): the cell's south-west corner, in whole steps of <code>unit</code> degrees of longitude and
 latitude (thousandths of a degree by default). The cells' own size is read from the corners: a table of
 0.005-degree cells is drawn no finer than that;</p></li>
+<li><p><code>h3</code> (optional, or the column named by <code>h3</code>): the cell's H3 index, as text or a whole number, all of one
+resolution, the finest drawn. A table may have both a square and an H3 cell on each row (a row for each pair
+that meets), or either alone. H3 needs DuckDB's community extension
+h3, installed on first use;</p></li>
 <li><p><code>values</code>: the columns summed, each coloured per square kilometre; by default every column of fractions;</p></li>
 <li><p><code>count</code>: a column of whole numbers summed and shown on a click, not coloured (<code>n</code>, the records, by default);</p></li>
 <li><p><code>by</code>: the columns the reader chooses by, the others by default: each a list of its values ("all" first, then
@@ -263,6 +285,16 @@ under it.</p></div>
 <span class="r-in"><span>         palette <span class="op">=</span> <span class="st">"blues"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;og_map&gt; Map</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   layers: cells (grid)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># the same hours on H3's hexagons too, beside the squares (each row a square and the hexagon it meets)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">duckdb</span><span class="fu">::</span><span class="fu"><a href="https://r.duckdb.org/reference/duckdb.html" class="external-link">duckdb</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbExecute.html" class="external-link">dbExecute</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"INSTALL h3 FROM community; LOAD h3"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">duckdb</span><span class="fu">::</span><span class="fu"><a href="https://r.duckdb.org/reference/duckdb_register.html" class="external-link">duckdb_register</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cells"</span>, <span class="va">cells</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">hex</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbGetQuery.html" class="external-link">dbGetQuery</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"SELECT ix, iy, h3_latlng_to_cell_string((iy + 5) / 1000, (ix + 5) / 1000, 8) AS h3,</span></span></span>
+<span class="r-in"><span><span class="st">                                    gear, year, hours FROM cells"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">og_cells</span><span class="op">(</span><span class="va">hex</span>, cell <span class="op">=</span> <span class="st">"h3_7"</span>, name <span class="op">=</span> <span class="st">"Fishing effort"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># cells named once, by OGIS_CELLS in .Renviron, over the sea floor:</span></span></span>
 <span class="r-in"><span><span class="co"># og_map() |&gt; og_relief() |&gt; og_cells(name = "Fishing effort", one_of = "preset")</span></span></span>

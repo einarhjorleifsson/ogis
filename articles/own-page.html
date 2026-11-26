@@ -11,7 +11,7 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="own-page_files/libs/quarto-html/popper.min.js"></script><script src="own-page_files/libs/quarto-html/tippy.umd.min.js"></script><link href="own-page_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="own-page_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<script src="own-page_files/libs/og-map-41a91e3c2907-1/og-locate.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="A page of your own">
+<script src="own-page_files/libs/og-map-6f8d04f464b3-1/og-locate.js"></script><script src="own-page_files/libs/og-map-48b1d45e26b9-1/og-locate.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="A page of your own">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -95,6 +95,14 @@
 </td>
 </tr>
 <tr class="even">
+<td><code>window([from, to])</code></td>
+<td>the time panel’s window (<code><a href="../reference/og_time.html">og_time()</a></code>) set, in seconds, or <code>null</code> for the whole span; read with no argument</td>
+</tr>
+<tr class="odd">
+<td><code>on("window", fn)</code></td>
+<td>the time panel’s window each time it is drawn, with its group and span</td>
+</tr>
+<tr class="even">
 <td><code>state(id, key, value)</code></td>
 <td>a feature’s state in MapLibre, which its styles read</td>
 </tr>
@@ -159,7 +167,7 @@
 <span>  <span class="fu"><a href="../reference/og_script.html">og_script</a></span><span class="op">(</span><span class="va">js</span><span class="op">)</span></span>
 <span><span class="va">m</span></span></code></pre></div>
 <div class="cell-output-display">
-<iframe class="og-map" data-rr-map="og-map-41a91e3c2907" title="Map" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
+<iframe class="og-map" data-rr-map="og-map-6f8d04f464b3" title="Map" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
 </div>
 </div>
 <p>Click a few positions, then <em>Save the list</em>.</p>
@@ -176,6 +184,41 @@
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>In a script run by <code>Rscript</code>, give <code>og_serve(..., wait = TRUE)</code>: it keeps serving until stopped (Ctrl-C). In RStudio it answers while the console is idle. The page’s writes are answered only for a page opened from this computer.</p>
+</section><section class="level2"><h2 id="the-time-panels-window">The time panel’s window<a class="anchor" aria-label="anchor" href="#the-time-panels-window"></a>
+</h2>
+<p>A map with a time panel (<code><a href="../reference/og_time.html">og_time()</a></code>, <code><a href="../reference/og_tracks.html">og_tracks()</a></code>) shows a window of a group’s span: the chart’s time axis, and on the map the rows in it. <code>og.window()</code> reads it and sets it, as a drag across the chart does, in seconds since 1970 on the panel’s clock; <code>og.on("window", fn)</code> hears each window drawn, the reader’s or the script’s. Here two buttons step through a vessel’s track a day at a time, and the panel’s box says which day is shown:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">js_days</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
+<span><span class="st">  const body = og.panel("Day by day");</span></span>
+<span><span class="st">  const said = document.createElement("div");</span></span>
+<span><span class="st">  const back = document.createElement("button"), on = document.createElement("button");</span></span>
+<span><span class="st">  back.textContent = "‹ day"; on.textContent = "day ›";</span></span>
+<span><span class="st">  body.append(said, back, on);</span></span>
+<span><span class="st">  const day = 86400, iso = s =&gt; new Date(s * 1000).toISOString().slice(0, 16).replace("T", " ");</span></span>
+<span><span class="st">  og.on("window", ({ window: w, group }) =&gt; { said.textContent = `${group}: ${iso(w[0])} to ${iso(w[1])}`; });</span></span>
+<span><span class="st">  // a window of one day steps a day either way; any other first shows the day it starts in</span></span>
+<span><span class="st">  const step = k =&gt; {</span></span>
+<span><span class="st">    const w = og.window();</span></span>
+<span><span class="st">    if (!w) return;</span></span>
+<span><span class="st">    const d0 = Math.floor(w[0] / day) * day, one = Math.abs(w[0] - d0) &lt; 1 &amp;&amp; Math.abs(w[1] - w[0] - day) &lt; 1;</span></span>
+<span><span class="st">    const a = d0 + (one ? k : 0) * day;</span></span>
+<span><span class="st">    og.window([a, a + day]);</span></span>
+<span><span class="st">  };</span></span>
+<span><span class="st">  back.onclick = () =&gt; step(-1);</span></span>
+<span><span class="st">  on.onclick = () =&gt; step(1);</span></span>
+<span><span class="st">)"</span></span>
+<span><span class="fu"><a href="../reference/og_example.html">og_example</a></span><span class="op">(</span><span class="st">"dansk"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">vessel_id</span> <span class="op">==</span> <span class="st">"EX_12"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html" class="external-link">n</a></span><span class="op">(</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/og_tracks.html">og_tracks</a></span><span class="op">(</span>effort <span class="op">=</span> <span class="cn">FALSE</span>, title <span class="op">=</span> <span class="st">"Day by day"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/og_script.html">og_script</a></span><span class="op">(</span><span class="va">js_days</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<iframe class="og-map" data-rr-map="og-map-48b1d45e26b9" title="Day by day" style="width:100%;height:480px;border:1px solid #d9d9d9;border-radius:4px;display:block" loading="lazy"></iframe>
+</div>
+</div>
+<p>The map’s pings show the window’s rows alone, as the chart does (<code>og_time(follow = )</code>), coloured by speed, black the slowest; <em>On top</em> under <em>Pings</em> draws the slow or the fast ones over the others.</p>
 </section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

@@ -26,6 +26,8 @@ og_time(
   span_max = 3e+06,
   time_label = "UTC",
   thin = FALSE,
+  dots = TRUE,
+  follow = c("window", "span"),
   data = NULL,
   lon = NULL,
   lat = NULL,
@@ -135,6 +137,31 @@ og_time(
   in k drawn on the map" while it thins. `TRUE` is 5,000. The chart is
   not thinned.
 
+- dots:
+
+  Whether the window's rows are drawn as points of the panel's own,
+  coloured by the first of `col` in Inferno, a click on one marking its
+  time on the chart: `TRUE`, the default; `FALSE` where a point layer of
+  the map draws the same rows
+  ([`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+  as
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)'
+  pings do). The window's path is drawn under the panel's point and
+  segment layers (those with the group and a time), so the rows they
+  draw lie on it.
+
+- follow:
+
+  What the map's other layers that carry the group and a time
+  ([`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+  [`og_segment()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+  [`og_path()`](https://einarhjorleifsson.github.io/ogis/reference/og_path.md))
+  show of the group chosen: `"window"`, the default, the rows of the
+  window alone, as the chart's axis shows them, again each time the
+  window is set; `"span"`, every row of the span, wherever the window
+  is. A path's line (a run of the group, broken by a silence or a change
+  of colour) is shown whole where it overlaps.
+
 - data:
 
   Rows for this panel, in place of the map's.
@@ -167,17 +194,22 @@ window, and a double click goes back to the whole span. The map draws
 the window's path and points, and fits to them. A hover on the chart
 marks that row on the map, and a click on a point of the window marks
 its time on the chart. The group, the span and the window go into the
-page's address.
+page's address. A page's own script
+([`og_script()`](https://einarhjorleifsson.github.io/ogis/reference/og_script.md))
+reads and sets the window with `og.window()`, and hears it change with
+`og.on("window", fn)`.
 
 The page holds one group's span at a time: by default its whole series;
 with `span`, also each of its intervals, chosen under *Span*. A group
 with more than `span_max` rows is offered by its spans only, or by month
 where there are none. The map's other layers that carry the group and a
 time
-([`og_path()`](https://einarhjorleifsson.github.io/ogis/reference/og_path.md),
-[`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md))
-show only the chosen group and span; a path's line that runs over a
-span's start or end is shown whole.
+([`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+[`og_segment()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+[`og_path()`](https://einarhjorleifsson.github.io/ogis/reference/og_path.md))
+show only the chosen group and the rows of the window, again as the
+window changes (`follow`); a path's line that runs over the window's
+start or end is shown whole.
 
 Every row is drawn. The window's path on the map joins every row of the
 window, and each row is a point, unless `thin` asks for fewer. The chart

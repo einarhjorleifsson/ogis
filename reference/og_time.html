@@ -19,7 +19,7 @@ lanes of intervals under the chart (visits, legs, phases), a click on one settin
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,6 +72,8 @@ a float's, an animal's: the values of <code>by</code>):</p><ul><li><p>a column o
 <span>  span_max <span class="op">=</span> <span class="fl">3e+06</span>,</span>
 <span>  time_label <span class="op">=</span> <span class="st">"UTC"</span>,</span>
 <span>  thin <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  dots <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  follow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"window"</span>, <span class="st">"span"</span><span class="op">)</span>,</span>
 <span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lon <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lat <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -152,6 +154,20 @@ chart, is thinned less, and one of that many rows or fewer not at all. The panel
 the map" while it thins. <code>TRUE</code> is 5,000. The chart is not thinned.</p></dd>
 
 
+<dt id="arg-dots">dots<a class="anchor" aria-label="anchor" href="#arg-dots"></a></dt>
+<dd><p>Whether the window's rows are drawn as points of the panel's own, coloured by the first of <code>col</code> in
+Inferno, a click on one marking its time on the chart: <code>TRUE</code>, the default; <code>FALSE</code> where a point layer of the
+map draws the same rows (<code><a href="og_point.html">og_point()</a></code>, as <code><a href="og_tracks.html">og_tracks()</a></code>' pings do). The window's path is drawn under the panel's
+point and segment layers (those with the group and a time), so the rows they draw lie on it.</p></dd>
+
+
+<dt id="arg-follow">follow<a class="anchor" aria-label="anchor" href="#arg-follow"></a></dt>
+<dd><p>What the map's other layers that carry the group and a time (<code><a href="og_point.html">og_point()</a></code>, <code><a href="og_point.html">og_segment()</a></code>,
+<code><a href="og_path.html">og_path()</a></code>) show of the group chosen: <code>"window"</code>, the default, the rows of the window alone, as the chart's axis
+shows them, again each time the window is set; <code>"span"</code>, every row of the span, wherever the window is. A path's
+line (a run of the group, broken by a silence or a change of colour) is shown whole where it overlaps.</p></dd>
+
+
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>Rows for this panel, in place of the map's.</p></dd>
 
@@ -178,11 +194,13 @@ the map" while it thins. <code>TRUE</code> is 5,000. The chart is not thinned.</
     <p>The panel and the map are linked. A drag across the chart sets the time window, and a double click goes back to
 the whole span. The map draws the window's path and points, and fits to them. A hover on the chart marks that row
 on the map, and a click on a point of the window marks its time on the chart. The group, the span and the window go
-into the page's address.</p>
+into the page's address. A page's own script (<code><a href="og_script.html">og_script()</a></code>) reads and sets the window with <code>og.window()</code>, and
+hears it change with <code>og.on("window", fn)</code>.</p>
 <p>The page holds one group's span at a time: by default its whole series; with <code>span</code>, also each of its intervals,
 chosen under <em>Span</em>. A group with more than <code>span_max</code> rows is offered by its spans only, or by month where there
-are none. The map's other layers that carry the group and a time (<code><a href="og_path.html">og_path()</a></code>, <code><a href="og_point.html">og_point()</a></code>) show only the chosen
-group and span; a path's line that runs over a span's start or end is shown whole.</p>
+are none. The map's other layers that carry the group and a time (<code><a href="og_point.html">og_point()</a></code>, <code><a href="og_point.html">og_segment()</a></code>, <code><a href="og_path.html">og_path()</a></code>) show
+only the chosen group and the rows of the window, again as the window changes (<code>follow</code>); a path's line that runs
+over the window's start or end is shown whole.</p>
 <p>Every row is drawn. The window's path on the map joins every row of the window, and each row is a point, unless
 <code>thin</code> asks for fewer. The chart is given every row of the span; where more rows than pixels share the time axis,
 its line runs, in each column of pixels, from the least of their values to the most, so no value is left out, and a

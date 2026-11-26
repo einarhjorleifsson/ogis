@@ -4,12 +4,12 @@
 draws vessel tracks, a row a ping, for a quick look at what a step of
 their processing made of them: a time panel of speed under the map (a
 vessel chosen there, then one of its trips), lanes of what the vessel
-was doing and of its trips, the chosen span’s path and pings on the map,
-and the fishing effort by cell, which follows the vessel chosen. The
-processing is [ramb](https://github.com/einarhjorleifsson/ramb)’s:
-flags, harbours, trips, fishing and effort. ogis only draws, so a step’s
-output, ramb’s or another workflow’s, can be looked at as soon as it is
-made.
+was doing and of its trips, the path and pings of the window shown on
+the chart, and the fishing effort by cell, which follows the vessel
+chosen. The processing is
+[ramb](https://github.com/einarhjorleifsson/ramb)’s: flags, harbours,
+trips, fishing and effort. ogis only draws, so a step’s output, ramb’s
+or another workflow’s, can be looked at as soon as it is made.
 
 ``` r
 
@@ -52,12 +52,17 @@ og_tracks(pings, title = "Danish vessels")
 What to look at:
 
 - **The trips.** Under *Time*, choose a vessel, then a trip: the map and
-  the panel show that trip alone. The lane *trip* shows where each trip
-  begins and ends against the speed: a trip should leave a harbour and
-  come back to one. A trip is known by its vessel and ramb’s number for
-  it, which starts again each year.
-- **What the vessel was doing.** The lane *behaviour* and the pings’
-  colours: fishing at slow, steady speed, steaming fast between.
+  the panel show that trip alone. A drag across the chart narrows the
+  window, and the map then shows its pings alone; a double click shows
+  the whole trip. The lane *trip* shows where each trip begins and ends
+  against the speed: a trip should leave a harbour and come back to one.
+  A trip is known by its vessel and ramb’s number for it, which starts
+  again each year.
+- **Speed and what the vessel was doing.** The pings are coloured by
+  speed, black the slowest (Inferno); *On top* draws the slow or the
+  fast pings over the others. *Colour by* behaviour shows what the
+  vessel was doing, in the colours of the lane *behaviour*: fishing at
+  slow, steady speed, steaming fast between.
 - **The effort.** *Show* follows the panel’s vessel: its own effort, its
   gear’s, or the whole fleet’s. *Cells* sets their size, live: about a
   pixel at each zoom, or 0.01 to 0.5 degrees at every zoom, a c-square
@@ -135,15 +140,14 @@ faster.
 ## Another workflow’s output
 
 [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
-finds its columns by name: ramb’s, or those of the EM4SSF project’s
-track format (D2.1: `VESSEL_ID`, `DATE_TIME`, `LONGITUDE`, `LATITUDE`,
-`SPEED`, `TRIP_ID`, `ACTIVITY`, `GEAR`), or those given. A file written
-by any step of such a workflow is looked at in one line, another
-method’s trips held against it:
+finds its columns by name: ramb’s, or upper-case ones (`VESSEL_ID`,
+`DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`, `TRIP_ID`, `ACTIVITY`,
+`GEAR`), or those given. A file written by any step of such a workflow
+is looked at in one line, another method’s trips held against it:
 
 ``` r
 
-og_tracks("trips_step01.parquet", compare = c(ramb = "trip_key", EM4SSF = "TRIP_ID"), effort = FALSE)
+og_tracks("trips.parquet", compare = c(ramb = "trip_key", other = "TRIP_ID"), effort = FALSE)
 ```
 
 A set and its haul, drawn as a segment with a time

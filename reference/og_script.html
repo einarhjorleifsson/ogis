@@ -13,7 +13,7 @@ page, its elements and functions, may change from one version to the next):"></h
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,6 +92,14 @@ kept through a change of base map.</p></li>
 <li><p><code>og.on("click", id, fn)</code>: a click on the layer's features is the script's: <code>fn({feature, lngLat, point, row})</code>,
 where <code><a href="https://rdrr.io/r/base/row.html" class="external-link">row()</a></code> is a promise of the clicked row's columns (those its <code>popup</code> names, each <code>name</code>, <code>label</code>, <code>unit</code>,
 <code>value</code>), or <code>null</code> when the reader has clicked again meanwhile; the layer's own popup is not shown.</p></li>
+<li><p><code>og.window()</code>: the time panel's window (<code><a href="og_time.html">og_time()</a></code>), <code>[from, to]</code> in seconds since 1970 on the panel's clock (as
+the data hold the times, in no zone), or <code>null</code> where there is no panel, while a series loads, or for a span of no
+rows. <code>og.window([from, to])</code> sets it, as a drag across the chart does, and <code>og.window(null)</code> shows the group's
+whole span. Asked for before the panel's series has loaded, the window is set once it has, in place of the
+address's.</p></li>
+<li><p><code>og.on("window", fn)</code>: <code>fn({window, group, span})</code> each time the time panel's window is drawn (a drag, a double
+click, a lane, another group or span, <code>og.window()</code>), with the group and the span shown; called at once with the
+window shown, if there is one.</p></li>
 <li><p><code>og.setData(id, geojson)</code>: a layer sent whole (<code>whole = TRUE</code>) given new data, at most once a frame.</p></li>
 <li><p><code>og.filter(id, key, expr)</code>: a filter of the script's on a layer (a MapLibre expression), kept with the page's own
 choices; <code>null</code> removes it.</p></li>

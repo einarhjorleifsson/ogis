@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -132,7 +132,7 @@
 <li>
 <strong>ogis does not depend on ramb.</strong> ramb is installed only for the site’s tracks article (<code>Config/Needs/website</code>).</li>
 <li>
-<strong>ogis views; it does not edit</strong> (2026-11-17, fishycode plan 076). A page that edits builds on ogis’s documented surface: <code><a href="reference/og_script.html">og_script()</a></code>, <code>og_serve(routes = )</code>, and in the page <code>og.on()</code>, <code>og.state()</code>, <code>og.fetch()</code>. It uses no <code>:::</code> and no copied page. A fault such a page finds is fixed in ogis, with a test.</li>
+<strong>ogis views; it does not edit</strong> (2026-11-17, fishycode plan 076). A page that edits builds on ogis’s documented surface: <code><a href="reference/og_script.html">og_script()</a></code>, <code>og_serve(routes = )</code>, and in the page <code>og.on()</code>, <code>og.state()</code>, <code>og.fetch()</code>, <code>og.window()</code>. It uses no <code>:::</code> and no copied page. A fault such a page finds is fixed in ogis, with a test.</li>
 <li>
 <strong>Keep it simple</strong> (2026-11-11): options studied and set aside are not built unasked. These include MLT, GeoArrow with deck.gl, DuckDB-WASM, FlatGeobuf, and a <code>.duckdb</code> file as the store (parquet stays the store).</li>
 <li>
@@ -152,15 +152,15 @@
 </ul><p>The studies are under <code>$FISHYDATA/archive/</code> (<code>2026-11-11-rebelrebel-*</code> and others).</p>
 </div>
 <div class="section level2">
-<h2 id="state-2026-11-19">State (2026-11-19)<a class="anchor" aria-label="anchor" href="#state-2026-11-19"></a></h2>
+<h2 id="state-2026-11-26">State (2026-11-26)<a class="anchor" aria-label="anchor" href="#state-2026-11-26"></a></h2>
 <ul><li>
-<strong><code>main</code></strong> is at 2026.11.19.1 and on GitHub (pushed 2026-11-19 at the maintainer’s word): fd28f37, <code><a href="reference/og_names.html">og_names()</a></code> turning a name by an <code>angle</code> column (fishycode’s plan 078 ask i), with a test. Its push ran no CI, the newest commit carrying the skip marker, nor did an empty commit quoting it (c27cc9e); 0bf40a8, empty, ran both: R CMD check passed on Ubuntu, Windows and macOS, and the site was built (its build at 8fddee3 had failed installing R on the runner, not in ogis). Before it, 2026.11.19 (cf66ca5, a test of a served map’s <code>og_cells(filter = )</code>) and 2026.11.18.17 (c6f3bcf, 0c4ed35); the side sessions that built 2026.11.18.14-17 are closed, their record fishycode’s decision 330.</li>
+<strong><code>main</code></strong> is at 2026.11.26.3 on GitHub, pushed on 2026-11-26 at the maintainer’s word (“Yes, scrub and push”). Before the push, the twelve local commits after 93170cd (2026.11.21.2) had their messages and notes reworded to take out work outside ogis; no code changed, and the commits as they were are on the local branch <code>backup/pre-scrub-2026-11-26</code>. 2026.11.26.3 words <code><a href="reference/og_tracks.html">og_tracks()</a></code>’ help, a test’s name, the tracks article and NEWS alike. The versions in the push: 2026.11.22 (c5eb655), <code>og.window()</code> and <code>og.on("window")</code>; 2026.11.22.1 (6c15a84), <code>og_time(dots = )</code>; 2026.11.22.2 (9439689), <code>og_time(follow = )</code>, the window by default (the maintainer’s choice); 2026.11.22.3 (f26df14), <em>On top</em> on every point layer coloured by a number; 2026.11.22.4 (28900dd), <code><a href="reference/og_tracks.html">og_tracks()</a></code>’ pings by speed in Inferno, <code>palette = list(&lt;column&gt; = )</code>; 2026.11.22.5 (5af9bac), the own-page article’s window stepped a day at a time; 2026.11.26 (dd74c85), H3’s hexagons in <code><a href="reference/og_cells.html">og_cells()</a></code>; 2026.11.26.1 (2b26095), a grid cell with no value grey (the user: “fix the no-soak colour in ogis”); 2026.11.26.2 (35b08ac), <code>og_cells(pixel = FALSE)</code> and a bundle carrying every size offered. <code>devtools::test()</code> passed as each landed (1,739 on 2026.11.22.5; two tests skip that need the installed ogis), and <code>devtools::check()</code> on 2026.11.22.5 gave 0 errors, 0 warnings and two notes (a worktree’s <code>.git</code> file, and <code><a href="reference/og_names.html">og_names()</a></code>’ <code>angle</code>, there since 2026.11.19.1). CI runs on the push.</li>
 <li>
-<strong>Installed</strong>: 2026.11.19.1, from the local <code>main</code> at fd28f37 (<code>remotes::install_git("file:///Users/einarhj/R/Pakkar/ogis", git = "external", force = TRUE)</code>: a bare path loses its leading slash; <code>RemoteSha</code> fd28f37, the LFS example data whole, byte for byte the tree’s). The tests that run only against an installed ogis (test-knit.R’s renders) pass against it, 34 of 34. Before it, 2026.11.19 from GitHub at 79017ff.</li>
+<strong>Installed</strong>: 2026.11.26.2, from <code>main</code>’s local tree (<code>devtools::install()</code>, <code>RemoteSha</code> empty), for an effort page; before it 2026.11.22.5, from the branch’s local tree (the LFS example data whole, dansk.parquet 6,583,218 bytes), at the maintainer’s word, for a trip check page. The tests that run only against an installed ogis pass against it (test-knit.R’s Quarto test, test-script.R’s <code>og_serve(wait = TRUE)</code>).</li>
 <li>
 <strong>Open</strong>: a vessel id with a comma is still refused by the effort’s cells, since the server splits a filter’s values at commas (fishycode TODO 203); a tile address for dem and contour layers, the S3 route for the Icelandic depth model (TODO 204).</li>
 <li>
-<strong>Next</strong>: the EM4SSF hackathon in Ancona, 1-4 December 2026. There, <code><a href="reference/og_tracks.html">og_tracks()</a></code> is a quick visual check of each step of a track’s processing, with ramb doing the processing.</li>
+<strong>Next</strong>: <code><a href="reference/og_tracks.html">og_tracks()</a></code> as a quick visual check of each step of a track’s processing, with ramb doing the processing.</li>
 </ul></div>
 </div>
 

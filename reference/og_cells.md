@@ -22,8 +22,10 @@ og_cells(
   one_of = NULL,
   range = "year",
   unit = 0.001,
+  h3 = NULL,
   sizes = c(0.01, 0.05, 0.1, 0.5),
   ices = TRUE,
+  pixel = TRUE,
   cell = NULL,
   vessels = NULL,
   min_vessels = 1,
@@ -78,16 +80,32 @@ og_cells(
 
   The degrees of one step of `ix` and `iy`.
 
+- h3:
+
+  The column of the cells' H3 index: by default `"h3"` where the cells
+  have one; `FALSE`, none.
+
 - sizes, ices:
 
   The cell sizes in degrees the page offers besides about a pixel, those
   that are a whole number of the cells' own; `ices`, whether the ICES
-  statistical rectangle (1 by 0.5 degrees) is one of them.
+  statistical rectangle (1 by 0.5 degrees) is one of them. A bundle
+  carries every size offered.
+
+- pixel:
+
+  Whether the page offers cells of about a screen pixel at each zoom
+  (and finer and coarser) beside the fixed sizes. `FALSE`, the fixed
+  sizes alone (and H3's), opening on the finest: for cells whose own
+  size is already about a pixel at the zooms they are looked at, where a
+  pixel's cells are the finest size's.
 
 - cell:
 
-  The cells' size when the page opens: `NULL`, about a pixel; one of
-  `sizes`; or `"ices"`.
+  The cells' size when the page opens: `NULL`, about a pixel (the finest
+  size with `pixel = FALSE`; H3 following the zoom where the cells have
+  no squares); one of `sizes`; `"ices"`; `"h3"`, H3 following the zoom;
+  or `"h3_<resolution>"`, such as `"h3_9"`.
 
 - vessels:
 
@@ -180,7 +198,9 @@ og_cells(
 The map, with the layer. A map has one such layer at most.
 [`og_bundle()`](https://einarhjorleifsson.github.io/ogis/reference/og_bundle.md)
 carries it with no further word, summed by the browser from the cells at
-sizes from 0.01 degrees up.
+sizes from 0.01 degrees up; H3's hexagons are drawn on a served map
+only, so a bundle offers the squares alone, and leaves out cells that
+have no squares.
 
 ## Details
 
@@ -189,10 +209,14 @@ zoom (finer or coarser), or one size at every zoom (by default 0.01,
 0.05, a c-square, 0.1 and 0.5 degrees, and the ICES statistical
 rectangle, 1 by 0.5 degrees), so the reader sees what a grid's
 resolution does to the picture. A size narrower than half a pixel at the
-zoom is drawn at a whole number of it that is not. Where the cells name
-their vessel (`vessels`), the page also hides the cells of fewer than a
-number of vessels chosen there (all by default), as a confidentiality
-rule would, and a click shows each cell's.
+zoom is drawn at a whole number of it that is not. Where the cells also
+carry their H3 cell (`h3`), the same control offers H3's hexagons: at a
+resolution following the zoom (about eight pixels across), or at one
+resolution at every zoom, from the cells' own to coarser; a square and a
+hexagon are two grids over the same values. Where the cells name their
+vessel (`vessels`), the page also hides the cells of fewer than a number
+of vessels chosen there (all by default), as a confidentiality rule
+would, and a click shows each cell's.
 
 The arguments are the starting look and choices; the page's controls
 change them, and a value in the page's address wins over both.
@@ -218,6 +242,12 @@ Its columns:
   steps of `unit` degrees of longitude and latitude (thousandths of a
   degree by default). The cells' own size is read from the corners: a
   table of 0.005-degree cells is drawn no finer than that;
+
+- `h3` (optional, or the column named by `h3`): the cell's H3 index, as
+  text or a whole number, all of one resolution, the finest drawn. A
+  table may have both a square and an H3 cell on each row (a row for
+  each pair that meets), or either alone. H3 needs DuckDB's community
+  extension h3, installed on first use;
 
 - `values`: the columns summed, each coloured per square kilometre; by
   default every column of fractions;
@@ -261,6 +291,16 @@ og_cells(cells, filter = list(gear = "trawl", year = c(2021, 2021)), limits = c(
          palette = "blues")
 #> <og_map> Map
 #>   layers: cells (grid)
+
+# the same hours on H3's hexagons too, beside the squares (each row a square and the hexagon it meets)
+if (FALSE) { # \dontrun{
+con <- DBI::dbConnect(duckdb::duckdb())
+DBI::dbExecute(con, "INSTALL h3 FROM community; LOAD h3")
+duckdb::duckdb_register(con, "cells", cells)
+hex <- DBI::dbGetQuery(con, "SELECT ix, iy, h3_latlng_to_cell_string((iy + 5) / 1000, (ix + 5) / 1000, 8) AS h3,
+                                    gear, year, hours FROM cells")
+og_cells(hex, cell = "h3_7", name = "Fishing effort")
+} # }
 
 # cells named once, by OGIS_CELLS in .Renviron, over the sea floor:
 # og_map() |> og_relief() |> og_cells(name = "Fishing effort", one_of = "preset")

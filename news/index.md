@@ -1,5 +1,198 @@
 # Changelog
 
+## ogis 2026.11.26.3
+
+- **Documentation only.**
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)’
+  help, its error for `compare`, a test’s name and the tracks article
+  call its second set of column names upper-case ones (`VESSEL_ID`,
+  `DATE_TIME`, …), and the `compare` example’s second source `other`;
+  the older entries here are worded alike. Text only: nothing behaves
+  differently but the error’s wording.
+
+## ogis 2026.11.26.2
+
+- **`og_cells(pixel = FALSE)`: the fixed sizes alone, opening on the
+  finest.** The user (2026-11-26), on an effort map of 0.001-degree
+  cells: “there is no difference between grid - about a pixel, fine
+  (heavy), coarser and 0.001 degrees. suggest we just”start” at 0.001”.
+  Where the cells’ own size is about a pixel at the zooms they are
+  looked at, the three choices draw the finest size; with
+  `pixel = FALSE` *Cells* lists the sizes (and H3’s) alone.
+  `pixel = TRUE`, as before, by default.
+- **A bundle carries every size offered.** Its levels started at 0.01
+  degrees, so a size offered under it (0.005, 0.001) found no level and
+  a bundle drew another size for it; the effort map had passed the finer
+  levels to `og_bundle(grids = )` by hand.
+
+## ogis 2026.11.26.1
+
+- **A grid cell with no value is grey**, said so in the legend (“no
+  value”, shown while such a cell is in view) and in its popup. Before,
+  a cell whose every row lacked the value shown was drawn in the
+  palette’s lowest colour, as a small value: the page read a missing
+  value as 0, and a bundle wrote it as 0. The user (2026-11-26), on an
+  effort map where 13,441 of 148,237 cells hold hauls with no soak: “fix
+  the no-soak colour in ogis - think we should user a grey colour for
+  NA”. A bundle now writes a missing sum as missing and sums only the
+  values a cell’s rows have, as DuckDB’s
+  [`sum()`](https://rdrr.io/r/base/sum.html) does on a served map; a
+  coarser cell with some values is coloured by them.
+
+## ogis 2026.11.26
+
+- **[`og_cells()`](https://einarhjorleifsson.github.io/ogis/reference/og_cells.md)
+  draws H3’s hexagons beside the squares**: where the cells carry an H3
+  index (a column `h3`, or the one named by `h3 =`), the page’s *Cells*
+  offers hexagons at a resolution following the zoom (an edge of four
+  pixels or more, a hexagon about eight across) or at one resolution at
+  every zoom, from the cells’ own to seven coarser, in the same list as
+  the squares, the c-square and the ICES rectangle. DuckDB sums the
+  cells to the H3 cell that holds them at the resolution drawn
+  (`h3_cell_to_parent()`), and a value is per km² of each hexagon’s own
+  area. A table may carry both grids on each row (a row for each square
+  and hexagon that meet), or H3 alone (`cell = "h3"` or `"h3_9"` opens
+  on them). The user (2026-11-26), for effort maps: “We could both think
+  of this as a grid level or hex (h3) level … the C-square is just one
+  dimension.” H3 had been set aside for fishycode’s effort map on speed
+  (decision 220: 0.7-1.1 s a tile on 524 M cells); on another effort map
+  (148,237 cells at 0.001 degrees and H3 resolution 11, served from its
+  Parquet file) a whole view at zoom 10 redraws in 0.25-1.0 s on every
+  grid, H3 resolution 11’s 63,460 hexagons in view included (measured in
+  the page, 2026-11-26). H3 needs DuckDB’s community extension `h3`,
+  installed on first use.
+- **A bundle offers the squares alone**, saying the hexagons are left
+  out: its cells are summed by the browser, which knows squares only.
+  Cells with no squares are left out of a bundle.
+
+## ogis 2026.11.22.5
+
+- **The article *A page of your own* steps through a time panel’s
+  window**: two buttons of a page’s script set the window to a day and
+  the next (`og.window()`), and the script’s box says which day is shown
+  (`og.on("window")`), on a vessel of `og_example("dansk")` drawn by
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md),
+  its pings following the window, by speed, black the slowest. The
+  tracks article says what the map now shows of the window, and that the
+  pings are by speed.
+
+## ogis 2026.11.22.4
+
+- **[`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
+  colours its pings by speed, in Inferno, black the slowest**, and by
+  what the vessel was doing as a choice in the page (*Colour by*), in
+  the colours of the activity lane; before, by what it was doing alone,
+  speed only where the pings had no activity, in viridis. The maintainer
+  (2026-11-22), on a trip check: “the device speed should be the default
+  colour of pings. And i am used to the inverse viridis when it comes to
+  speed (black - low speed)”, then “I mean inferno”. Asked where in
+  ogis: in
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md),
+  which knows its speed column;
+  [`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md)
+  stays general, viridis for a number, and the time panel’s own points
+  already ran Inferno from black. With the pings by speed, *On top*
+  (2026.11.22.3) draws the slow or the fast ones over the others.
+- **A palette by column, for a choice of colours**:
+  `og_point(colour = c(behaviour, speed), palette = list(speed = "inferno"))`,
+  each column its own palette, a column not named keeping its default,
+  for every layer function with `palette`. One palette had served every
+  column of the choice, so a number’s and a category’s could not both be
+  chosen.
+
+## ogis 2026.11.22.3
+
+- **Points coloured by a number have a switch, *On top***: the rows in
+  their order, as before and by default, or low or high values on top.
+  The maintainer (2026-11-22): “that the user can ‘arrange’ the pings in
+  the plot so that e.g. the slowest come on top. This should be a switch
+  in the app”, for every point layer coloured by a number (asked whether
+  by default or by an argument). It is under the layer’s name in the
+  page, applies at once, goes into the address as `<id>_ontop`, and
+  holds over a change of base map; with a choice of colours
+  (`colour = c(behaviour, speed)`) it orders by the colour shown, and a
+  colour of categories orders nothing. It is MapLibre’s
+  `circle-sort-key`, read from the layer’s state (`og_layer(state = )`):
+  a point’s class along the colour’s scale, 32 classes four to each of
+  the palette’s nine stops, whatever the stretch, the rows in their
+  order within a class and a missing value under all. MapLibre draws
+  each key of a tile at once, so a key for each value would be a draw
+  call for each point. Measured in headless Chrome (Apple M4 Pro), a
+  served map of 200,000 points as tiles, 166,000 in view: the switch
+  re-lays the tiles, the map settled 0.22-0.25 s after it (0.13 s back
+  to the rows’ order), and a frame took the same time in each. A sort
+  key given in MapLibre’s terms (`og_point("circle-sort-key" = )`)
+  replaces the switch.
+
+## ogis 2026.11.22.2
+
+- **The panel’s other layers follow its window**: `og_time(follow = )`,
+  `"window"` by default. A layer that carries the group and a time
+  ([`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+  [`og_segment()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+  [`og_path()`](https://einarhjorleifsson.github.io/ogis/reference/og_path.md))
+  showed the group’s whole span, wherever the window was set, so a trip
+  opened with a few pings either side, or a window dragged on the chart,
+  showed more on the map than on the chart. A page built on the panel
+  filtered its layers to the window itself (`og.filter()` on the
+  features’ time, `og_t`). The maintainer (2026-11-22): “By default I
+  wanted only the trip window proper to appear both in space and time”;
+  asked whether ogis should do it by default, the window. Those layers
+  now show the rows of the window alone (a path’s run where it overlaps
+  the window, whole), and follow it each time it is set: a drag, a
+  double click, a lane, `og.window()`. `follow = "span"` shows the
+  span’s, as before. Each window the reader sets is one filter on each
+  such layer, laid out again in MapLibre’s worker, where a span was
+  filtered once. Measured in headless Chrome (Apple M4 Pro), a served
+  map of one vessel’s 200,000 pings a minute as tiles: a window of a day
+  set with `og.window()`, the map settled after a median 615 ms
+  following the window and 582 ms following the span (five windows each,
+  the camera’s move included), so the filter adds little to the move.
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
+  takes the default.
+
+## ogis 2026.11.22.1
+
+- **The time panel’s path lies under the map’s points, and its own
+  points are optional**: `og_time(dots = )`. The window’s path and
+  points were drawn over every layer, so a point layer of the same rows
+  ([`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)’
+  pings) lay under a white line and under the panel’s own points, in
+  another colour. The maintainer (2026-11-22), on a trip check: “The
+  white track line should not have a point. And the pings should be on
+  top of the white track line”. The page there moved the panel’s layers
+  by their ids and hid its points, again after each change of base map.
+  The window’s path is now drawn under the lowest of the panel’s point
+  and segment layers
+  ([`og_point()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md),
+  [`og_segment()`](https://einarhjorleifsson.github.io/ogis/reference/og_point.md):
+  those with the group and a time), over its other layers (a path), and
+  its points, rings and hover over every layer, as before; the order
+  holds when a layer’s data come late and over a change of base map.
+  `dots = FALSE` leaves out the panel’s own points, and with them the
+  click that marks a row’s time on the chart; marked rows keep their
+  rings.
+  [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
+  passes it, as its pings are the panel’s rows.
+
+## ogis 2026.11.22
+
+- **A page’s script reads and sets the time panel’s window, and hears it
+  change**: `og.window()` and `og.on("window", fn)`, documented in
+  [`og_script()`](https://einarhjorleifsson.github.io/ogis/reference/og_script.md).
+  A page built on the panel had to call the page’s internal
+  `tSetWindow()`, judge the series loaded by its internal `TS`, and poll
+  the address’s `tw` to follow the reader (a trip check built on ogis).
+  `og.window()` gives the window shown, `[from, to]` in seconds on the
+  panel’s clock, or `null` (no panel, a series loading, a span of no
+  rows); `og.window([from, to])` sets it as a drag across the chart
+  does, and `og.window(null)` shows the whole span. Asked for before the
+  series has loaded, the window is set once it has, in place of the
+  address’s. `og.on("window", fn)` calls `fn({window, group, span})`
+  each time the window is drawn (a drag, a double click, a lane, another
+  group or span, `og.window()`), and at once with the window shown, if
+  there is one.
+
 ## ogis 2026.11.21.2
 
 - **A lane takes a layer’s colours whether the layer comes before the
@@ -123,11 +316,10 @@
 
 - **Vessel tracks in one line**,
   [`og_tracks()`](https://einarhjorleifsson.github.io/ogis/reference/og_tracks.md)
-  (preparation for the EM4SSF hackathon, Ancona, December 2026: ogis as
-  a quick visual check of each step of a track’s processing, ramb doing
-  the processing). Pings, as ramb leaves them (`vid`, `time`, `lon`,
-  `lat`, `speed`, `trip_id`, `gear`, `hours`, `behaviour`) or in
-  EM4SSF’s D2.1 format (`VESSEL_ID`, `DATE_TIME`, …), become the track
+  (ogis as a quick visual check of each step of a track’s processing,
+  ramb doing the processing). Pings, as ramb leaves them (`vid`, `time`,
+  `lon`, `lat`, `speed`, `trip_id`, `gear`, `hours`, `behaviour`) or
+  with upper-case names (`VESSEL_ID`, `DATE_TIME`, …), become the track
   and its pings coloured by what the vessel did; a time panel of speed
   under the map, a vessel chosen there and then one of its trips, with
   lanes of activity, trips and any more given (another method’s trips,
@@ -135,26 +327,24 @@
   fishing effort by cell, summed from the fishing pings’ hours by
   vessel, gear and year, following the vessel chosen. On ramb’s `dansk`
   (395,000 pings, 14 vessels; ramb’s flags, harbours, `jepol` trips and
-  hours in 4 s) the map built in 1.7 s. On EM4SSF’s CS1 (1,020,999
-  pings, 10 vessels, served on this computer only), from the raw file
-  through ramb to the map in 9 s. The map has no layer of each vessel’s
-  whole path: such a path ran over every span’s ends and was drawn
-  whole, a year’s tangle over the trip chosen; the panel draws the
-  chosen span’s path itself. `time_label` names the clock
-  (`"as written (zone unknown)"` for CS1). A trip is ramb’s `voyage_key`
-  where the pings have one (one key per trip across vessels and years,
-  from ramb 2026.11.18, at this viewer’s wish), taken as it is; a
-  vessel’s trip numbered from 1 is known by its vessel too. With ramb’s
-  `rb_flag_ping_clock_jump()` the clock’s jumps are marks: CS1’s three.
+  hours in 4 s) the map built in 1.7 s. On about a million pings (10
+  vessels, served on this computer only), from the raw file through ramb
+  to the map in 9 s. The map has no layer of each vessel’s whole path:
+  such a path ran over every span’s ends and was drawn whole, a year’s
+  tangle over the trip chosen; the panel draws the chosen span’s path
+  itself. `time_label` names the clock (`"as written (zone unknown)"`
+  where it is not known). A trip is ramb’s `voyage_key` where the pings
+  have one (one key per trip across vessels and years, from ramb
+  2026.11.18, at this viewer’s wish), taken as it is; a vessel’s trip
+  numbered from 1 is known by its vessel too. With ramb’s
+  `rb_flag_ping_clock_jump()` the clock’s jumps are marks.
 - **`og_tracks(compare = )`: where two columns disagree**, two methods’
   trips or an inferred activity against an observer’s: each a lane, and
   the panel marks, a row each, the pings one has and the other has not
   and, where the two share their values, those they give differently. On
-  CS1, ramb’s trips (`jepol` on the hackathon’s own HDBSCAN anchorage
-  sites) and EM4SSF’s step-01 trips (option C) differ on 15,652 of
-  1,020,999 pings (12,183 in ramb’s alone, 3,469 in EM4SSF’s alone),
-  gathered at Ancona’s harbour mouth, where each decides a trip begins
-  and ends.
+  the million pings, two methods’ trips differ on about 1.5 % of them,
+  gathered at a harbour mouth, where each decides a trip begins and
+  ends.
 - **[`og_cells()`](https://einarhjorleifsson.github.io/ogis/reference/og_cells.md):
   the grid’s resolution, live.** The page’s *Cells* offers, beside about
   a pixel at each zoom, sizes fixed at every zoom: 0.01, 0.05 (a

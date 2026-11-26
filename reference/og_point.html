@@ -19,7 +19,7 @@ change in the page."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">ogis</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.21.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2026.11.26.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -240,7 +240,9 @@ as DuckDB's GEOMETRY or WKB).</p></dd>
 <dd><p>The marks' colour (an area's outline): a colour (<code>"#c0392b"</code>), or a column written bare (<code>colour = speed</code>), coloured by <code>palette</code>; several columns, <code>c(behaviour, speed)</code>, are a choice in the page, the first
 shown. A column's colours by default: Okabe-Ito for up to eight values, Paired for up to twelve, Glasbey's 32
 beyond, the rest grey as "other"; viridis for an ordered factor and for numbers, dates and times. <code>color</code> is the
-same.</p></dd>
+same. Points coloured by a number have a switch under the layer's name, <em>On top</em>: the rows in their order (the
+default), or low or high values on top, so that the slowest pings, say, are not hidden under faster ones; it
+goes into the page's address as <code>&lt;id&gt;_ontop</code>. MapLibre's own <code>"circle-sort-key"</code>, given in <code>...</code>, replaces it.</p></dd>
 
 
 <dt id="arg-size">size<a class="anchor" aria-label="anchor" href="#arg-size"></a></dt>
@@ -279,7 +281,9 @@ deepest zoom (<code>maxzoom</code>, 14 by default) and beyond, only points that 
 <dt id="arg-palette">palette<a class="anchor" aria-label="anchor" href="#arg-palette"></a></dt>
 <dd><p>The colours for a column, in place of the default: a palette's name (from <code><a href="og_palettes.html">og_palettes()</a></code>,
 <code><a href="https://rdrr.io/r/grDevices/palette.html" class="external-link">palette.pals()</a></code> or <code><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.pals()</a></code>, written loosely: <code>"set1"</code> is Set 1), colours, colours named by value
-(<code>c(Fishing = "#c0392b")</code>), or a function of n (<code><a href="https://sjmgarnier.github.io/viridisLite/reference/viridis.html" class="external-link">viridisLite::mako</a></code>).</p></dd>
+(<code>c(Fishing = "#c0392b")</code>), or a function of n (<code><a href="https://sjmgarnier.github.io/viridisLite/reference/viridis.html" class="external-link">viridisLite::mako</a></code>). For a choice of columns in <code>colour</code>, one of
+these for each column, a list named by the columns (<code>list(speed = "inferno")</code>), a column not named keeping its
+default.</p></dd>
 
 
 <dt id="arg-limits-stretch">limits, stretch<a class="anchor" aria-label="anchor" href="#arg-limits-stretch"></a></dt>
