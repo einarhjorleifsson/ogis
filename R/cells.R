@@ -60,9 +60,14 @@
 #' @param unit The degrees of one step of `ix` and `iy`.
 #' @param h3 The column of the cells' H3 index: by default `"h3"` where the cells have one; `FALSE`, none.
 #' @param sizes,ices The cell sizes in degrees the page offers besides about a pixel, those that are a whole number of the
-#'   cells' own; `ices`, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them.
-#' @param cell The cells' size when the page opens: `NULL`, about a pixel (H3 following the zoom where the cells have no
-#'   squares); one of `sizes`; `"ices"`; `"h3"`, H3 following the zoom; or `"h3_<resolution>"`, such as `"h3_9"`.
+#'   cells' own; `ices`, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them. A bundle carries
+#'   every size offered.
+#' @param pixel Whether the page offers cells of about a screen pixel at each zoom (and finer and coarser) beside the
+#'   fixed sizes. `FALSE`, the fixed sizes alone (and H3's), opening on the finest: for cells whose own size is already
+#'   about a pixel at the zooms they are looked at, where a pixel's cells are the finest size's.
+#' @param cell The cells' size when the page opens: `NULL`, about a pixel (the finest size with `pixel = FALSE`; H3
+#'   following the zoom where the cells have no squares); one of `sizes`; `"ices"`; `"h3"`, H3 following the zoom; or
+#'   `"h3_<resolution>"`, such as `"h3_9"`.
 #' @param vessels The column of `by` that names a vessel, for the cells' number of vessels: by default the first of
 #'   `vid`, `vessel_id`, `VESSEL_ID`, `vessel` and `mmsi` there is; `FALSE`, none.
 #' @param min_vessels The fewest vessels a cell shown has when the page opens: 1 (all), 2, 3, 5 or 10.
@@ -122,7 +127,8 @@
 og_cells <- function(
   map = NULL, cells = NULL,
   values = NULL, count = "n", by = NULL, one_of = NULL, range = "year", unit = 0.001, h3 = NULL,
-  sizes = c(0.01, 0.05, 0.1, 0.5), ices = TRUE, cell = NULL, vessels = NULL, min_vessels = 1, follow = "vessel",
+  sizes = c(0.01, 0.05, 0.1, 0.5), ices = TRUE, pixel = TRUE, cell = NULL, vessels = NULL, min_vessels = 1,
+  follow = "vessel",
   gear = NULL,
   filter = list(), metric = NULL, palette = "magma", opacity = 85, limits = NULL, stretch = c("even", "equal"),
   labels = NULL, codes = NULL, name = "Cells", id = "cells", info = NULL, section = name, visible = TRUE
@@ -315,13 +321,21 @@ og_cells <- function(
                                                      format(signif(h3_size$km2[r + 1], 2), big.mark = ",", scientific = FALSE)))
       }))
   }
+  if (!isTRUE(pixel) && !isFALSE(pixel)) stop("og_cells(): `pixel` is TRUE or FALSE.", call. = FALSE)
+  pixel <- pixel && !is.null(xy)
+  if (!pixel && !length(fixed) && is.null(hexes)) {
+    stop("og_cells(): with `pixel = FALSE` the page needs a size to offer: `sizes` (a whole number of the cells' own), ",
+         "`ices`, or H3 cells.", call. = FALSE)
+  }
+  # the size the page opens on where `cell` gives none: about a pixel, else the finest size offered, else H3's
+  px_default <- if (pixel) "1" else if (length(fixed)) fixed[[1]]$value else "h"
   filters <- c(filters, list(list(
-    id = px_id, label = "Cells", default = if (!is.null(xy)) "1" else "h",
-    options = c(if (!is.null(xy)) {
-      c(list(list(value = "1", label = "about a pixel"),
-             list(value = "0.5", label = "finer (heavy)", tip = "Each cell about half a screen pixel"),
-             list(value = "2", label = "coarser")), fixed)
-    }, hexes)
+    id = px_id, label = "Cells", default = px_default,
+    options = c(if (pixel) {
+      list(list(value = "1", label = "about a pixel"),
+           list(value = "0.5", label = "finer (heavy)", tip = "Each cell about half a screen pixel"),
+           list(value = "2", label = "coarser"))
+    }, fixed, hexes)
   )))
   least_id <- fid("atleast")
   follow_id <- fid("follow")
@@ -388,7 +402,7 @@ og_cells <- function(
     }
   }
   tiles <- function(z, x, y, params) {
-    v <- .og_or(params[[px_id]], if (!is.null(xy)) "1" else "h")
+    v <- .og_or(params[[px_id]], px_default)
     hex <- is.null(xy) || (!is.null(hcol) && grepl("^h[0-9]*$", v))
     n2 <- 2^z
     lat <- function(t) atan(sinh(pi * (1 - 2 * t / n2))) * 180 / pi
@@ -518,7 +532,8 @@ og_cells <- function(
   # a bundle's: the cells summed by the browser, at sizes from 0.01 degrees up; squares only (H3's are a served map's)
   if (!is.null(xy)) {
     base <- finest * max(1, ceiling(0.01 / unit / finest))
-    levels <- sort(unique(c(base * c(1, 2, 4, 10, 20, 50), round(sq / unit)[round(sq / unit) >= base])))
+    # every size offered, a finer one than the base too (drawn at another size before, as no level divided it)
+    levels <- sort(unique(c(base * c(1, 2, 4, 10, 20, 50), round(sq / unit))))
     layer$bundle_grid <- list(
       rows = d$tbl, unit = unit, levels = levels, x = xy[1], y = xy[2],
       vessels = if (!is.null(vcol)) Filter(Negate(is.null), list(column = fid(vcol), least = least_id,

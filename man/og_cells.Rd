@@ -16,6 +16,7 @@ og_cells(
   h3 = NULL,
   sizes = c(0.01, 0.05, 0.1, 0.5),
   ices = TRUE,
+  pixel = TRUE,
   cell = NULL,
   vessels = NULL,
   min_vessels = 1,
@@ -54,10 +55,16 @@ fishing, say): one value shown at a time, the first by default, with no "all".}
 \item{h3}{The column of the cells' H3 index: by default \code{"h3"} where the cells have one; \code{FALSE}, none.}
 
 \item{sizes, ices}{The cell sizes in degrees the page offers besides about a pixel, those that are a whole number of the
-cells' own; \code{ices}, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them.}
+cells' own; \code{ices}, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them. A bundle carries
+every size offered.}
 
-\item{cell}{The cells' size when the page opens: \code{NULL}, about a pixel (H3 following the zoom where the cells have no
-squares); one of \code{sizes}; \code{"ices"}; \code{"h3"}, H3 following the zoom; or \code{"h3_<resolution>"}, such as \code{"h3_9"}.}
+\item{pixel}{Whether the page offers cells of about a screen pixel at each zoom (and finer and coarser) beside the
+fixed sizes. \code{FALSE}, the fixed sizes alone (and H3's), opening on the finest: for cells whose own size is already
+about a pixel at the zooms they are looked at, where a pixel's cells are the finest size's.}
+
+\item{cell}{The cells' size when the page opens: \code{NULL}, about a pixel (the finest size with \code{pixel = FALSE}; H3
+following the zoom where the cells have no squares); one of \code{sizes}; \code{"ices"}; \code{"h3"}, H3 following the zoom; or
+\code{"h3_<resolution>"}, such as \code{"h3_9"}.}
 
 \item{vessels}{The column of \code{by} that names a vessel, for the cells' number of vessels: by default the first of
 \code{vid}, \code{vessel_id}, \code{VESSEL_ID}, \code{vessel} and \code{mmsi} there is; \code{FALSE}, none.}

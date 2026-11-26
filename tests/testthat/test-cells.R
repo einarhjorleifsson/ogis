@@ -474,3 +474,46 @@ test_that("a cell whose every row lacks the value is grey, served and bundled, s
   expect_identical(s3$without, 0L)
   expect_false(s3$legend)
 })
+
+# The fixed sizes alone ------------------------------------------------------------------------------------------------
+# vessel_cells() on 0.005-degree cells: each 0.01-degree cell split in two, twenty in a row
+fine_cells <- function() {
+  d <- vessel_cells()
+  e <- d
+  e$ix <- e$ix + 5
+  rbind(d, e)
+}
+
+test_that("pixel = FALSE: the fixed sizes alone, opening on the finest; a bundle carries every size offered", {
+  skip_if_no_spatial()
+  l <- og_cells(fine_cells(), sizes = c(0.005, 0.01, 0.05), pixel = FALSE)$layers$cells
+  f <- stats::setNames(l$config$filters, vapply(l$config$filters, `[[`, "", "id"))
+  expect_identical(vapply(f$cells_px$options, `[[`, "", "value"), c("s0.005", "s0.01", "s0.05", "r1x0.5"))
+  expect_identical(f$cells_px$default, "s0.005")
+  # a tile asked with no size: the finest, the twenty cells at zoom 9 (a pixel 0.0014 degrees)
+  expect_identical(tile_at(l, 9, lon = -22.96), 20)
+  expect_identical(tile_at(l, 9, list(cells_px = "s0.01"), lon = -22.96), 10)
+  # the bundle's levels: every size offered, 0.005 too, under the base of 0.01 (before, no level divided it, and a
+  # bundle drew 0.01-degree cells for it)
+  expect_true(all(c(5, 10, 50, 500) %in% l$bundle_grid$levels))
+  expect_true(5 %in% og_cells(fine_cells(), sizes = c(0.005, 0.01))$layers$cells$bundle_grid$levels)
+  # about a pixel as before, by default
+  expect_identical(og_cells(fine_cells())$layers$cells$config$filters[[2]]$default, "1")
+  expect_error(og_cells(fine_cells(), sizes = 0.003, ices = FALSE, pixel = FALSE), "needs a size to offer")
+  expect_error(og_cells(fine_cells(), pixel = NA), "TRUE or FALSE")
+})
+
+test_that("in the page (a bundle), pixel = FALSE opens on the finest size and draws it as itself", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  dir <- withr::local_tempdir()
+  og_bundle(og_map(view = list(center = c(-22.95, 65.005), zoom = 9)) |>
+              og_cells(fine_cells(), sizes = c(0.005, 0.01, 0.05), pixel = FALSE), dir, overwrite = TRUE)
+  expect_true("5" %in% list.files(file.path(dir, "grids", "cells")))
+  b <- open_page(paste0(serve_dir(dir), "index.html"))
+  expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && !!map.getLayer('cells') && map.loaded() && map.areTilesLoaded()")), 40))
+  n <- function() length(unique(unlist(page_eval(b, "map.querySourceFeatures('cells', { sourceLayer: 'cells' }).map(f => JSON.stringify(f.geometry.coordinates))"))))
+  expect_true(wait_until(function() n() > 0, 20))
+  expect_identical(page_eval(b, "document.getElementById('cells_px').value"), "s0.005")
+  expect_identical(n(), 20L)
+})

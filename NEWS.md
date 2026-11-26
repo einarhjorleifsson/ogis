@@ -1,3 +1,14 @@
+# ogis 2026.11.26.2
+
+* **`og_cells(pixel = FALSE)`: the fixed sizes alone, opening on the finest.** The user (2026-11-26), on an
+  effort map of 0.001-degree cells: "there is no difference between grid - about a pixel, fine (heavy), coarser and
+  0.001 degrees. suggest we just "start" at 0.001". Where the cells' own size is about a pixel at the zooms they are
+  looked at, the three choices draw the finest size; with `pixel = FALSE` *Cells* lists the sizes (and H3's) alone.
+  `pixel = TRUE`, as before, by default.
+* **A bundle carries every size offered.** Its levels started at 0.01 degrees, so a size offered under it (0.005,
+  0.001) found no level and a bundle drew another size for it; the effort map had passed the finer levels to
+  `og_bundle(grids = )` by hand.
+
 # ogis 2026.11.26.1
 
 * **A grid cell with no value is grey**, said so in the legend ("no value", shown while such a cell is in view) and
