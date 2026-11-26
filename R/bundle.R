@@ -500,7 +500,7 @@ og_bundle <- function(
 
 # A grid's rows summed by cell at each level, from the finest level that divides it, written in blocks of 128 x 128
 # cells: grids/<id>/<level>/<bx>_<by>.js, each handing OG_BUNDLE() its rows compressed (zlib) and in base64: their
-# number (uint32), each sum (float32), the cell within the block (uint16, row by row from the south-west), and each
+# number (uint32), each sum (float32; NaN where no row of the cell has it), the cell within the block (uint16, row by row from the south-west), and each
 # filter's column as codes into its values (uint16, then uint8), all little-endian. The page's account of them
 .og_map_bundle_grid <- function(spec, lc, dir, id) {
   B <- 128L
@@ -549,9 +549,10 @@ og_bundle <- function(
                keys, stem, L, bl$blx[k], bl$bly[k], if (nzchar(dims)) paste0(", ", dims) else "")
       cell <- as.integer((r$cy - bl$bly[k] * B) * B + (r$cx - bl$blx[k] * B))
       code <- lapply(seq_along(cols), function(j) match(r[[cols[j]]], values[[j]]) - 1L)
+      # a sum no row of the cell has stays missing (NaN), so the page draws it as no value, not as 0
       f32 <- function(v) {
         v <- as.double(v)
-        v[is.na(v)] <- 0
+        v[is.na(v)] <- NaN
         writeBin(v, raw(), size = 4, endian = "little")
       }
       u16 <- function(v) writeBin(ifelse(v > 32767L, v - 65536L, v), raw(), size = 2, endian = "little")

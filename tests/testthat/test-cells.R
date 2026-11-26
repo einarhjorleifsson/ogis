@@ -418,3 +418,59 @@ test_that("in the page (served): hexagons drawn, each cell's value per km² of i
   expect_true(wait_until(function() isTRUE(page_eval(b, "map.loaded() && map.areTilesLoaded()")), 20))
   expect_true(wait_until(function() all(vapply(feats(), `[[`, 0, "ring") == 5), 20))
 })
+
+# A value missing ---------------------------------------------------------------------------------------------------
+test_that("a cell whose every row lacks the value is grey, served and bundled, said so in the legend and the popup", {
+  skip_if_no_spatial()
+  skip_if_no_chrome()
+  # vessel_cells()'s ten cells: a soak in the first five, none in the last five
+  d <- vessel_cells()
+  d$soak <- ifelse(d$ix < -22950, 2, NA)
+  m <- og_map(view = list(center = c(-22.95, 65.005), zoom = 9)) |> og_cells(d, metric = "soak")
+  look <- function(b) {
+    expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && !!map.getLayer('cells') && map.loaded() && map.areTilesLoaded()")), 40))
+    expect_true(wait_until(function() length(page_eval(b, "map.queryRenderedFeatures({ layers: ['cells'] })")) > 0, 20))
+    Sys.sleep(0.5)
+    page_eval(b, paste(
+      "(() => { const f = map.queryRenderedFeatures({ layers: ['cells'] });",
+      "  const c = x => { const k = x.layer.paint['fill-color']; return [k.r, k.g, k.b].map(v => Math.round(v * 255)).join(','); };",
+      "  return { with: f.filter(x => 'soak_km2' in x.properties).length, without: f.filter(x => !('soak_km2' in x.properties)).length,",
+      "           hours: f.every(x => x.properties.hours_km2 > 0),",
+      "           grey: [...new Set(f.filter(x => !('soak_km2' in x.properties)).map(c))],",
+      "           coloured: [...new Set(f.filter(x => 'soak_km2' in x.properties).map(c))].length,",
+      "           legend: !document.getElementById('novalue').hidden }; })()"))
+  }
+  # served: the server leaves a missing value out of its tile
+  url <- og_serve(m, open = FALSE, wait = FALSE)
+  withr::defer(og_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
+  b <- open_page(url)
+  s <- look(b)
+  expect_gt(s$with, 0)
+  expect_gt(s$without, 0)
+  expect_true(s$hours)
+  expect_identical(unlist(s$grey), "153,153,153")
+  expect_true(s$legend)
+  # the popup of a cell with no soak says so, its hours given
+  page_eval(b, paste(
+    "(() => { const f = map.queryRenderedFeatures({ layers: ['cells'] }).find(x => !('soak_km2' in x.properties));",
+    "  const c = f.geometry.coordinates[0], x = c.reduce((a, p) => a + p[0], 0) / c.length, y = c.reduce((a, p) => a + p[1], 0) / c.length;",
+    "  const p = map.project([x, y]); map.fire('click', { point: p, lngLat: map.unproject(p), originalEvent: {} }); return true; })()"))
+  expect_true(wait_until(function() isTRUE(page_eval(b, "!!document.querySelector('.maplibregl-popup')")), 10))
+  expect_match(page_eval(b, "document.querySelector('.maplibregl-popup').textContent"), "hours per km².*no value soak per km²")
+  b$close()
+  # bundled: the bundle keeps the missing sum missing (it wrote 0 before), and the browser leaves it out
+  dir <- withr::local_tempdir()
+  og_bundle(m, dir, overwrite = TRUE)
+  b2 <- open_page(paste0(serve_dir(dir), "index.html"))
+  s2 <- look(b2)
+  expect_gt(s2$with, 0)
+  expect_gt(s2$without, 0)
+  expect_identical(unlist(s2$grey), "153,153,153")
+  expect_true(s2$legend)
+  # a coarser cell holding some cells with a soak and some without: the soak of those that have one, no grey
+  page_eval(b2, "(() => { const s = document.getElementById('cells_px'); s.value = 's0.5'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()")
+  Sys.sleep(1)
+  s3 <- look(b2)
+  expect_identical(s3$without, 0L)
+  expect_false(s3$legend)
+})

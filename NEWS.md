@@ -1,3 +1,12 @@
+# ogis 2026.11.26.1
+
+* **A grid cell with no value is grey**, said so in the legend ("no value", shown while such a cell is in view) and
+  in its popup. Before, a cell whose every row lacked the value shown was drawn in the palette's lowest colour, as a
+  small value: the page read a missing value as 0, and a bundle wrote it as 0. The user (2026-11-26), on an
+  effort map where 13,441 of 148,237 cells hold hauls with no soak: "fix the no-soak colour in ogis - think we
+  should user a grey colour for NA". A bundle now writes a missing sum as missing and sums only the values a cell's
+  rows have, as DuckDB's `sum()` does on a served map; a coarser cell with some values is coloured by them.
+
 # ogis 2026.11.26
 
 * **`og_cells()` draws H3's hexagons beside the squares**: where the cells carry an H3 index (a column `h3`, or the

@@ -89,6 +89,9 @@
   .bar { height: 10px; border-radius: 2px; }
   #hist { display: block; width: 100%; height: 44px; margin-top: 2px; }
   .ends { display: flex; justify-content: space-between; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .novalue { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--muted); }
+  .novalue[hidden] { display: none; }
+  .novalue i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; background: #999999; }
   #status { color: #777; padding: 6px 12px; border-top: 1px solid var(--line); min-height: 1.3em; }
   .about p { margin: 4px 0 8px; }
   #bases label { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; }
@@ -240,7 +243,8 @@
   <div class="row range"><label for="opacity" data-t="opacity"></label><input id="opacity" type="range" min="0" max="100" step="1"><span class="val" id="opval"></span></div>
   <div class="row"><button id="fit" data-t="fit" data-tt="fitTip"></button></div>
   <div class="legend" data-tt="legendTip">
-    <div class="bar" id="bar"></div><canvas id="hist"></canvas><div class="ends"><span id="lolab"></span><span id="midlab"></span><span id="hilab"></span></div></div>
+    <div class="bar" id="bar"></div><canvas id="hist"></canvas><div class="ends"><span id="lolab"></span><span id="midlab"></span><span id="hilab"></span></div>
+    <div class="novalue" id="novalue" hidden><i></i><span data-t="noValue"></span></div></div>
 </template>
 <script id="config" type="application/json">__CONFIG__</script>
 <script id="bundle" type="application/json">__BUNDLE__</script>
@@ -268,6 +272,7 @@ const ENGINE_TEXTS = {
   opacity: "Opacity", fit: "Fit to view", fitTip: "Floor and cap at the 2nd and 98th percentiles of the cells in view",
   chooseAll: "all", chooseAllTip: "Show every value", chooseBack: "The previous one", chooseNext: "The next one",
   legendTip: "The colour scale on a log axis, and below it the cells in view: values below the floor and above the cap in the end bars",
+  noValue: "no value: every row of the cell lacks it",
   yes: "yes", no: "no",
   findPlaceholder: "Find…", findCount: "{1} found; the {2} nearest the view's centre listed, whole matches first",
   findNone: "none found", findHere: "here", findFailed: "the search did not load",
@@ -504,7 +509,7 @@ async function gridTile(url) {
     for (let by = Math.floor(cy0 * fy / B); by <= Math.floor(((cy1 + 1) * fy - 1) / B); by++)
       if (want.has(`${bx}_${by}`)) jobs.push([bx, by]);
   const blocks = await Promise.all(jobs.map(([bx, by]) => gridBlock(L, `${bx}_${by}`)));
-  const acc = new Float64Array(W * H * S), seen = new Uint8Array(W * H);
+  const acc = new Float64Array(W * H * S), got = new Uint8Array(W * H * S), seen = new Uint8Array(W * H);
   // each cell's vessels, where the cells name them: their codes, counted, and the fewest a cell shown has
   const V = GRID.vessels, vesselsOf = V ? new Map() : null, least = V ? Math.max(1, +q.get(V.least) || 1) : 1;
   blocks.forEach((b, j) => {
@@ -519,7 +524,7 @@ async function gridTile(url) {
       if (!pass) continue;
       const at = gy * W + gx;
       seen[at] = 1;
-      for (let s = 0; s < S; s++) acc[at * S + s] += b.sums[s][i];
+      for (let s = 0; s < S; s++) { const v = b.sums[s][i]; if (v === v) { acc[at * S + s] += v; got[at * S + s] = 1; } }
       if (vcodes) { let set = vesselsOf.get(at); if (!set) vesselsOf.set(at, set = new Set()); set.add(vcodes[i]); }
     }
   });
@@ -540,7 +545,7 @@ async function gridTile(url) {
       if (V && nv < least) continue;
       const left = tx((cx0 + gx) * sideX), right = tx((cx0 + gx + 1) * sideX);
       if (left === right) continue;
-      const vals = from.map(([s, per]) => per ? acc[at * S + s] / km2 : acc[at * S + s]);
+      const vals = from.map(([s, per]) => !got[at * S + s] ? null : per ? acc[at * S + s] / km2 : acc[at * S + s]);
       feats.push([left, top, right, bottom, V ? [...vals, nv] : vals]);
     }
   }
@@ -567,6 +572,7 @@ function mvtRectangles(name, keys, feats) {
   for (const [x0, y0, x1, y1, vals] of feats) {
     feat.reset(); part.reset();
     vals.forEach((v, k) => {
+      if (v === null) return;   // no value: the key left out of the feature
       let i = index.get(v);
       if (i === undefined) { i = values.length; index.set(v, i); values.push(v); }
       part.varint(k); part.varint(i);
@@ -822,6 +828,8 @@ function readShade(l, q) {
 // a ramp or in bands, the shallow end cut clear or grey, an opacity; the colour formula is made anew as a control moves.
 // MapLibre's colour relief interpolates between stops, so bands are pairs of stops a centimetre apart
 const CLEAR = "rgba(0,0,0,0)", GREY = "rgba(150,150,150,0.75)", EPS = 0.01;
+// a grid cell with no value: a mid grey, apart from every palette's ends
+const NO_VALUE = "#999999";
 const COLOUR_KEYS = ["pal", "lo", "hi", "scale", "mode", "cut", "cutas", "op"];
 const colourDefaults = l => ({ pal: l.colour.palette ?? layerPalettes(l)[0]?.id ?? PALETTES[0].id, lo: l.colour.floor,
                                hi: l.colour.cap, scale: l.colour.scale, mode: l.colour.mode, cut: l.colour.cut,
@@ -1213,8 +1221,11 @@ function drawHist() {
 }
 
 function colorExpr() {
-  // values below the floor take the first colour and above the cap the last: interpolate clamps at its ends
-  return ["interpolate", ["linear"], ["log10", ["max", ["to-number", ["get", metric()]], 1e-9]], ...stops().flat()];
+  // values below the floor take the first colour and above the cap the last: interpolate clamps at its ends; a cell
+  // with no value (every row's missing) is grey, never a small value
+  return ["case", ["has", metric()],
+          ["interpolate", ["linear"], ["log10", ["max", ["to-number", ["get", metric()]], 1e-9]], ...stops().flat()],
+          NO_VALUE];
 }
 
 function paint() {
@@ -2592,7 +2603,9 @@ map.on("error", async e => {
 });
 function sampleView() {
   if (!G || !map.getLayer(G.id)) return;
-  histVals = query(null, [G.id]).map(f => +f.properties[metric()]).filter(x => x > 0).map(Math.log10);
+  const inView = query(null, [G.id]);
+  histVals = inView.map(f => +f.properties[metric()]).filter(x => x > 0).map(Math.log10);
+  $("novalue").hidden = !inView.some(f => !(metric() in f.properties));
   // an equal stretch with a floor and cap from the address has no fit to take its shares from: the first view gives them
   if (!viewVals.length && histVals.length >= 10) { viewVals = [...histVals].sort((a, b) => a - b); paint(); }
   drawHist();
@@ -2612,7 +2625,8 @@ if (G) {
     const cell = query(e.point, [G.id])[0];
     if (!cell) return;
     const p = cell.properties, fs = G.popup?.fields ?? [];
-    const v = f => f.format === "count" ? (+p[f.field]).toLocaleString(loc()) : fmt(+p[f.field]);
+    const v = f => p[f.field] === undefined || p[f.field] === null ? tr("noValue").split(":")[0]
+      : f.format === "count" ? (+p[f.field]).toLocaleString(loc()) : fmt(+p[f.field]);
     popup?.remove();
     popup = new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat)
       .setHTML(fs.map((f, i) => i === 0 ? `<b>${v(f)}</b> ${tr(f.label)}` : `${v(f)} ${tr(f.label)}`).join("<br>"))
