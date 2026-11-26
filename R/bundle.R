@@ -179,6 +179,18 @@ og_bundle <- function(
                       paste(dropped, collapse = ", ")))
     }
     config$layers[[i]]$filters <- Filter(function(f) f$id %in% spec$filters, config$layers[[i]]$filters)
+    # H3's hexagons are drawn by a server (og_cells()): a bundle offers the squares alone
+    k <- which(vapply(config$layers[[i]]$filters, `[[`, "", "id") == .og_or(spec$px, ""))
+    if (length(k)) {
+      o <- config$layers[[i]]$filters[[k]]$options
+      hexv <- vapply(o, function(x) grepl("^h[0-9]*$", x$value), NA)
+      if (any(hexv)) {
+        message(sprintf("Layer %s: H3's hexagons left out of the bundle, as a server draws them; its squares kept.", id))
+        config$layers[[i]]$filters[[k]]$options <- o[!hexv]
+        st <- config$layers[[i]]$start[[spec$px]]
+        if (!is.null(st) && grepl("^h[0-9]*$", st)) config$layers[[i]]$start[[spec$px]] <- NULL
+      }
+    }
     grid_specs[[id]] <- .og_map_bundle_grid(spec, config$layers[[i]], dir, id)
   }
 

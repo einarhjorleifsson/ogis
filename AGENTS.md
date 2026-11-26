@@ -98,9 +98,13 @@ designs and choices:
 
 The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and others).
 
-## State (2026-11-22)
+## State (2026-11-26)
 
-- **`main`** is at 2026.11.22.5 locally, not pushed: merged at the maintainer's word on 2026-11-22 as a
+- **`main`** is at 2026.11.26 locally, not pushed: H3's hexagons in `og_cells()` (the cells' `h3` column beside or
+  instead of the squares, in the same *Cells* list; a bundle keeps the squares), merged at the user's word on
+  2026-11-26 ("Merge and commit") as a fast-forward of the branch `cells-h3`, for an effort map.
+  `devtools::test()` passes on the branch (two tests skip that need the installed
+  ogis). CI has not run on it. Before it, `main` was at 2026.11.22.5 locally, not pushed: merged at the maintainer's word on 2026-11-22 as a
   fast-forward of the side session's branch `claude/window-follow-5d61c8` (worktree
   `.claude/worktrees/window-follow-5d61c8`). GitHub's `main` is at 93170cd (2026.11.21.2, CI green on all three
   systems); the AGENTS.md commit 361cc68 and these are not pushed (the maintainer, 2026-11-22: "no pushing again").
@@ -112,7 +116,8 @@ The studies are under `$FISHYDATA/archive/` (`2026-11-11-rebelrebel-*` and other
   own-page article's window stepped a day at a time. `devtools::test()` 1,739 pass, the one failure (a race in the new
   `og.window()` test) fixed and passing since; `devtools::check()` 0 errors, 0 warnings, two notes (a worktree's
   `.git` file, and `og_names()`' `angle`, there since 2026.11.19.1). CI has not run on these.
-- **Installed**: 2026.11.22.5, from the branch's local tree (`devtools::install()`, `RemoteSha` empty; the LFS example
+- **Installed**: 2026.11.26, from `main`'s local tree (`devtools::install()`, `RemoteSha` empty), for an
+  effort page; before it 2026.11.22.5, from the branch's local tree (the LFS example
   data whole, dansk.parquet 6,583,218 bytes), at the maintainer's word, for a trip check page. The tests that run only
   against an installed ogis pass against it (test-knit.R's Quarto test, test-script.R's `og_serve(wait = TRUE)`).
 - **Open**: a vessel id with a comma is still refused by the effort's cells, since the server splits a filter's

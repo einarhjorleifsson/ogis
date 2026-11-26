@@ -1,3 +1,20 @@
+# ogis 2026.11.26
+
+* **`og_cells()` draws H3's hexagons beside the squares**: where the cells carry an H3 index (a column `h3`, or the
+  one named by `h3 =`), the page's *Cells* offers hexagons at a resolution following the zoom (an edge of four pixels
+  or more, a hexagon about eight across) or at one resolution at every zoom, from the cells' own to seven coarser, in
+  the same list as the squares, the c-square and the ICES rectangle. DuckDB sums the cells to the H3 cell that holds
+  them at the resolution drawn (`h3_cell_to_parent()`), and a value is per km² of each hexagon's own area. A table may
+  carry both grids on each row (a row for each square and hexagon that meet),
+  or H3 alone (`cell = "h3"` or `"h3_9"` opens on them). The user (2026-11-26), for effort maps: "We could
+  both think of this as a grid level or hex (h3) level ... the C-square is just one dimension." H3 had been set
+  aside for fishycode's effort map on speed (decision 220: 0.7-1.1 s a tile on 524 M cells); on another
+  effort map (148,237 cells at 0.001 degrees and H3 resolution 11, served from its Parquet file) a whole view at zoom 10
+  redraws in 0.25-1.0 s on every grid, H3 resolution 11's 63,460 hexagons in view included (measured in the page,
+  2026-11-26). H3 needs DuckDB's community extension `h3`, installed on first use.
+* **A bundle offers the squares alone**, saying the hexagons are left out: its cells are summed by the browser, which
+  knows squares only. Cells with no squares are left out of a bundle.
+
 # ogis 2026.11.22.5
 
 * **The article *A page of your own* steps through a time panel's window**: two buttons of a page's script set the

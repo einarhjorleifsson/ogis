@@ -315,3 +315,106 @@ test_that("in the page (a bundle), the sizes and the fewest vessels as the serve
   # c-squares: two, of 3 and 1 vessels
   expect_setequal(sub("/.*", "", cells_now("cells_px", "s0.05")), c("1", "3"))
 })
+
+# H3 -------------------------------------------------------------------------------------------------------------------
+skip_if_no_h3 <- function() {
+  skip_if_no_spatial()
+  skip_if(inherits(try(.og_h3(.og_connection()), silent = TRUE), "try-error"), "DuckDB's h3 extension is not available")
+}
+# vessel_cells()'s ten 0.01-degree cells, each with the resolution 9 H3 cell of its centre (edge 200 m: the ten cells,
+# 470 m apart at 65 N, in ten hexagons); or the hexagons alone
+hex_cells <- function(squares = TRUE) {
+  d <- vessel_cells()
+  con <- .og_connection()
+  .og_h3(con)
+  d$h3 <- DBI::dbGetQuery(con, sprintf("SELECT h3_latlng_to_cell_string(65.005, unnest([%s]), 9) AS h",
+                                       paste((d$ix + 5) / 1000, collapse = ", ")))$h
+  if (!squares) d$ix <- d$iy <- NULL
+  d
+}
+
+test_that("H3: hexagons offered beside the squares, at a resolution following the zoom or one at every zoom", {
+  skip_if_no_h3()
+  l <- og_cells(hex_cells())$layers$cells
+  f <- stats::setNames(l$config$filters, vapply(l$config$filters, `[[`, "", "id"))
+  # the h3 column is the cells' grid, not a choice
+  expect_false("cells_h3" %in% names(f))
+  expect_identical(vapply(f$cells_px$options, `[[`, "", "value"),
+                   c("1", "0.5", "2", "s0.01", "s0.05", "s0.1", "s0.5", "r1x0.5", "h", paste0("h", 9:2)))
+  expect_match(f$cells_px$options[[10]]$label, "H3 resolution 9 \\(0.11 km²\\)")
+  expect_identical(f$cells_px$default, "1")
+  # ten hexagons at the cells' own resolution; one at resolution 4 (edge 26 km); the squares as before
+  expect_identical(tile_at(l, 9, list(cells_px = "h9"), lon = -22.96), 10)
+  expect_identical(tile_at(l, 9, list(cells_px = "h4"), lon = -22.96), 1)
+  expect_identical(tile_at(l, 9, list(cells_px = "s0.05"), lon = -22.96), 2)
+  # the choices and the fewest vessels as on the squares
+  expect_identical(tile_at(l, 9, list(cells_px = "h9", cells_atleast = "3"), lon = -22.96), 2)
+  expect_identical(tile_at(l, 9, list(cells_px = "h9", cells_vid = "C"), lon = -22.96), 2)
+  # following the zoom: four pixels to an edge or more, at most the cells' own
+  edge <- c(1281256, 483057, 182513, 68979, 26072, 9854, 3725, 1406, 531.4, 200.8, 75.9, 28.7)
+  expect_identical(.og_h3_res("h", 9, c(-23, 64.8, -22.3, 65.2), 9, edge), 8L)
+  expect_identical(.og_h3_res("h", 14, c(-23, 64.8, -22.3, 65.2), 9, edge), 9L)
+  # resolution 9 asked at zoom 4 (a pixel 2.1 km at 65 N): the finest with an edge of half a pixel or more, 7
+  expect_identical(.og_h3_res("h9", 4, c(-23, 64.8, -22.3, 65.2), 9, edge), 7L)
+  # the start: an H3 resolution, or following the zoom
+  expect_identical(og_cells(hex_cells(), cell = "h3_7")$layers$cells$config$start$cells_px, "h7")
+  expect_identical(og_cells(hex_cells(), cell = "h3")$layers$cells$config$start$cells_px, "h")
+  expect_error(og_cells(hex_cells(), cell = "h3_10"), "`cell` is one of")
+  expect_error(og_cells(vessel_cells(), cell = "h3"), "`cell` is one of")
+  # none wanted: the h3 column is then a choice like any other
+  expect_true("cells_h3" %in% vapply(og_cells(hex_cells(), h3 = FALSE)$config$layers[[1]]$filters, `[[`, "", "id"))
+})
+
+test_that("H3 alone: hexagons only, following the zoom when the page opens; a bundle leaves them out", {
+  skip_if_no_h3()
+  m <- og_cells(hex_cells(squares = FALSE))
+  l <- m$layers$cells
+  f <- stats::setNames(l$config$filters, vapply(l$config$filters, `[[`, "", "id"))
+  expect_identical(vapply(f$cells_px$options, `[[`, "", "value"), c("h", paste0("h", 9:2)))
+  expect_identical(f$cells_px$default, "h")
+  expect_equal(unlist(l$config$bounds)[c(2, 4)], c(65.005, 65.005), tolerance = 0.01)
+  expect_identical(tile_at(l, 9, list(cells_px = "h9"), lon = -22.96), 10)
+  expect_gt(tile_at(l, 9, list(), lon = -22.96), 0)
+  expect_null(l$bundle_grid)
+  dir <- withr::local_tempdir()
+  expect_message(og_bundle(m, dir, overwrite = TRUE), "Left out of the bundle")
+})
+
+test_that("a bundle of cells with both grids keeps the squares and says the hexagons are left out", {
+  skip_if_no_h3()
+  dir <- withr::local_tempdir()
+  expect_message(og_bundle(og_cells(hex_cells(), cell = "h3_8"), dir, overwrite = TRUE), "H3's hexagons left out")
+  # the page's config, in its index.html: no hexagon offered, nor opened on
+  page <- paste(readLines(file.path(dir, "index.html"), warn = FALSE), collapse = "\n")
+  expect_false(grepl("H3 resolution", page, fixed = TRUE))
+  expect_false(grepl('"cells_px":"h', page, fixed = TRUE))
+  expect_true(grepl("c-square", page, fixed = TRUE))
+})
+
+test_that("in the page (served): hexagons drawn, each cell's value per km² of its own area", {
+  skip_if_no_h3()
+  skip_if_no_chrome()
+  m <- og_map(view = list(center = c(-22.95, 65.005), zoom = 11)) |> og_cells(hex_cells(), cell = "h3_9")
+  url <- og_serve(m, open = FALSE, wait = FALSE)
+  withr::defer(og_stop(as.integer(sub(".*:([0-9]+)/$", "\\1", url))))
+  b <- open_page(url)
+  feats <- function() page_eval(b, paste(
+    "map.querySourceFeatures('cells', { sourceLayer: 'cells' }).map(f =>",
+    "  ({ ring: f.geometry.coordinates[0].length, hours: f.properties.hours_km2, vessels: f.properties.vessels }))"))
+  expect_true(wait_until(function() isTRUE(page_eval(b, "typeof map !== 'undefined' && !!map.getLayer('cells') && map.loaded() && map.areTilesLoaded()")), 40))
+  expect_true(wait_until(function() length(feats()) > 0, 20))
+  ff <- feats()
+  # a hexagon's ring: six corners and the first again (one cut by a tile's edge may have more)
+  expect_true(all(vapply(ff, `[[`, 0, "ring") >= 7))
+  expect_true(any(vapply(ff, `[[`, 0, "ring") == 7))
+  # the first cell's three vessels' hours (3) over its hexagon's area, about 0.1 km² at resolution 9
+  h <- max(vapply(ff, `[[`, 0, "hours"))
+  expect_gt(h, 3 / 0.13)
+  expect_lt(h, 3 / 0.08)
+  expect_identical(page_eval(b, "document.getElementById('cells_px').value"), "h9")
+  # back to the squares: about a pixel at zoom 11 (0.01-degree cells, their own)
+  page_eval(b, "(() => { const s = document.getElementById('cells_px'); s.value = '1'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()")
+  Sys.sleep(0.5)
+  expect_true(wait_until(function() isTRUE(page_eval(b, "map.loaded() && map.areTilesLoaded()")), 20))
+  expect_true(wait_until(function() all(vapply(feats(), `[[`, 0, "ring") == 5), 20))
+})

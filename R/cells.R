@@ -16,7 +16,9 @@
 #' The page's *Cells* sets their size, live: about a screen pixel at each zoom (finer or coarser), or one size at every
 #' zoom (by default 0.01, 0.05, a c-square, 0.1 and 0.5 degrees, and the ICES statistical rectangle, 1 by 0.5
 #' degrees), so the reader sees what a grid's resolution does to the picture. A size narrower than half a pixel at the
-#' zoom is drawn at a whole number of it that is not. Where the cells name their vessel (`vessels`), the page also hides
+#' zoom is drawn at a whole number of it that is not. Where the cells also carry their H3 cell (`h3`), the same control
+#' offers H3's hexagons: at a resolution following the zoom (about eight pixels across), or at one resolution at every
+#' zoom, from the cells' own to coarser; a square and a hexagon are two grids over the same values. Where the cells name their vessel (`vessels`), the page also hides
 #' the cells of fewer than a number of vessels chosen there (all by default), as a confidentiality rule would, and a
 #' click shows each cell's.
 #'
@@ -34,6 +36,10 @@
 #'   * `ix` and `iy` (or `x` and `y`): the cell's south-west corner, in whole steps of `unit` degrees of longitude and
 #'     latitude (thousandths of a degree by default). The cells' own size is read from the corners: a table of
 #'     0.005-degree cells is drawn no finer than that;
+#'   * `h3` (optional, or the column named by `h3`): the cell's H3 index, as text or a whole number, all of one
+#'     resolution, the finest drawn. A table may have both a square and an H3 cell on each row (a row for each pair
+#'     that meets), or either alone. H3 needs DuckDB's community extension
+#'     h3, installed on first use;
 #'   * `values`: the columns summed, each coloured per square kilometre; by default every column of fractions;
 #'   * `count`: a column of whole numbers summed and shown on a click, not coloured (`n`, the records, by default);
 #'   * `by`: the columns the reader chooses by, the others by default: each a list of its values ("all" first, then
@@ -52,9 +58,11 @@
 #'   fishing, say): one value shown at a time, the first by default, with no "all".
 #' @param range Columns of `by` chosen as a span of two values, from and to: `"year"` by default, where there is one.
 #' @param unit The degrees of one step of `ix` and `iy`.
+#' @param h3 The column of the cells' H3 index: by default `"h3"` where the cells have one; `FALSE`, none.
 #' @param sizes,ices The cell sizes in degrees the page offers besides about a pixel, those that are a whole number of the
 #'   cells' own; `ices`, whether the ICES statistical rectangle (1 by 0.5 degrees) is one of them.
-#' @param cell The cells' size when the page opens: `NULL`, about a pixel; one of `sizes`; or `"ices"`.
+#' @param cell The cells' size when the page opens: `NULL`, about a pixel (H3 following the zoom where the cells have no
+#'   squares); one of `sizes`; `"ices"`; `"h3"`, H3 following the zoom; or `"h3_<resolution>"`, such as `"h3_9"`.
 #' @param vessels The column of `by` that names a vessel, for the cells' number of vessels: by default the first of
 #'   `vid`, `vessel_id`, `VESSEL_ID`, `vessel` and `mmsi` there is; `FALSE`, none.
 #' @param min_vessels The fewest vessels a cell shown has when the page opens: 1 (all), 2, 3, 5 or 10.
@@ -82,7 +90,8 @@
 #' @param section The sidebar's box the layer sits in, by its title.
 #' @param visible Whether the cells are on when the page opens.
 #' @return The map, with the layer. A map has one such layer at most. [og_bundle()] carries it with no further word,
-#'   summed by the browser from the cells at sizes from 0.01 degrees up.
+#'   summed by the browser from the cells at sizes from 0.01 degrees up; H3's hexagons are drawn on a served map only,
+#'   so a bundle offers the squares alone, and leaves out cells that have no squares.
 #' @seealso [og_layer()]'s `"grid"`, which it makes; [og_relief()] and [og_names()], for a sea floor and its names
 #'   under it.
 #' @export
@@ -98,11 +107,21 @@
 #' og_cells(cells, filter = list(gear = "trawl", year = c(2021, 2021)), limits = c(0.5, 50),
 #'          palette = "blues")
 #'
+#' # the same hours on H3's hexagons too, beside the squares (each row a square and the hexagon it meets)
+#' \dontrun{
+#' con <- DBI::dbConnect(duckdb::duckdb())
+#' DBI::dbExecute(con, "INSTALL h3 FROM community; LOAD h3")
+#' duckdb::duckdb_register(con, "cells", cells)
+#' hex <- DBI::dbGetQuery(con, "SELECT ix, iy, h3_latlng_to_cell_string((iy + 5) / 1000, (ix + 5) / 1000, 8) AS h3,
+#'                                     gear, year, hours FROM cells")
+#' og_cells(hex, cell = "h3_7", name = "Fishing effort")
+#' }
+#'
 #' # cells named once, by OGIS_CELLS in .Renviron, over the sea floor:
 #' # og_map() |> og_relief() |> og_cells(name = "Fishing effort", one_of = "preset")
 og_cells <- function(
   map = NULL, cells = NULL,
-  values = NULL, count = "n", by = NULL, one_of = NULL, range = "year", unit = 0.001,
+  values = NULL, count = "n", by = NULL, one_of = NULL, range = "year", unit = 0.001, h3 = NULL,
   sizes = c(0.01, 0.05, 0.1, 0.5), ices = TRUE, cell = NULL, vessels = NULL, min_vessels = 1, follow = "vessel",
   gear = NULL,
   filter = list(), metric = NULL, palette = "magma", opacity = 85, limits = NULL, stretch = c("even", "equal"),
@@ -138,8 +157,15 @@ og_cells <- function(
   fraction <- grepl("^(FLOAT|DOUBLE|REAL|DECIMAL)", types)
   names(whole) <- names(fraction) <- cols
   xy <- if (all(c("ix", "iy") %in% cols)) c("ix", "iy") else if (all(c("x", "y") %in% cols)) c("x", "y")
-  if (is.null(xy) || !all(whole[xy] | fraction[xy])) {
-    stop("og_cells(): the cells need their corners as numbers of steps, `ix` and `iy` (or `x` and `y`).", call. = FALSE)
+  hcol <- if (isFALSE(h3)) NULL else if (is.null(h3)) intersect("h3", cols)[1] else h3
+  if (identical(hcol, NA_character_)) hcol <- NULL
+  if (!is.null(hcol) && !(is.character(hcol) && length(hcol) == 1 && hcol %in% cols &&
+                          (whole[[hcol]] || grepl("^VARCHAR", types[[hcol]])))) {
+    stop("og_cells(): `h3` names the cells' column of H3 indexes (text or whole numbers), or is FALSE.", call. = FALSE)
+  }
+  if ((is.null(xy) && is.null(hcol)) || (!is.null(xy) && !all(whole[xy] | fraction[xy]))) {
+    stop("og_cells(): the cells need their corners as numbers of steps, `ix` and `iy` (or `x` and `y`), or their H3 ",
+         "index (`h3`).", call. = FALSE)
   }
   need <- function(v, what) {
     if (!is.null(v) && (!is.character(v) || !all(v %in% cols))) {
@@ -152,13 +178,13 @@ og_cells <- function(
   need(one_of, "one_of")
   count <- if (!is.null(count) && count %in% cols && whole[[count]]) count
   if (is.null(values)) {
-    values <- setdiff(cols[fraction], c(xy, count, by))
+    values <- setdiff(cols[fraction], c(xy, count, by, hcol))
   }
   if (!length(values) || !all(fraction[values] | whole[values])) {
     stop("og_cells(): the cells have no `values` to sum: columns of numbers.", call. = FALSE)
   }
   if (is.null(by)) {
-    by <- setdiff(cols, c(xy, values, count))
+    by <- setdiff(cols, c(xy, values, count, hcol))
   }
   by <- union(by, one_of)
   range <- intersect(intersect(range, by), cols[whole])
@@ -216,17 +242,40 @@ og_cells <- function(
   q <- function(v) as.character(DBI::dbQuoteIdentifier(con, v))
 
   # the cells' own size, read from a sample of their corners, and their extent (all but the farthest few)
-  smp <- DBI::dbGetQuery(con, sprintf("SELECT %s AS x, %s AS y FROM %s s USING SAMPLE 20000 ROWS",
-                                      q(xy[1]), q(xy[2]), src))
-  if (!nrow(smp)) stop("og_cells(): the cells are none.", call. = FALSE)
-  steps <- Filter(function(k) all(smp$x %% k == 0 & smp$y %% k == 0), .og_cell_k)
-  if (!length(steps)) {
-    stop(sprintf("og_cells(): the cells' corners are whole steps of `unit` (%s degrees): %s and %s.", format(unit),
-                 xy[1], xy[2]), call. = FALSE)
+  finest <- NULL
+  if (!is.null(xy)) {
+    smp <- DBI::dbGetQuery(con, sprintf("SELECT %s AS x, %s AS y FROM %s s USING SAMPLE 20000 ROWS",
+                                        q(xy[1]), q(xy[2]), src))
+    if (!nrow(smp)) stop("og_cells(): the cells are none.", call. = FALSE)
+    steps <- Filter(function(k) all(smp$x %% k == 0 & smp$y %% k == 0), .og_cell_k)
+    if (!length(steps)) {
+      stop(sprintf("og_cells(): the cells' corners are whole steps of `unit` (%s degrees): %s and %s.", format(unit),
+                   xy[1], xy[2]), call. = FALSE)
+    }
+    finest <- max(steps)
+    ext <- c(stats::quantile(smp$x, 0.005), stats::quantile(smp$y, 0.005),
+             stats::quantile(smp$x, 0.995) + finest, stats::quantile(smp$y, 0.995) + finest) * unit
   }
-  finest <- max(steps)
-  ext <- c(stats::quantile(smp$x, 0.005), stats::quantile(smp$y, 0.005),
-           stats::quantile(smp$x, 0.995) + finest, stats::quantile(smp$y, 0.995) + finest) * unit
+  # the H3 cells' own resolution, the finest drawn, and every resolution's mean edge and area
+  if (!is.null(hcol)) {
+    .og_h3(con)
+    hs <- DBI::dbGetQuery(con, sprintf(
+      "SELECT h3_get_resolution(%1$s) AS r, h3_cell_to_lng(%1$s) AS x, h3_cell_to_lat(%1$s) AS y FROM %2$s s
+       WHERE %1$s IS NOT NULL USING SAMPLE 20000 ROWS", q(hcol), src))
+    if (!nrow(hs)) stop("og_cells(): the cells' H3 indexes are none.", call. = FALSE)
+    if (length(unique(hs$r)) != 1) {
+      stop(sprintf("og_cells(): the cells' H3 indexes (%s) are of one resolution, the finest drawn: here %s.", hcol,
+                   paste(sort(unique(hs$r)), collapse = ", ")), call. = FALSE)
+    }
+    h3_res <- hs$r[1]
+    h3_size <- DBI::dbGetQuery(con, "SELECT r, h3_get_hexagon_edge_length_avg(r::INTEGER, 'm') AS edge_m,
+                                            h3_get_hexagon_area_avg(r::INTEGER, 'km^2') AS km2 FROM range(16) t(r) ORDER BY r")
+    if (is.null(xy)) {
+      pad <- h3_size$edge_m[h3_res + 1] / 110574
+      ext <- c(stats::quantile(hs$x, 0.005) - pad, stats::quantile(hs$y, 0.005) - pad,
+               stats::quantile(hs$x, 0.995) + pad, stats::quantile(hs$y, 0.995) + pad)
+    }
+  }
   ext <- pmin(pmax(unname(ext), c(-180, -85, -180, -85)), c(180, 85, 180, 85))
 
   # the controls: a list of each column's values (all first, but for one_of), a span for a range, the value coloured,
@@ -248,19 +297,31 @@ og_cells <- function(
     k <- d / unit
     abs(k - round(k)) < 1e-6 && round(k) >= finest && round(k) %% finest == 0
   }
-  sq <- sort(unique(sizes[vapply(sizes, fits, NA)]))
+  sq <- if (!is.null(xy)) sort(unique(sizes[vapply(sizes, fits, NA)])) else numeric(0)
   fixed <- c(
     lapply(sq, function(d) {
       list(value = paste0("s", format(d)),
            label = paste0(format(d), "\u00b0", if (isTRUE(all.equal(d, 0.05))) " (c-square)"))
     }),
-    if (ices && fits(1) && fits(0.5)) list(list(value = "r1x0.5", label = "1\u00b0 \u00d7 0.5\u00b0 (ICES rectangle)"))
+    if (!is.null(xy) && ices && fits(1) && fits(0.5)) {
+      list(list(value = "r1x0.5", label = "1\u00b0 \u00d7 0.5\u00b0 (ICES rectangle)"))
+    }
   )
+  # H3's hexagons: a resolution following the zoom, or one at every zoom, from the cells' own down to seven coarser
+  hexes <- if (!is.null(hcol)) {
+    c(list(list(value = "h", label = "H3, following the zoom", tip = "Hexagons about eight screen pixels across")),
+      lapply(seq(h3_res, max(0, h3_res - 7)), function(r) {
+        list(value = paste0("h", r), label = sprintf("H3 resolution %d (%s km\u00b2)", r,
+                                                     format(signif(h3_size$km2[r + 1], 2), big.mark = ",", scientific = FALSE)))
+      }))
+  }
   filters <- c(filters, list(list(
-    id = px_id, label = "Cells", default = "1",
-    options = c(list(list(value = "1", label = "about a pixel"),
-                     list(value = "0.5", label = "finer (heavy)", tip = "Each cell about half a screen pixel"),
-                     list(value = "2", label = "coarser")), fixed)
+    id = px_id, label = "Cells", default = if (!is.null(xy)) "1" else "h",
+    options = c(if (!is.null(xy)) {
+      c(list(list(value = "1", label = "about a pixel"),
+             list(value = "0.5", label = "finer (heavy)", tip = "Each cell about half a screen pixel"),
+             list(value = "2", label = "coarser")), fixed)
+    }, hexes)
   )))
   least_id <- fid("atleast")
   follow_id <- fid("follow")
@@ -316,7 +377,7 @@ og_cells <- function(
     Filter(Negate(is.null), list(options = options, ranges = ranges, follow = follow_gear, v = d$v()))
   }
 
-  auto_k <- .og_cell_k[.og_cell_k %% finest == 0]
+  auto_k <- if (!is.null(finest)) .og_cell_k[.og_cell_k %% finest == 0]
   lit <- function(cn, v) {
     if (whole[[cn]] || fraction[[cn]]) {
       n <- suppressWarnings(as.numeric(v))
@@ -327,15 +388,34 @@ og_cells <- function(
     }
   }
   tiles <- function(z, x, y, params) {
-    kxy <- .og_cell_size(.og_or(params[[px_id]], "1"), z, unit, finest, auto_k)
-    kx <- kxy[1]
-    ky <- kxy[2]
+    v <- .og_or(params[[px_id]], if (!is.null(xy)) "1" else "h")
+    hex <- is.null(xy) || (!is.null(hcol) && grepl("^h[0-9]*$", v))
     n2 <- 2^z
     lat <- function(t) atan(sinh(pi * (1 - 2 * t / n2))) * 180 / pi
-    b <- c(x / n2 * 360 - 180, lat(y + 1), (x + 1) / n2 * 360 - 180, lat(y)) / unit
-    where <- sprintf("%1$s >= %3$.0f AND %1$s < %4$.0f AND %2$s >= %5$.0f AND %2$s < %6$.0f", q(xy[1]), q(xy[2]),
-                     floor(b[1] / kx) * kx - kx, ceiling(b[3] / kx) * kx + kx, floor(b[2] / ky) * ky - ky,
-                     ceiling(b[4] / ky) * ky + ky)
+    bd <- c(x / n2 * 360 - 180, lat(y + 1), (x + 1) / n2 * 360 - 180, lat(y))
+    if (hex) {
+      if (!grepl("^h[0-9]*$", v)) v <- "h"
+      r <- .og_h3_res(v, z, bd, h3_res, h3_size$edge_m)
+      # every cell of a hexagon that meets the tile: the cells within three of its edges of the tile
+      my <- 3 * h3_size$edge_m[r + 1] / 110574
+      mx <- 3 * h3_size$edge_m[r + 1] / (111320 * cos(min(85, max(abs(bd[c(2, 4)]))) * pi / 180))
+      where <- c(if (!is.null(xy)) {
+        sprintf("%1$s >= %3$.0f AND %1$s < %4$.0f AND %2$s >= %5$.0f AND %2$s < %6$.0f", q(xy[1]), q(xy[2]),
+                floor((bd[1] - mx) / unit) - finest, ceiling((bd[3] + mx) / unit) + finest,
+                floor((bd[2] - my) / unit) - finest, ceiling((bd[4] + my) / unit) + finest)
+      } else {
+        sprintf("h3_cell_to_lng(%1$s) BETWEEN %2$.10f AND %3$.10f AND h3_cell_to_lat(%1$s) BETWEEN %4$.10f AND %5$.10f",
+                q(hcol), bd[1] - mx, bd[3] + mx, bd[2] - my, bd[4] + my)
+      }, sprintf("%s IS NOT NULL", q(hcol)))
+    } else {
+      kxy <- .og_cell_size(v, z, unit, finest, auto_k)
+      kx <- kxy[1]
+      ky <- kxy[2]
+      b <- bd / unit
+      where <- sprintf("%1$s >= %3$.0f AND %1$s < %4$.0f AND %2$s >= %5$.0f AND %2$s < %6$.0f", q(xy[1]), q(xy[2]),
+                       floor(b[1] / kx) * kx - kx, ceiling(b[3] / kx) * kx + kx, floor(b[2] / ky) * ky - ky,
+                       ceiling(b[4] / ky) * ky + ky)
+    }
     for (cn in by) {
       if (cn %in% range) {
         a <- params[[paste0(fid(cn), "_from")]]
@@ -363,6 +443,21 @@ og_cells <- function(
                       if (!is.null(vcol)) "'vessels': og_vessels"), collapse = ", ")
     least <- suppressWarnings(as.integer(.og_or(params[[least_id]], "1")))
     having <- if (!is.null(vcol) && !is.na(least) && least > 1) sprintf(" HAVING count(DISTINCT %s) >= %d", q(vcol), least) else ""
+    if (hex) {
+      # the cells summed to the H3 cell that holds them at the resolution drawn, each hexagon on its exact area
+      sql <- sprintf("
+        WITH c AS (SELECT h3_cell_to_parent(%1$s, %2$d) AS og_h3, %3$s FROM %4$s s WHERE %5$s GROUP BY 1%6$s),
+        m AS (SELECT *, h3_cell_area(og_h3, 'km^2') AS km2,
+                     ST_Transform(ST_GeomFromText(h3_cell_to_boundary_wkt(og_h3)), 'EPSG:4326', 'EPSG:3857',
+                                  always_xy := true) AS env
+              FROM c)
+        SELECT ST_AsMVT({'geometry': ST_AsMVTGeom(env, ST_Extent(ST_TileEnvelope(%7$d, %8$d, %9$d)), 4096, 64, true), %10$s},
+                        'cells', 4096) AS tile
+        FROM m", q(hcol), as.integer(r), sums, src, paste(where, collapse = " AND "), having,
+        as.integer(z), as.integer(x), as.integer(y), fields)
+      t <- DBI::dbGetQuery(con, sql)$tile[[1]]
+      return(if (is.null(t)) raw(0) else t)
+    }
     sql <- sprintf("
       WITH c AS (
         SELECT floor(%1$s / %3$d) AS cx, floor(%2$s / %12$d) AS cy, %4$s FROM %5$s s WHERE %6$s GROUP BY ALL%13$s),
@@ -392,8 +487,10 @@ og_cells <- function(
   if (!is.null(metric)) start$metric <- paste0(metric, "_km2")
   if (!is.null(cell)) {
     v <- if (identical(cell, "ices")) "r1x0.5" else if (is.numeric(cell) && length(cell) == 1) paste0("s", format(cell))
-    if (is.null(v) || !v %in% vapply(fixed, `[[`, "", "value")) {
-      stop("og_cells(): `cell` is one of `sizes` (a whole number of the cells' own), or \"ices\".", call. = FALSE)
+    if (is.character(cell) && length(cell) == 1 && grepl("^h3(_[0-9]+)?$", cell)) v <- sub("^h3_?", "h", cell)
+    if (is.null(v) || !v %in% vapply(c(fixed, hexes), `[[`, "", "value")) {
+      stop("og_cells(): `cell` is one of `sizes` (a whole number of the cells' own), \"ices\", or with H3 cells \"h3\" ",
+           "or \"h3_<resolution>\" (the cells' own or coarser).", call. = FALSE)
     }
     start[[px_id]] <- v
   }
@@ -418,18 +515,20 @@ og_cells <- function(
   if (!isFALSE(follow)) {
     layer$config$follow <- Filter(Negate(is.null), list(id = follow_id, vessel = fid(vcol), gear = if (!is.null(gcol)) fid(gcol)))
   }
-  # a bundle's: the cells summed by the browser, at sizes from 0.01 degrees up
-  base <- finest * max(1, ceiling(0.01 / unit / finest))
-  levels <- sort(unique(c(base * c(1, 2, 4, 10, 20, 50), round(sq / unit)[round(sq / unit) >= base])))
-  layer$bundle_grid <- list(
-    rows = d$tbl, unit = unit, levels = levels, x = xy[1], y = xy[2],
-    vessels = if (!is.null(vcol)) Filter(Negate(is.null), list(column = fid(vcol), least = least_id,
-                                                                   follow = if (!isFALSE(follow)) follow_id)),
-    columns = stats::setNames(by, vapply(by, fid, "")), sums = c(values, count),
-    fields = c(stats::setNames(lapply(values, function(v) c(v, "km2")), paste0(values, "_km2")),
-               if (!is.null(count)) stats::setNames(list(count), count)),
-    px = px_id
-  )
+  # a bundle's: the cells summed by the browser, at sizes from 0.01 degrees up; squares only (H3's are a served map's)
+  if (!is.null(xy)) {
+    base <- finest * max(1, ceiling(0.01 / unit / finest))
+    levels <- sort(unique(c(base * c(1, 2, 4, 10, 20, 50), round(sq / unit)[round(sq / unit) >= base])))
+    layer$bundle_grid <- list(
+      rows = d$tbl, unit = unit, levels = levels, x = xy[1], y = xy[2],
+      vessels = if (!is.null(vcol)) Filter(Negate(is.null), list(column = fid(vcol), least = least_id,
+                                                                     follow = if (!isFALSE(follow)) follow_id)),
+      columns = stats::setNames(by, vapply(by, fid, "")), sums = c(values, count),
+      fields = c(stats::setNames(lapply(values, function(v) c(v, "km2")), paste0(values, "_km2")),
+                 if (!is.null(count)) stats::setNames(list(count), count)),
+      px = px_id
+    )
+  }
   og_add_layer(map, layer, section = section)
 }
 
@@ -451,6 +550,29 @@ og_cells <- function(
   px <- suppressWarnings(as.numeric(v))
   if (is.na(px) || px <= 0) px <- 1
   rep(max(auto_k[auto_k <= max(pix * px, finest)]), 2)
+}
+
+# The H3 resolution a tile draws: `h`, following the zoom, the finest whose mean edge is four pixels or more (a hexagon
+# about eight across), at most the cells' own; `h<r>`, that one, coarser where its edge is under half a pixel
+.og_h3_res <- function(v, z, bd, finest, edge_m) {
+  pix_m <- 40075016.686 * cos(mean(bd[c(2, 4)]) * pi / 180) / 2^z / 512
+  if (identical(v, "h")) {
+    ok <- which(edge_m[seq_len(finest + 1)] >= 4 * pix_m) - 1L
+    return(if (length(ok)) max(ok) else 0L)
+  }
+  r <- min(as.integer(sub("^h", "", v)), finest)
+  while (r > 0 && edge_m[r + 1] < pix_m / 2) r <- r - 1L
+  as.integer(r)
+}
+
+# DuckDB's h3 extension on ogis's connection: loaded, or installed from the community repository first
+.og_h3 <- function(con) {
+  ok <- function(sql) !inherits(try(DBI::dbExecute(con, sql), silent = TRUE), "try-error")
+  if (ok("LOAD h3") || (ok("INSTALL h3 FROM community") && ok("LOAD h3"))) {
+    return(invisible(TRUE))
+  }
+  stop("og_cells(): H3 cells need DuckDB's community extension h3, which could not be loaded or installed here (it is ",
+       "fetched once from the internet). Give `h3 = FALSE` to draw the squares alone.", call. = FALSE)
 }
 
 # The map and the cells: a map given first, or the cells (or nothing), which start one
