@@ -1,3 +1,10 @@
+# ogis 2026.11.26.3
+
+* **Documentation only.** `og_tracks()`' help, its error for `compare`, a test's name and the tracks article call its
+  second set of column names upper-case ones (`VESSEL_ID`, `DATE_TIME`, ...), and the `compare` example's second
+  source `other`; the older entries here are worded alike. Text only: nothing behaves differently but the error's
+  wording.
+
 # ogis 2026.11.26.2
 
 * **`og_cells(pixel = FALSE)`: the fixed sizes alone, opening on the finest.** The user (2026-11-26), on an
@@ -185,25 +192,24 @@
 
 # ogis 2026.11.18.16
 
-* **Vessel tracks in one line**, `og_tracks()` (preparation for the EM4SSF hackathon, Ancona, December 2026: ogis as a
+* **Vessel tracks in one line**, `og_tracks()` (ogis as a
   quick visual check of each step of a track's processing, ramb doing the processing). Pings, as ramb leaves them
-  (`vid`, `time`, `lon`, `lat`, `speed`, `trip_id`, `gear`, `hours`, `behaviour`) or in EM4SSF's D2.1 format
+  (`vid`, `time`, `lon`, `lat`, `speed`, `trip_id`, `gear`, `hours`, `behaviour`) or with upper-case names
   (`VESSEL_ID`, `DATE_TIME`, ...), become the track and its pings coloured by what the vessel did; a time panel of
   speed under the map, a vessel chosen there and then one of its trips, with lanes of activity, trips and any more
   given (another method's trips, an observer's labels) and marks (flags, planted faults); and the fishing effort by
   cell, summed from the fishing pings' hours by vessel, gear and year, following the vessel chosen. On ramb's `dansk`
   (395,000 pings, 14 vessels; ramb's flags, harbours, `jepol` trips and hours in 4 s) the map built in 1.7 s. On
-  EM4SSF's CS1 (1,020,999 pings, 10 vessels, served on this computer only), from the raw file through ramb to the map
+  about a million pings (10 vessels, served on this computer only), from the raw file through ramb to the map
   in 9 s. The map has no layer of each vessel's whole path: such a path ran over every span's ends and was drawn whole,
   a year's tangle over the trip chosen; the panel draws the chosen span's path itself. `time_label` names the clock
-  (`"as written (zone unknown)"` for CS1). A trip is ramb's `voyage_key` where the pings have one (one key per trip
+  (`"as written (zone unknown)"` where it is not known). A trip is ramb's `voyage_key` where the pings have one (one key per trip
   across vessels and years, from ramb 2026.11.18, at this viewer's wish), taken as it is; a vessel's trip numbered from
-  1 is known by its vessel too. With ramb's `rb_flag_ping_clock_jump()` the clock's jumps are marks: CS1's three.
+  1 is known by its vessel too. With ramb's `rb_flag_ping_clock_jump()` the clock's jumps are marks.
 * **`og_tracks(compare = )`: where two columns disagree**, two methods' trips or an inferred activity against an
   observer's: each a lane, and the panel marks, a row each, the pings one has and the other has not and, where the
-  two share their values, those they give differently. On CS1, ramb's trips (`jepol` on the hackathon's own HDBSCAN
-  anchorage sites) and EM4SSF's step-01 trips (option C) differ on 15,652 of 1,020,999 pings (12,183 in ramb's alone,
-  3,469 in EM4SSF's alone), gathered at Ancona's harbour mouth, where each decides a trip begins and ends.
+  two share their values, those they give differently. On the million pings, two methods' trips
+  differ on about 1.5 % of them, gathered at a harbour mouth, where each decides a trip begins and ends.
 * **`og_cells()`: the grid's resolution, live.** The page's *Cells* offers, beside about a pixel at each zoom, sizes
   fixed at every zoom: 0.01, 0.05 (a c-square), 0.1 and 0.5 degrees and the ICES statistical rectangle (1 by 0.5
   degrees), those a whole number of the cells' own (`sizes`, `ices`, `cell` for the start). A size narrower than half

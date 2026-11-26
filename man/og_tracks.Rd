@@ -43,7 +43,7 @@ method's trips, an observer's activity, ...}
 
 \item{marks}{Columns that mark pings, as \code{\link[=og_time]{og_time()}}'s \code{marks}.}
 
-\item{compare}{Two columns to hold against each other, as strings, named for their sources (\code{c(ramb = "trip_id", EM4SSF = "TRIP_ID")}), or a list of such pairs: two methods' trips, an inferred activity against an observer's.
+\item{compare}{Two columns to hold against each other, as strings, named for their sources (\code{c(ramb = "trip_id", other = "TRIP_ID")}), or a list of such pairs: two methods' trips, an inferred activity against an observer's.
 Each is a lane, and the panel marks, each a row of its own, the pings that one has and the other has not (in a
 trip by one method alone), and, where the two share their values (\code{"fishing"} in both), the pings they give
 differently.}
@@ -76,7 +76,7 @@ chosen vessel's, its gear's or the fleet's (\code{\link[=og_cells]{og_cells()}}'
 }
 \details{
 The columns are found by their names: ramb's (\code{vid}, \code{time}, \code{lon}, \code{lat}, \code{speed}, \code{voyage_key} or \code{trip_id},
-\code{gear}, \code{hours}, and \code{behaviour} or \code{activity}) or EM4SSF's D2.1 format's (\code{VESSEL_ID}, \code{DATE_TIME}, \code{LONGITUDE}, \code{LATITUDE}, \code{SPEED},
+\code{gear}, \code{hours}, and \code{behaviour} or \code{activity}) or upper-case ones (\code{VESSEL_ID}, \code{DATE_TIME}, \code{LONGITUDE}, \code{LATITUDE}, \code{SPEED},
 \code{TRIP_ID}, \code{ACTIVITY}, \code{GEAR}), or given.
 }
 \examples{

@@ -1,4 +1,4 @@
-# tracks.R — vessel tracks as one layer function: og_tracks() draws pings (ramb's columns, or EM4SSF's D2.1 format's) as
+# tracks.R — vessel tracks as one layer function: og_tracks() draws pings (ramb's columns, or upper-case ones) as
 # a track and its pings, a time panel of speed under the map (a vessel, then a trip), and the fishing effort by cell,
 # which follows the vessel chosen there. A quick look at each step of a track's processing: trips, fishing, gear,
 # effort. Built on og_path(), og_point(), og_time() and og_cells().
@@ -13,7 +13,7 @@
 #' chosen vessel's, its gear's or the fleet's ([og_cells()]'s `follow`).
 #'
 #' The columns are found by their names: ramb's (`vid`, `time`, `lon`, `lat`, `speed`, `voyage_key` or `trip_id`,
-#' `gear`, `hours`, and `behaviour` or `activity`) or EM4SSF's D2.1 format's (`VESSEL_ID`, `DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`,
+#' `gear`, `hours`, and `behaviour` or `activity`) or upper-case ones (`VESSEL_ID`, `DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`,
 #' `TRIP_ID`, `ACTIVITY`, `GEAR`), or given.
 #'
 #' @param map A map the pipe makes ([og_map()]), or the pings, which start one.
@@ -27,7 +27,7 @@
 #'   method's trips, an observer's activity, ...
 #' @param marks Columns that mark pings, as [og_time()]'s `marks`.
 #' @param compare Two columns to hold against each other, as strings, named for their sources (`c(ramb = "trip_id",
-#'   EM4SSF = "TRIP_ID")`), or a list of such pairs: two methods' trips, an inferred activity against an observer's.
+#'   other = "TRIP_ID")`), or a list of such pairs: two methods' trips, an inferred activity against an observer's.
 #'   Each is a lane, and the panel marks, each a row of its own, the pings that one has and the other has not (in a
 #'   trip by one method alone), and, where the two share their values (`"fishing"` in both), the pings they give
 #'   differently.
@@ -119,7 +119,7 @@ og_tracks <- function(
   for (i in seq_along(pairs)) {
     pr <- pairs[[i]]
     if (!is.character(pr) || length(pr) != 2 || !all(pr %in% colnames(x))) {
-      stop("og_tracks(): `compare` is two columns of the pings, as strings (`c(ramb = \"trip_id\", EM4SSF = \"TRIP_ID\")`), or a list of such pairs.",
+      stop("og_tracks(): `compare` is two columns of the pings, as strings (`c(ramb = \"trip_id\", other = \"TRIP_ID\")`), or a list of such pairs.",
            call. = FALSE)
     }
     lab <- if (!is.null(names(pr)) && all(nzchar(names(pr)))) names(pr) else unname(pr)

@@ -114,13 +114,13 @@ setting where the boat moves faster.
 
 ## Another workflow's output
 
-`og_tracks()` finds its columns by name: ramb's, or those of the EM4SSF project's track format (D2.1: `VESSEL_ID`,
+`og_tracks()` finds its columns by name: ramb's, or upper-case ones (`VESSEL_ID`,
 `DATE_TIME`, `LONGITUDE`, `LATITUDE`, `SPEED`, `TRIP_ID`, `ACTIVITY`, `GEAR`), or those given. A file written by any
 step of such a workflow is looked at in one line, another method's trips held against it:
 
 ```{r}
 #| eval: false
-og_tracks("trips_step01.parquet", compare = c(ramb = "trip_key", EM4SSF = "TRIP_ID"), effort = FALSE)
+og_tracks("trips.parquet", compare = c(ramb = "trip_key", other = "TRIP_ID"), effort = FALSE)
 ```
 
 A set and its haul, drawn as a segment with a time (`og_segment()`), follow the panel as the pings do: a static gear's

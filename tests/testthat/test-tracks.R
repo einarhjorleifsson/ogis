@@ -1,5 +1,5 @@
 # og_tracks(): pings as a track, a time panel of speed (a vessel, then a trip), and the effort by cell following the
-# vessel chosen there; ramb's columns or EM4SSF's D2.1 format's
+# vessel chosen there; ramb's columns or upper-case ones
 
 # two vessels off Jutland, a ping every 10 minutes: A two gillnet trips, B one trawl trip; fishing in each trip's middle
 track_pings <- function() {
@@ -58,7 +58,7 @@ test_that("ramb's voyage_key is a trip's key as it is, taken before its trip_id"
   expect_identical(substr(lab, 1, 8), c("A:2020:1", "A:2020:2"))
 })
 
-test_that("EM4SSF's D2.1 names are found; what is missing said", {
+test_that("upper-case names are found; what is missing said", {
   skip_if_no_spatial()
   d <- track_pings()
   names(d) <- c("VESSEL_ID", "DATE_TIME", "LONGITUDE", "LATITUDE", "SPEED", "ACTIVITY", "TRIP_ID", "GEAR", "hours")
